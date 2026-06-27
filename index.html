@@ -2,60 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Right On Commander</title>
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    #gameCanvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+  </style>
 </head>
 <body>
   <canvas id="gameCanvas"></canvas>
-  <div id="ui-overlay">
-    <div id="title-screen" class="screen active">
-      <h1>RIGHT ON<br>COMMANDER</h1>
-      <p class="subtitle">A tribute to ELITE</p>
-      <button id="btn-start">LAUNCH</button>
-      <div class="controls-hint">
-        <span>WASD / Arrows / D-Pad to move</span>
-        <span>Space / Tap to fire</span>
-      </div>
-    </div>
-    <div id="game-screen" class="screen">
-      <div id="hud">
-        <div id="hud-left">
-          <div class="hud-label">SHIELDS</div>
-          <div class="bar-container"><div id="shield-bar" class="bar shield"></div></div>
-          <div class="hud-label">ENERGY</div>
-          <div class="bar-container"><div id="energy-bar" class="bar energy"></div></div>
-        </div>
-        <div id="hud-center">
-          <div id="score-display">0</div>
-          <div id="system-display">LAVE SECTOR</div>
-        </div>
-        <div id="hud-right">
-          <div class="hud-label">CREDITS</div>
-          <div id="credits-display">0.0 Cr</div>
-          <div class="hud-label">KILLS</div>
-          <div id="kills-display">0</div>
-        </div>
-      </div>
-      <div id="mobile-controls">
-        <div id="dpad">
-          <button class="dpad-btn" data-dir="up">▲</button>
-          <div class="dpad-row">
-            <button class="dpad-btn" data-dir="left">◀</button>
-            <button class="dpad-btn" data-dir="right">▶</button>
-          </div>
-          <button class="dpad-btn" data-dir="down">▼</button>
-        </div>
-        <button id="fire-btn">FIRE</button>
-      </div>
-    </div>
-    <div id="gameover-screen" class="screen">
-      <h2>SHIP DESTROYED</h2>
-      <p class="subtitle">Your Cobra Mk III has been vaporised.</p>
-      <div id="final-score-display"></div>
-      <button id="btn-restart">FLY AGAIN</button>
-    </div>
-  </div>
-  <script type="module" src="src/game.js"></script>
+  <script type="module" src="/src/platform/main.ts"></script>
 </body>
 </html>
