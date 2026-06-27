@@ -1,11 +1,14 @@
-// Browser entry point (the shell). For T1.2 this drives a rotating Sidewinder to exercise the
-// software-3D renderer (cull + painter sort + black-fill/white-stroke + starfield). The
-// fixed-timestep loop wired to the real sim arrives in T1.3.
+// Browser entry point (the shell). Wires the deterministic sim to the real renderer through
+// the fixed-timestep loop: the sim steps at DT while the renderer interpolates between the
+// last two states for smooth motion at the display rate. [tasks T1.3, design §3]
 
+import { createSim } from '../sim/index.js';
+import { PLAYER_ID } from '../sim/world.js';
+import { vec3 } from '../sim/math/vec3.js';
 import { Renderer2D } from '../render/renderer2d.js';
 import { modelMatrix } from '../render/project.js';
-import { vec3 } from '../sim/math/vec3.js';
-import type { Mesh } from '../interfaces.js';
+import { startGameLoop } from './loop.js';
+import type { InputFrame, Mesh } from '../interfaces.js';
 import sidewinder from '../content/meshes/sidewinder.json';
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
@@ -23,15 +26,53 @@ function resize(): void {
 resize();
 window.addEventListener('resize', resize);
 
+const sim = createSim({ seed: 1 });
 const renderer = new Renderer2D(ctx);
 const mesh = sidewinder as unknown as Mesh;
 
-let yaw = 0;
-function frame(): void {
-  yaw += 0.012;
-  renderer.beginFrame();
-  renderer.drawMesh(mesh, modelMatrix(vec3(0, 0, 0), yaw, 0));
-  renderer.endFrame(0);
-  requestAnimationFrame(frame);
+const noInput: InputFrame = {
+  moveTarget: null,
+  firing: false,
+  fireTapped: false,
+  ecm: false,
+  energyBomb: false,
+  confirm: false,
+  pause: false,
+};
+
+interface Pose {
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+  bank: number;
 }
-requestAnimationFrame(frame);
+
+function readPlayerPose(): Pose {
+  const p = sim.state.entities.get(PLAYER_ID)!;
+  return { x: p.pos.x, y: p.pos.y, z: p.pos.z, yaw: p.yaw, bank: p.bank };
+}
+
+const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
+
+// Keep the last two render-relevant poses so the renderer can interpolate between them.
+let prev = readPlayerPose();
+let curr = prev;
+
+startGameLoop({
+  step: () => {
+    prev = curr;
+    sim.step(noInput);
+    curr = readPlayerPose();
+  },
+  render: (alpha) => {
+    const pos = vec3(
+      lerp(prev.x, curr.x, alpha),
+      lerp(prev.y, curr.y, alpha),
+      lerp(prev.z, curr.z, alpha),
+    );
+    renderer.beginFrame();
+    renderer.drawMesh(mesh, modelMatrix(pos, lerp(prev.yaw, curr.yaw, alpha), lerp(prev.bank, curr.bank, alpha)));
+    renderer.endFrame(alpha);
+  },
+});
