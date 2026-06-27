@@ -29,3 +29,20 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  meshes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Regenerate meshes and check they match the committed output
+        run: |
+          python3 tools/bbcelite_to_mesh.py
+          git diff --exit-code src/content/meshes
+
+      - name: Validate meshes
+        run: python3 tools/test_meshes.py
