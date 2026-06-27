@@ -11,6 +11,9 @@ import { createRng, type Rng } from './rng.js';
 import { snapshot, restore, type WorldSnapshot } from './snapshot.js';
 import { makeWorld, PLAYER_ID, type World } from './world.js';
 
+// Placeholder spin rate (radians per fixed step) for the T1.3 demo; ~0.7 rad/s at 120 Hz.
+const DEMO_SPIN_PER_STEP = 0.006;
+
 export interface SimConfig {
   [key: string]: unknown;
 }
@@ -49,6 +52,10 @@ export function createSim({ seed }: CreateSimArgs): Sim {
       }
       // Bank jitter sourced from the RNG so determinism has something to bite on.
       player.bank = player.bank * 0.9 + (rng.next() - 0.5) * 0.01;
+
+      // PLACEHOLDER (T1.3): spin the player at the fixed tick so the loop's interpolation is
+      // visible. The movement system (T2.2) replaces this with real heading/banking.
+      player.yaw += DEMO_SPIN_PER_STEP;
 
       if (input.fireTapped || input.firing) {
         world.events.push({ type: 'sfx', id: 'laser_pulse' });
