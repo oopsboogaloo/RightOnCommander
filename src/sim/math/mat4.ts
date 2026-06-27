@@ -56,6 +56,13 @@ export const rotationZ = (rad: number): Mat4 => {
   ];
 };
 
+// Transform a direction (ignores translation) — for normals and other vectors.
+export const transformDir = (m: Mat4, v: Vec3): Vec3 => ({
+  x: m[0] * v.x + m[1] * v.y + m[2] * v.z,
+  y: m[4] * v.x + m[5] * v.y + m[6] * v.z,
+  z: m[8] * v.x + m[9] * v.y + m[10] * v.z,
+});
+
 // Transform a point (assumes w = 1) and perspective-divide.
 export const transformPoint = (m: Mat4, v: Vec3): Vec3 => {
   const x = m[0] * v.x + m[1] * v.y + m[2] * v.z + m[3];
