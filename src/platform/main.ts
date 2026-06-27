@@ -7,8 +7,10 @@ import { PLAYER_ID } from '../sim/world.js';
 import { vec3 } from '../sim/math/vec3.js';
 import { Renderer2D } from '../render/renderer2d.js';
 import { modelMatrix } from '../render/project.js';
-import { startGameLoop } from './loop.js';
-import type { InputFrame, Mesh } from '../interfaces.js';
+import { startGameLoop, DT } from './loop.js';
+import { DomInput } from '../input/domInput.js';
+import { createLocalStorage } from './storage.js';
+import type { Mesh } from '../interfaces.js';
 import sidewinder from '../content/meshes/sidewinder.json';
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
@@ -28,17 +30,8 @@ window.addEventListener('resize', resize);
 
 const sim = createSim({ seed: 1 });
 const renderer = new Renderer2D(ctx);
+const input = new DomInput({ canvas, storage: createLocalStorage() });
 const mesh = sidewinder as unknown as Mesh;
-
-const noInput: InputFrame = {
-  moveTarget: null,
-  firing: false,
-  fireTapped: false,
-  ecm: false,
-  energyBomb: false,
-  confirm: false,
-  pause: false,
-};
 
 interface Pose {
   x: number;
@@ -62,7 +55,7 @@ let curr = prev;
 startGameLoop({
   step: () => {
     prev = curr;
-    sim.step(noInput);
+    sim.step(input.sample(DT));
     curr = readPlayerPose();
   },
   render: (alpha) => {

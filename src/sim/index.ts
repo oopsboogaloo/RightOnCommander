@@ -46,9 +46,10 @@ export function createSim({ seed }: CreateSimArgs): Sim {
     const player = world.entities.get(PLAYER_ID);
     if (player) {
       if (input.moveTarget) {
-        // Critically-damped-ish follow toward the move target.
+        // Critically-damped-ish follow toward the move target, in the play plane
+        // (x = right, y-of-target -> world z = up-screen). Real movement lands in T2.2.
         player.pos.x += (input.moveTarget.x - player.pos.x) * 0.1;
-        player.pos.y += (input.moveTarget.y - player.pos.y) * 0.1;
+        player.pos.z += (input.moveTarget.y - player.pos.z) * 0.1;
       }
       // Bank jitter sourced from the RNG so determinism has something to bite on.
       player.bank = player.bank * 0.9 + (rng.next() - 0.5) * 0.01;
