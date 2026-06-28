@@ -19,6 +19,7 @@ export interface PlayerState {
   escapePod: boolean;
   lives: number;
   fireCooldown: number; // seconds until the next pulse may fire [ROC-LAS-3]
+  invulnTtl: number; // post-spawn / post-hit invulnerability, seconds [ROC-LIFE-2]
 }
 
 // Pending-spawn schedule for an active wave (kept in the World so replays are deterministic).
@@ -78,6 +79,8 @@ export function makeWorld(seed: number): World {
     shieldMax: 4,
     hull: 16,
     hullMax: 16,
+    colliderRx: 0.45, // play-plane hit ellipse (full-mesh; collision scales by SHIP_SCALE)
+    colliderRz: 0.3,
   };
 
   const entities = new Map<number, Entity>();
@@ -105,6 +108,7 @@ export function makeWorld(seed: number): World {
       escapePod: false,
       lives: 3,
       fireCooldown: 0,
+      invulnTtl: 0,
     },
     econ: { wallet: 0, score: 0 },
     cargo: {},

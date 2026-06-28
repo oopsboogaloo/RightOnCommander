@@ -5,7 +5,7 @@
 
 import type { Mesh } from '../../interfaces.js';
 import type { Entity } from '../components.js';
-import type { World } from '../world.js';
+import { PLAYER_ID, type World } from '../world.js';
 import {
   type Pt,
   segmentIntersectsEllipse,
@@ -157,36 +157,54 @@ function projectileHitsTarget(a: Pt, b: Pt, t: Entity, cfg: CollisionConfig): bo
   return segmentIntersectsConvexPolygon(a, b, transformSilhouette(scaled, t.pos.x, t.pos.z, t.yaw));
 }
 
-// Find player-projectile -> target hits this step. Returns the hit list for the damage system.
+// Swept segment of a projectile in the play plane (previous -> current position).
+function sweptSegment(e: Entity, dt: number): { a: Pt; b: Pt } {
+  const b: Pt = { x: e.pos.x, y: e.pos.z };
+  const a: Pt = { x: e.pos.x - e.vel.x * dt, y: e.pos.z - e.vel.z * dt };
+  return { a, b };
+}
+
+// Find this step's projectile hits for the damage system: player fire vs enemy/boss targets, and
+// enemy fire vs the player (the player can now be shot — death/lives handled in gamestate). [T6.4]
 export function collisionSystem(world: World, cfg: CollisionConfig): CollisionHit[] {
+  const hits: CollisionHit[] = [];
+
   const targets: Entity[] = [];
   for (const e of world.entities.values()) {
     if (e.kind === 'enemy' || e.kind === 'boss') targets.push(e);
   }
-  if (targets.length === 0) return [];
 
-  const hash = new SpatialHash(cfg.cellSize);
-  const scale = cfg.colliderScale ?? 1;
-  for (const t of targets) {
-    hash.insert({ id: t.id, x: t.pos.x, y: t.pos.z, r: colliderRadius(t, cfg.defaultRadius ?? 0.3, scale) });
-  }
-
-  const hits: CollisionHit[] = [];
-  for (const e of world.entities.values()) {
-    // Player projectiles and homing missiles are the attackers vs enemy targets.
-    if (e.team !== 'player' || (e.kind !== 'projectile' && e.kind !== 'missile')) continue;
-    const b: Pt = { x: e.pos.x, y: e.pos.z };
-    const a: Pt = { x: e.pos.x - e.vel.x * cfg.dt, y: e.pos.z - e.vel.z * cfg.dt };
-
-    for (const tid of hash.nearAABB(
-      Math.min(a.x, b.x),
-      Math.min(a.y, b.y),
-      Math.max(a.x, b.x),
-      Math.max(a.y, b.y),
-    )) {
-      const t = world.entities.get(tid);
-      if (t && projectileHitsTarget(a, b, t, cfg)) hits.push({ projectile: e.id, target: tid });
+  // Player fire -> enemy targets, via the spatial-hash broadphase.
+  if (targets.length > 0) {
+    const hash = new SpatialHash(cfg.cellSize);
+    const scale = cfg.colliderScale ?? 1;
+    for (const t of targets) {
+      hash.insert({ id: t.id, x: t.pos.x, y: t.pos.z, r: colliderRadius(t, cfg.defaultRadius ?? 0.3, scale) });
+    }
+    for (const e of world.entities.values()) {
+      if (e.team !== 'player' || (e.kind !== 'projectile' && e.kind !== 'missile')) continue;
+      const { a, b } = sweptSegment(e, cfg.dt);
+      for (const tid of hash.nearAABB(
+        Math.min(a.x, b.x),
+        Math.min(a.y, b.y),
+        Math.max(a.x, b.x),
+        Math.max(a.y, b.y),
+      )) {
+        const t = world.entities.get(tid);
+        if (t && projectileHitsTarget(a, b, t, cfg)) hits.push({ projectile: e.id, target: tid });
+      }
     }
   }
+
+  // Enemy fire -> the player. One target, so a direct test is cheaper than a hash. [ROC-DMG-6a]
+  const player = world.entities.get(PLAYER_ID);
+  if (player) {
+    for (const e of world.entities.values()) {
+      if (e.team !== 'enemy' || (e.kind !== 'projectile' && e.kind !== 'missile')) continue;
+      const { a, b } = sweptSegment(e, cfg.dt);
+      if (projectileHitsTarget(a, b, player, cfg)) hits.push({ projectile: e.id, target: PLAYER_ID });
+    }
+  }
+
   return hits;
 }

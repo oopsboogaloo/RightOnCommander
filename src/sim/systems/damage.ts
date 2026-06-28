@@ -47,9 +47,19 @@ export function applyDamage(
   world.events.push({ type: 'fragments', pos: { ...e.pos }, meshId: e.meshId });
 
   if ((e.hull ?? 0) <= 0) {
-    world.events.push({ type: 'destroyed', id: e.id, kind: e.kind, pos: { ...e.pos }, bounty: e.bounty ?? 0, drops: e.drops });
-    world.events.push({ type: 'sfx', id: 'explode_small' });
-    world.entities.delete(e.id);
+    // No bounty/drops for the player; gamestate resolves the life/respawn and keeps the entity
+    // (we reuse it on respawn), so only non-player wrecks are deleted here. [T6.4, ROC-LIFE-*]
+    const isPlayer = e.kind === 'player';
+    world.events.push({
+      type: 'destroyed',
+      id: e.id,
+      kind: e.kind,
+      pos: { ...e.pos },
+      bounty: isPlayer ? 0 : e.bounty ?? 0,
+      drops: isPlayer ? undefined : e.drops,
+    });
+    world.events.push({ type: 'sfx', id: isPlayer ? 'explode_player' : 'explode_small' });
+    if (!isPlayer) world.entities.delete(e.id);
     return;
   }
 
@@ -74,7 +84,10 @@ export function damageSystem(
     const proj = world.entities.get(hit.projectile);
     if (!proj || spent.has(hit.projectile)) continue; // projectile already consumed
 
-    applyDamage(world, target, proj.damage ?? 1, cfg);
+    // An invulnerable (just-spawned) or already-dead player soaks the shot harmlessly. [T6.4]
+    const playerImmune =
+      target.kind === 'player' && (world.mode === 'GAME_OVER' || world.player.invulnTtl > 0);
+    if (!playerImmune) applyDamage(world, target, proj.damage ?? 1, cfg);
 
     world.entities.delete(proj.id);
     if (proj.kind === 'projectile') world.pool.projectiles.push(proj); // recycle pulses (no leak)
