@@ -75,7 +75,7 @@ function hullFlash(e: Entity): { fill: string; stroke: string } | undefined {
 
 // Concentric shield ellipses = remaining strength; brighten briefly when a hit is absorbed.
 // Drawn a little outside the hull for clarity, foreshortened by the camera. [ROC-DMG-2,3]
-function drawShield(e: Entity): void {
+function drawShield(e: Entity, center: Vec3 = e.pos): void {
   const rings = e.shield ?? 0;
   if (rings <= 0) return;
   const flash = (e.shieldFlashTtl ?? 0) > 0;
@@ -83,7 +83,7 @@ function drawShield(e: Entity): void {
   const rz = (e.colliderRz ?? 0.3) * SHIP_SCALE;
   for (let i = 0; i < rings; i++) {
     const f = 1.25 + i * 0.28; // each remaining ring sits a little further out
-    renderer.drawWorldEllipse(e.pos, rx * f, rz * f, {
+    renderer.drawWorldEllipse(center, rx * f, rz * f, {
       stroke: flash ? '#cffcff' : '#39d',
       lineWidth: flash ? 2.5 : 1.2,
     });
@@ -132,11 +132,23 @@ startGameLoop({
     if (particles.length) renderer.drawWorldParticles(particles, { fill: '#fff', size: 2 });
     if (pickups.length) renderer.drawWorldParticles(pickups, { fill: '#6cf', size: 7 });
 
-    // Player ship, interpolated between the last two sim states.
+    // Player ship, interpolated between the last two sim states. Blink while invulnerable
+    // (just spawned / after a hit) so the i-frames read on screen. [ROC-LIFE-2]
     const player = sim.state.entities.get(PLAYER_ID)!;
-    const pmesh = (player.meshId && MESHES[player.meshId]) || MESHES.cobra_mk3;
-    const pos = vec3(lerp(prev.x, curr.x, alpha), lerp(prev.y, curr.y, alpha), lerp(prev.z, curr.z, alpha));
-    renderer.drawMesh(pmesh, modelMatrix(pos, lerp(prev.yaw, curr.yaw, alpha), lerp(prev.bank, curr.bank, alpha), SHIP_SCALE), hullFlash(player));
+    const invuln = sim.state.player.invulnTtl;
+    const blinkOff = invuln > 0 && Math.floor(invuln / 0.1) % 2 === 1;
+    if (sim.state.mode !== 'GAME_OVER' && !blinkOff) {
+      const pmesh = (player.meshId && MESHES[player.meshId]) || MESHES.cobra_mk3;
+      const pos = vec3(lerp(prev.x, curr.x, alpha), lerp(prev.y, curr.y, alpha), lerp(prev.z, curr.z, alpha));
+      renderer.drawMesh(pmesh, modelMatrix(pos, lerp(prev.yaw, curr.yaw, alpha), lerp(prev.bank, curr.bank, alpha), SHIP_SCALE), hullFlash(player));
+      drawShield(player, pos);
+    }
+
+    if (sim.state.mode === 'GAME_OVER') {
+      const cx = (canvas!.clientWidth || canvas!.width) / 2;
+      const cy = (canvas!.clientHeight || canvas!.height) / 2;
+      renderer.drawText('GAME OVER', { x: cx, y: cy }, { fill: '#f55', font: '32px monospace', align: 'center' });
+    }
 
     renderer.endFrame(alpha);
   },

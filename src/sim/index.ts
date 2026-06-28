@@ -22,6 +22,7 @@ import { missilesSystem } from './systems/missiles.js';
 import { dropsSystem } from './systems/drops.js';
 import { pickupsSystem } from './systems/pickups.js';
 import { startLevel, levelStateSystem, type LevelDef } from './systems/levelstate.js';
+import { gamestateSystem, DEFAULT_GAMESTATE } from './systems/gamestate.js';
 import { loadContent } from './content/loadContent.js';
 
 // Fixed sim tick, in seconds. Must match the shell loop's DT (platform/loop.ts). [design §3]
@@ -67,6 +68,18 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
   const level: LevelDef | undefined = loaded.level;
   if (level) startLevel(world, level, waveCtx);
 
+  // Wipe the current combat and re-run the level's opening after a death that costs a life.
+  function restartLevel(): void {
+    if (!level) return;
+    for (const e of [...world.entities.values()]) {
+      if (e.kind === 'enemy' || e.kind === 'boss' || e.kind === 'projectile' || e.kind === 'missile' || e.kind === 'pickup') {
+        world.entities.delete(e.id);
+      }
+    }
+    world.waves.active.clear();
+    startLevel(world, level, waveCtx);
+  }
+
   function step(input: InputFrame): SimEvent[] {
     rng.setState(world.rngState);
     world.events = [];
@@ -84,6 +97,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
       colliderScale: SHIP_SCALE,
     });
     damageSystem(world, hits, SIM_DT);
+    gamestateSystem(world, SIM_DT, restartLevel, { ...DEFAULT_GAMESTATE, colliderScale: SHIP_SCALE });
     dropsSystem(world);
     pickupsSystem(world, SIM_DT);
     economySystem(world);
