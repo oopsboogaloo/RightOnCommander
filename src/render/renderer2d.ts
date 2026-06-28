@@ -4,8 +4,9 @@
 
 import type { Renderer, Mesh, Vec2, DrawOpts } from '../interfaces.js';
 import type { Mat4 } from '../sim/math/mat4.js';
+import type { Vec3 } from '../sim/math/vec3.js';
 import { type Camera, createCamera } from './camera.js';
-import { prepareMesh, type Projected } from './project.js';
+import { prepareMesh, projectPoint, type Projected } from './project.js';
 
 interface Star {
   x: number; // normalised [0,1) across the canvas
@@ -105,6 +106,13 @@ export class Renderer2D implements Renderer {
       ctx.fill(); // black fill occludes hulls behind (painter order) [ROC-VIS-2,5]
       ctx.stroke(); // white vector edges [ROC-VIS-1]
     }
+  }
+
+  // Project a world-space segment and stroke it (lasers, dock wireframe). [ROC-LAS-4]
+  drawWorldLine(a: Vec3, b: Vec3, opts: DrawOpts = {}): void {
+    const pa = this.toPixel(projectPoint(this.camera, a));
+    const pb = this.toPixel(projectPoint(this.camera, b));
+    this.drawLine(pa, pb, opts);
   }
 
   // The 2D primitives below take canvas-pixel coordinates; they get richer use in later tasks.

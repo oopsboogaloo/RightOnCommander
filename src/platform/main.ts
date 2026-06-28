@@ -4,7 +4,7 @@
 
 import { createSim } from '../sim/index.js';
 import { PLAYER_ID } from '../sim/world.js';
-import { vec3 } from '../sim/math/vec3.js';
+import { vec3, sub, scale, normalize } from '../sim/math/vec3.js';
 import { Renderer2D } from '../render/renderer2d.js';
 import { modelMatrix } from '../render/project.js';
 import { startGameLoop, DT } from './loop.js';
@@ -47,6 +47,7 @@ function readPlayerPose(): Pose {
 }
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
+const PULSE_LEN = 0.18; // visual length of a pulse-laser segment
 
 // Keep the last two render-relevant poses so the renderer can interpolate between them.
 let prev = readPlayerPose();
@@ -65,6 +66,14 @@ startGameLoop({
       lerp(prev.z, curr.z, alpha),
     );
     renderer.beginFrame();
+
+    // Pulse lasers: short white segments drawn behind the firing direction.
+    for (const e of sim.state.entities.values()) {
+      if (e.kind !== 'projectile') continue;
+      const tail = sub(e.pos, scale(normalize(e.vel), PULSE_LEN));
+      renderer.drawWorldLine(e.pos, tail, { stroke: '#fff', lineWidth: 2 });
+    }
+
     renderer.drawMesh(mesh, modelMatrix(pos, lerp(prev.yaw, curr.yaw, alpha), lerp(prev.bank, curr.bank, alpha)));
     renderer.endFrame(alpha);
   },
