@@ -8,15 +8,16 @@ import {
   translation,
   rotationY,
   rotationZ,
+  scaling,
   transformPoint,
   transformDir,
 } from '../sim/math/mat4.js';
 import type { Mesh } from '../interfaces.js';
 import { type Camera, toCameraSpace, dirToCameraSpace } from './camera.js';
 
-// Model matrix: orient by bank (roll) then yaw (heading), then translate to position. [design §7]
-export function modelMatrix(pos: Vec3, yaw: number, bank: number): Mat4 {
-  return multiply(translation(pos), multiply(rotationY(yaw), rotationZ(bank)));
+// Model matrix: scale, orient by bank (roll) then yaw (heading), then translate. [design §7]
+export function modelMatrix(pos: Vec3, yaw: number, bank: number, scale = 1): Mat4 {
+  return multiply(translation(pos), multiply(rotationY(yaw), multiply(rotationZ(bank), scaling(scale))));
 }
 
 export interface Projected {
@@ -51,6 +52,7 @@ export interface PreparedMesh {
   projected: Projected[]; // per source vertex
   cameraSpace: Vec3[]; // per source vertex
   faces: PreparedFace[]; // visible faces only, sorted far -> near
+  faceVisible: boolean[]; // per source face index: survived back-face cull
 }
 
 // Transform a mesh by its model matrix, project to screen, cull back faces, and painter-sort
@@ -60,7 +62,9 @@ export function prepareMesh(mesh: Mesh, model: Mat4, cam: Camera): PreparedMesh 
   const projected = cameraSpace.map((cs) => projectCameraPoint(cam, cs));
 
   const faces: PreparedFace[] = [];
-  for (const face of mesh.faces) {
+  const faceVisible: boolean[] = new Array<boolean>(mesh.faces.length).fill(false);
+  for (let fi = 0; fi < mesh.faces.length; fi++) {
+    const face = mesh.faces[fi];
     const normalCam = dirToCameraSpace(cam, transformDir(model, face.normal));
 
     let cx = 0;
@@ -75,9 +79,10 @@ export function prepareMesh(mesh: Mesh, model: Mat4, cam: Camera): PreparedMesh 
     const centroidCam = vec3(cx / n, cy / n, cz / n);
 
     if (isBackFace(normalCam, centroidCam)) continue;
+    faceVisible[fi] = true;
     faces.push({ loop: face.loop, depth: centroidCam.z, normalCam: normalize(normalCam) });
   }
 
   faces.sort((a, b) => b.depth - a.depth); // larger depth = farther = drawn first
-  return { projected, cameraSpace, faces };
+  return { projected, cameraSpace, faces, faceVisible };
 }

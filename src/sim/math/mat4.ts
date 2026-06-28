@@ -25,6 +25,13 @@ export const multiply = (a: Mat4, b: Mat4): Mat4 => {
   return out;
 };
 
+export const scaling = (s: number): Mat4 => [
+  s, 0, 0, 0,
+  0, s, 0, 0,
+  0, 0, s, 0,
+  0, 0, 0, 1,
+];
+
 export const translation = (t: Vec3): Mat4 => [
   1, 0, 0, t.x,
   0, 1, 0, t.y,

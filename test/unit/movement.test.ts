@@ -31,21 +31,22 @@ describe('movementSystem', () => {
     expect(p.pos.z).toBeCloseTo(0.3, 2);
   });
 
-  it('banks in the direction of lateral motion', () => {
+  it('banks into the turn (right rolls clockwise = negative bank)', () => {
+    // Bank is -bankFactor*vx so the on-screen roll matches the turn direction. [DEFECTS D3]
     const right = run(Array<Vec2>(3).fill({ x: 1, y: 0 }));
     expect(right.vel.x).toBeGreaterThan(0);
-    expect(right.bank).toBeGreaterThan(0); // sign matches lateral direction
+    expect(right.bank).toBeLessThan(0); // moving right rolls clockwise
 
     const left = run(Array<Vec2>(3).fill({ x: -1, y: 0 }));
     expect(left.vel.x).toBeLessThan(0);
-    expect(left.bank).toBeLessThan(0);
+    expect(left.bank).toBeGreaterThan(0); // moving left rolls anticlockwise
   });
 
   it('levels out when lateral motion ceases', () => {
     const w = makeWorld(1);
     for (let i = 0; i < 5; i++) movementSystem(w, frame({ x: 1, y: 0 }), DT); // bank right
     const banked = w.entities.get(PLAYER_ID)!.bank;
-    expect(banked).toBeGreaterThan(0);
+    expect(banked).toBeLessThan(0);
     for (let i = 0; i < 300; i++) movementSystem(w, frame(null), DT); // release
     expect(Math.abs(w.entities.get(PLAYER_ID)!.bank)).toBeLessThan(1e-3);
   });

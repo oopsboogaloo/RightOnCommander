@@ -157,13 +157,19 @@ def _newell_normal(loop: list[int], pts: list[Vec3]) -> Vec3:
 
 def _face_loop(face_index: int, bp: Blueprint, pts: list[Vec3], normal: Vec3) -> list[int]:
     """Reconstruct the ordered vertex loop of a face from its boundary edges."""
-    vids: set[int] = set()
+    incident: dict[int, int] = {}
     for v1, v2, f1, f2, _vis in bp.edges:
         if f1 == f2:
             continue  # decorative edge lying within a single face — not a boundary
         if f1 == face_index or f2 == face_index:
-            vids.add(v1)
-            vids.add(v2)
+            incident[v1] = incident.get(v1, 0) + 1
+            incident[v2] = incident.get(v2, 0) + 1
+    # A genuine polygon corner is entered and left as you walk the boundary, so it lies on
+    # >= 2 of the face's boundary edges. A vertex touched by only one is the endpoint of a
+    # decorative line spur — e.g. the Cobra's gun barrel (EDGE 20,21 lists faces 0 & 11 for
+    # visibility but is not part of either polygon). Elite stores such edges against a face
+    # yet never folds their tips into the hull; including them skews the loop. [DEFECTS D1]
+    vids: set[int] = {v for v, deg in incident.items() if deg >= 2}
     if len(vids) < 3:
         # Fallback: vertices that list this face in their membership fields.
         vids = {i for i, v in enumerate(bp.vertices) if face_index in v[3:7]}
@@ -215,9 +221,11 @@ def build_mesh(name: str, bp: Blueprint) -> dict:
     edges = [[e[0], e[1]] for e in bp.edges]
 
     faces = []
+    loops: list[list[int]] = []
     for fi, (nx, ny, nz, _vis) in enumerate(bp.faces):
         normal = _normalize((float(nx), float(ny), float(nz)))
         loop = _face_loop(fi, bp, pts, (float(nx), float(ny), float(nz)))
+        loops.append(loop)
         if normal == (0.0, 0.0, 0.0):
             normal = _normalize(_newell_normal(loop, pts))
         faces.append(
@@ -227,12 +235,30 @@ def build_mesh(name: str, bp: Blueprint) -> dict:
             }
         )
 
+    # Edges already stroked as a face boundary = consecutive vertex pairs of any face loop.
+    boundary: set[frozenset[int]] = set()
+    for loop in loops:
+        m = len(loop)
+        for i in range(m):
+            boundary.add(frozenset((loop[i], loop[(i + 1) % m])))
+
+    # Detail edges are blueprint edges that aren't a face boundary — the gun barrel and the
+    # cockpit/engine line work. Each carries its two controlling faces so the renderer can
+    # draw it only while one of those faces is visible (Elite's hidden-line rule), which keeps
+    # the gun on the lit nose but hides the rear detailing when the back is culled. [DEFECTS D1]
+    details = []
+    for v1, v2, f1, f2, _vis in bp.edges:
+        if frozenset((v1, v2)) in boundary:
+            continue
+        details.append({"edge": [v1, v2], "faces": [f1, f2]})
+
     return {
         "name": name,
         "source": f"bbcelite {bp.root}",
         "vertices": vertices,
         "edges": edges,
         "faces": faces,
+        "details": details,
     }
 
 

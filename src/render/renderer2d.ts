@@ -106,6 +106,20 @@ export class Renderer2D implements Renderer {
       ctx.fill(); // black fill occludes hulls behind (painter order) [ROC-VIS-2,5]
       ctx.stroke(); // white vector edges [ROC-VIS-1]
     }
+
+    // Decorative detail lines (gun barrel, cockpit/engine work) drawn over the hull, but only
+    // while one of each edge's controlling faces is visible — Elite's hidden-line rule. [ROC-VIS-1]
+    if (mesh.details) {
+      for (const d of mesh.details) {
+        if (!prep.faceVisible[d.faces[0]] && !prep.faceVisible[d.faces[1]]) continue;
+        const a = this.toPixel(prep.projected[d.edge[0]]);
+        const b = this.toPixel(prep.projected[d.edge[1]]);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
   }
 
   // Project a world-space segment and stroke it (lasers, dock wireframe). [ROC-LAS-4]
