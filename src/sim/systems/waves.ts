@@ -1,0 +1,171 @@
+// Wave manager. Spawns enemies from data-driven wave definitions (pattern × enemy, fully
+// decoupled), tracks membership, flies each member along its path, and awards the 50%
+// wave-clear bonus — but only when every member is destroyed by the player (any escape
+// forfeits it). [tasks T4.2, design §10, ROC-ENM-1,7,8, ROC-ECO-1a,1b]
+
+import { vec3 } from '../math/vec3.js';
+import type { Entity } from '../components.js';
+import type { Rng } from '../rng.js';
+import type { World, WaveRecord } from '../world.js';
+import { getPattern, yawFromTangent, type PathParams } from './paths.js';
+
+export interface EnemyDef {
+  hull: number;
+  shield?: number;
+  bounty: number;
+  meshId?: string;
+  colliderRx?: number;
+  colliderRz?: number;
+}
+
+// Wave-as-data: pattern, enemy and stats are orthogonal. [ROC-ENM-7,8]
+export interface WaveDef {
+  id: string;
+  pattern: string;
+  enemy: string;
+  count: number;
+  spacingMs: number;
+  durationMs?: number; // member lifetime before it flies off-field
+  speed?: number; // scales the path rate
+  params?: PathParams;
+}
+
+export interface WaveContext {
+  enemies: Record<string, EnemyDef>;
+}
+
+interface PathRuntime {
+  pattern: string;
+  params: PathParams;
+  age: number;
+  duration: number;
+}
+
+const BANK_K = 6; // bank ∝ turn rate
+const MAX_BANK = 0.6;
+const clampAbs = (v: number, m: number): number => Math.min(m, Math.max(-m, v));
+
+// Register a wave as active; members spawn over the following steps. Returns its id.
+export function startWave(world: World, def: WaveDef, ctx: WaveContext): number {
+  const enemy = ctx.enemies[def.enemy];
+  if (!enemy) throw new Error(`unknown enemy '${def.enemy}'`);
+
+  const id = world.nextId++;
+  const rec: WaveRecord = {
+    members: new Set(),
+    total: def.count,
+    bountySum: def.count * enemy.bounty,
+    killed: 0,
+    escaped: false,
+    spawn: {
+      pattern: def.pattern,
+      enemy: def.enemy,
+      params: def.params ?? {},
+      count: def.count,
+      spacingSec: def.spacingMs / 1000,
+      durationSec: (def.durationMs ?? 4000) / 1000 / (def.speed ?? 1),
+      pending: def.count,
+      timer: 0,
+      spawnedIndex: 0,
+    },
+  };
+  world.waves.active.set(id, rec);
+  return id;
+}
+
+function spawnMember(world: World, waveId: number, rec: WaveRecord, ctx: WaveContext, rng: Rng): void {
+  const s = rec.spawn;
+  if (!s) return;
+  const def = ctx.enemies[s.enemy];
+  const pattern = getPattern(s.pattern);
+  if (!def || !pattern) return;
+
+  const id = world.nextId++;
+  const params = s.params;
+  const start = pattern(0, params, rng);
+  const path: PathRuntime = { pattern: s.pattern, params, age: 0, duration: s.durationSec };
+  const e: Entity = {
+    id,
+    kind: 'enemy',
+    pos: vec3(start.pos.x, start.pos.y, start.pos.z),
+    vel: vec3(),
+    yaw: yawFromTangent(start.tangent),
+    bank: 0,
+    hull: def.hull,
+    hullMax: def.hull,
+    shield: def.shield ?? 0,
+    shieldMax: def.shield ?? 0,
+    bounty: def.bounty,
+    meshId: def.meshId,
+    colliderRx: def.colliderRx,
+    colliderRz: def.colliderRz,
+    waveId,
+    path,
+  };
+  world.entities.set(id, e);
+  rec.members.add(id);
+}
+
+export function waveSystem(world: World, rng: Rng, dt: number, ctx: WaveContext): void {
+  // 1. Reconcile kills: members the player destroyed are already gone from the world.
+  for (const rec of world.waves.active.values()) {
+    for (const id of [...rec.members]) {
+      if (!world.entities.has(id)) {
+        rec.members.delete(id);
+        rec.killed++;
+      }
+    }
+  }
+
+  // 2. Spawn any due members.
+  for (const [waveId, rec] of world.waves.active) {
+    const s = rec.spawn;
+    if (!s || s.pending <= 0) continue;
+    s.timer -= dt;
+    while (s.pending > 0 && s.timer <= 0) {
+      spawnMember(world, waveId, rec, ctx, rng);
+      s.pending--;
+      s.spawnedIndex++;
+      s.timer += s.spacingSec;
+    }
+  }
+
+  // 3. Fly members along their paths; off-field members escape (forfeiting the bonus).
+  for (const e of [...world.entities.values()]) {
+    if (e.kind !== 'enemy' || !e.path) continue;
+    const path = e.path as PathRuntime;
+    const pattern = getPattern(path.pattern);
+    if (!pattern) continue;
+
+    path.age += dt;
+    const t = Math.min(path.age / path.duration, 1);
+    const pt = pattern(t, path.params, rng);
+    e.pos = vec3(pt.pos.x, pt.pos.y, pt.pos.z);
+    const yaw = yawFromTangent(pt.tangent);
+    e.bank = clampAbs((yaw - e.yaw) * BANK_K, MAX_BANK); // [ROC-ENM-3]
+    e.yaw = yaw;
+
+    if (path.age >= path.duration) {
+      const rec = e.waveId != null ? world.waves.active.get(e.waveId) : undefined;
+      if (rec) {
+        rec.members.delete(e.id);
+        rec.escaped = true; // [ROC-ECO-1a]
+      }
+      world.entities.delete(e.id);
+    }
+  }
+
+  // 4. Resolve finished waves: award the bonus on a full kill-clear, else just clean up.
+  for (const [waveId, rec] of [...world.waves.active]) {
+    const doneSpawning = !rec.spawn || rec.spawn.pending === 0;
+    if (!doneSpawning || rec.members.size > 0) continue;
+
+    if (!rec.escaped && rec.killed === rec.total) {
+      const bonus = 0.5 * rec.bountySum; // [ROC-ECO-1a]
+      world.econ.wallet += bonus;
+      world.econ.score += bonus;
+      world.events.push({ type: 'waveBonus', amount: bonus }); // prominent flash [ROC-ECO-1b]
+    }
+    world.waves.active.delete(waveId);
+  }
+}
