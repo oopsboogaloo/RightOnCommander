@@ -4,7 +4,7 @@
 
 import type { Renderer, Mesh, Vec2, DrawOpts } from '../interfaces.js';
 import type { Mat4 } from '../sim/math/mat4.js';
-import type { Vec3 } from '../sim/math/vec3.js';
+import { type Vec3, vec3 } from '../sim/math/vec3.js';
 import { type Camera, createCamera } from './camera.js';
 import { prepareMesh, projectPoint, type Projected } from './project.js';
 
@@ -127,6 +127,17 @@ export class Renderer2D implements Renderer {
     const pa = this.toPixel(projectPoint(this.camera, a));
     const pb = this.toPixel(projectPoint(this.camera, b));
     this.drawLine(pa, pb, opts);
+  }
+
+  // Project a play-plane ellipse (a shield ring) to screen and stroke it. The x and z radii are
+  // projected independently so the ring foreshortens with the camera tilt. [ROC-DMG-3]
+  drawWorldEllipse(center: Vec3, rx: number, rz: number, opts: DrawOpts = {}): void {
+    const c = this.toPixel(projectPoint(this.camera, center));
+    const ex = this.toPixel(projectPoint(this.camera, vec3(center.x + rx, center.y, center.z)));
+    const ez = this.toPixel(projectPoint(this.camera, vec3(center.x, center.y, center.z + rz)));
+    const prx = Math.hypot(ex.x - c.x, ex.y - c.y);
+    const pry = Math.hypot(ez.x - c.x, ez.y - c.y);
+    this.drawEllipse(c, prx, pry, opts);
   }
 
   // Project world-space points and draw them as small dots (explosion particles). [ROC-VIS-6]

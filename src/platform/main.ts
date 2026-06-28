@@ -11,6 +11,7 @@ import { startGameLoop, DT } from './loop.js';
 import { DomInput } from '../input/domInput.js';
 import { createLocalStorage } from './storage.js';
 import type { Mesh } from '../interfaces.js';
+import type { Entity } from '../sim/components.js';
 
 import enemies from '../content/enemies.json';
 import level1 from '../content/level1.json';
@@ -67,6 +68,28 @@ function readPlayerPose(): Pose {
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const PULSE_LEN = 0.18;
 
+// White flash over the whole hull while a hull-damage hit is fresh. [ROC-DMG-6,6a]
+function hullFlash(e: Entity): { fill: string; stroke: string } | undefined {
+  return (e.flashTtl ?? 0) > 0 ? { fill: '#fff', stroke: '#fff' } : undefined;
+}
+
+// Concentric shield ellipses = remaining strength; brighten briefly when a hit is absorbed.
+// Drawn a little outside the hull for clarity, foreshortened by the camera. [ROC-DMG-2,3]
+function drawShield(e: Entity): void {
+  const rings = e.shield ?? 0;
+  if (rings <= 0) return;
+  const flash = (e.shieldFlashTtl ?? 0) > 0;
+  const rx = (e.colliderRx ?? 0.3) * SHIP_SCALE;
+  const rz = (e.colliderRz ?? 0.3) * SHIP_SCALE;
+  for (let i = 0; i < rings; i++) {
+    const f = 1.25 + i * 0.28; // each remaining ring sits a little further out
+    renderer.drawWorldEllipse(e.pos, rx * f, rz * f, {
+      stroke: flash ? '#cffcff' : '#39d',
+      lineWidth: flash ? 2.5 : 1.2,
+    });
+  }
+}
+
 let prev = readPlayerPose();
 let curr = prev;
 
@@ -98,7 +121,8 @@ startGameLoop({
         case 'enemy':
         case 'boss': {
           const m = e.meshId ? MESHES[e.meshId] : undefined;
-          if (m) renderer.drawMesh(m, modelMatrix(e.pos, e.yaw, e.bank, SHIP_SCALE));
+          if (m) renderer.drawMesh(m, modelMatrix(e.pos, e.yaw, e.bank, SHIP_SCALE), hullFlash(e));
+          drawShield(e);
           break;
         }
         default:
@@ -112,7 +136,7 @@ startGameLoop({
     const player = sim.state.entities.get(PLAYER_ID)!;
     const pmesh = (player.meshId && MESHES[player.meshId]) || MESHES.cobra_mk3;
     const pos = vec3(lerp(prev.x, curr.x, alpha), lerp(prev.y, curr.y, alpha), lerp(prev.z, curr.z, alpha));
-    renderer.drawMesh(pmesh, modelMatrix(pos, lerp(prev.yaw, curr.yaw, alpha), lerp(prev.bank, curr.bank, alpha), SHIP_SCALE));
+    renderer.drawMesh(pmesh, modelMatrix(pos, lerp(prev.yaw, curr.yaw, alpha), lerp(prev.bank, curr.bank, alpha), SHIP_SCALE), hullFlash(player));
 
     renderer.endFrame(alpha);
   },
