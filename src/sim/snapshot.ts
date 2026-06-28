@@ -3,7 +3,7 @@
 // be stored or replayed. [ROC-TEST-4,5]
 
 import type { Entity } from './components.js';
-import type { PlayerState, World } from './world.js';
+import type { PlayerState, WaveSpawnState, World } from './world.js';
 
 export interface WorldSnapshot {
   frame: number;
@@ -17,7 +17,17 @@ export interface WorldSnapshot {
   econ: { wallet: number; score: number };
   cargo: Record<string, number>;
   rating: { kills: number; weightedTally: number; rank: string };
-  waves: { active: { id: number; members: number[]; total: number; bountySum: number }[] };
+  waves: {
+    active: {
+      id: number;
+      members: number[];
+      total: number;
+      bountySum: number;
+      killed: number;
+      escaped: boolean;
+      spawn: WaveSpawnState | null;
+    }[];
+  };
   unlocks: { eliteMode: boolean; thargoidShip: boolean };
 }
 
@@ -40,6 +50,9 @@ export function snapshot(world: World): WorldSnapshot {
         members: Array.from(rec.members),
         total: rec.total,
         bountySum: rec.bountySum,
+        killed: rec.killed,
+        escaped: rec.escaped,
+        spawn: rec.spawn ? { ...rec.spawn, params: { ...rec.spawn.params } } : null,
       })),
     },
     unlocks: { ...world.unlocks },
@@ -65,7 +78,14 @@ export function restore(world: World, snap: WorldSnapshot): void {
     active: new Map(
       snap.waves.active.map((rec) => [
         rec.id,
-        { members: new Set(rec.members), total: rec.total, bountySum: rec.bountySum },
+        {
+          members: new Set(rec.members),
+          total: rec.total,
+          bountySum: rec.bountySum,
+          killed: rec.killed,
+          escaped: rec.escaped,
+          spawn: rec.spawn ? { ...rec.spawn, params: { ...rec.spawn.params } } : null,
+        },
       ]),
     ),
   };

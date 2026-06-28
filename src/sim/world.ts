@@ -3,6 +3,7 @@
 
 import { vec3 } from './math/vec3.js';
 import type { Entity, SimEvent } from './components.js';
+import type { PathParams } from './systems/paths.js';
 
 export const PLAYER_ID = 1;
 
@@ -19,10 +20,26 @@ export interface PlayerState {
   fireCooldown: number; // seconds until the next pulse may fire [ROC-LAS-3]
 }
 
+// Pending-spawn schedule for an active wave (kept in the World so replays are deterministic).
+export interface WaveSpawnState {
+  pattern: string;
+  enemy: string;
+  params: PathParams;
+  count: number;
+  spacingSec: number; // delay between member spawns
+  durationSec: number; // each member's path lifetime (t: 0 -> 1)
+  pending: number; // members not yet spawned
+  timer: number; // seconds until the next spawn
+  spawnedIndex: number; // how many have spawned (for per-member variation)
+}
+
 export interface WaveRecord {
-  members: Set<number>;
-  total: number;
-  bountySum: number;
+  members: Set<number>; // currently-alive member ids
+  total: number; // member count
+  bountySum: number; // summed member bounty
+  killed: number; // members destroyed by the player
+  escaped: boolean; // any member flew off-field (forfeits the bonus) [ROC-ECO-1a]
+  spawn: WaveSpawnState | null;
 }
 
 export interface World {

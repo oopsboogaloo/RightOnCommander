@@ -16,6 +16,7 @@ import { collisionSystem } from './systems/collision.js';
 import { damageSystem } from './systems/damage.js';
 import { economySystem } from './systems/economy.js';
 import { particlesSystem } from './systems/particles.js';
+import { waveSystem, type EnemyDef, type WaveContext } from './systems/waves.js';
 
 // Fixed sim tick, in seconds. Must match the shell loop's DT (platform/loop.ts). [design §3]
 export const SIM_DT = 1 / 120;
@@ -45,9 +46,12 @@ export interface Sim {
   restore(snap: WorldSnapshot): void;
 }
 
-export function createSim({ seed }: CreateSimArgs): Sim {
+export function createSim({ seed, content }: CreateSimArgs): Sim {
   const world = makeWorld(seed);
   const rng: Rng = createRng(world.rngState);
+
+  // Enemy definitions for the wave manager (empty until content/levels are wired in T5).
+  const waveCtx: WaveContext = { enemies: (content?.enemies as Record<string, EnemyDef>) ?? {} };
 
   function step(input: InputFrame): SimEvent[] {
     rng.setState(world.rngState);
@@ -55,6 +59,7 @@ export function createSim({ seed }: CreateSimArgs): Sim {
 
     movementSystem(world, input, SIM_DT);
     weaponsSystem(world, input, SIM_DT);
+    waveSystem(world, rng, SIM_DT, waveCtx);
     const hits = collisionSystem(world, {
       dt: SIM_DT,
       cellSize: COLLISION_CELL,
