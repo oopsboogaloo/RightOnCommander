@@ -12,9 +12,15 @@ import { snapshot, restore, type WorldSnapshot } from './snapshot.js';
 import { makeWorld, type World } from './world.js';
 import { movementSystem } from './systems/movement.js';
 import { weaponsSystem } from './systems/weapons.js';
+import { collisionSystem } from './systems/collision.js';
+import { damageSystem } from './systems/damage.js';
 
 // Fixed sim tick, in seconds. Must match the shell loop's DT (platform/loop.ts). [design §3]
 export const SIM_DT = 1 / 120;
+
+// Collision broadphase cell size (world units). Hull silhouettes are wired in once content
+// loading + enemies land (Phase 4); until then unshielded targets fall back to a circle.
+const COLLISION_CELL = 0.6;
 
 export interface SimConfig {
   [key: string]: unknown;
@@ -47,6 +53,12 @@ export function createSim({ seed }: CreateSimArgs): Sim {
 
     movementSystem(world, input, SIM_DT);
     weaponsSystem(world, input, SIM_DT);
+    const hits = collisionSystem(world, {
+      dt: SIM_DT,
+      cellSize: COLLISION_CELL,
+      getSilhouette: () => undefined,
+    });
+    damageSystem(world, hits, SIM_DT);
 
     world.rngState = rng.getState();
     world.frame++;

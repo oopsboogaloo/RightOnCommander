@@ -13,6 +13,7 @@ export interface WeaponsConfig {
   pulseSpeed: number; // world units / second
   pulseTtl: number; // projectile lifetime, seconds
   muzzleOffset: number; // spawn distance from the ship centre
+  pulseDamage: number; // damage per pulse hit
 }
 
 export const DEFAULT_WEAPONS: WeaponsConfig = {
@@ -20,6 +21,7 @@ export const DEFAULT_WEAPONS: WeaponsConfig = {
   pulseSpeed: 6,
   pulseTtl: 1.2,
   muzzleOffset: 0.25,
+  pulseDamage: 1,
 };
 
 // Mount -> firing direction in the play plane (x right, z up-screen/forward).
@@ -57,6 +59,7 @@ function spawnPulse(world: World, origin: Vec3, dir: Vec3, cfg: WeaponsConfig): 
   e.yaw = 0;
   e.bank = 0;
   e.ttl = cfg.pulseTtl;
+  e.damage = cfg.pulseDamage;
 }
 
 export function weaponsSystem(
