@@ -15,6 +15,7 @@ import { weaponsSystem } from './systems/weapons.js';
 import { collisionSystem } from './systems/collision.js';
 import { damageSystem } from './systems/damage.js';
 import { economySystem } from './systems/economy.js';
+import { particlesSystem } from './systems/particles.js';
 
 // Fixed sim tick, in seconds. Must match the shell loop's DT (platform/loop.ts). [design §3]
 export const SIM_DT = 1 / 120;
@@ -61,6 +62,7 @@ export function createSim({ seed }: CreateSimArgs): Sim {
     });
     damageSystem(world, hits, SIM_DT);
     economySystem(world);
+    particlesSystem(world, rng, SIM_DT);
 
     world.rngState = rng.getState();
     world.frame++;
