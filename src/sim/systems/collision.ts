@@ -144,10 +144,10 @@ function projectileHitsTarget(a: Pt, b: Pt, t: Entity, cfg: CollisionConfig): bo
     return segmentIntersectsEllipse(a, b, center, t.colliderRx ?? fallback, t.colliderRz ?? fallback);
   }
 
-  // Unshielded: hull silhouette if available, else fall back to a circle. [ROC-DMG-5]
+  // Unshielded: hull silhouette if available, else fall back to the collider ellipse. [ROC-DMG-5]
   const local = t.meshId ? cfg.getSilhouette(t.meshId) : undefined;
   if (!local || local.length < 3) {
-    return segmentIntersectsEllipse(a, b, center, fallback, fallback);
+    return segmentIntersectsEllipse(a, b, center, t.colliderRx ?? fallback, t.colliderRz ?? fallback);
   }
   return segmentIntersectsConvexPolygon(a, b, transformSilhouette(local, t.pos.x, t.pos.z, t.yaw));
 }

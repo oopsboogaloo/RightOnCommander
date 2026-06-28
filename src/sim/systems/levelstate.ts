@@ -42,7 +42,7 @@ function startGroup(world: World, waves: WaveDef[], ctx: WaveContext): void {
   for (const w of waves) startWave(world, w, ctx);
 }
 
-function spawnBoss(world: World, name: string, ctx: WaveContext): void {
+function spawnBoss(world: World, name: string, ctx: WaveContext, drops?: string): void {
   const def = ctx.enemies[name];
   if (!def) throw new Error(`unknown boss '${name}'`);
   const id = world.nextId++;
@@ -61,6 +61,7 @@ function spawnBoss(world: World, name: string, ctx: WaveContext): void {
     meshId: def.meshId,
     colliderRx: def.colliderRx,
     colliderRz: def.colliderRz,
+    drops,
   });
 }
 
@@ -76,7 +77,7 @@ function enter(world: World, state: LevelState, level: LevelDef, ctx: WaveContex
       startGroup(world, level.wavesA, ctx);
       break;
     case 'MID_BOSS':
-      spawnBoss(world, level.midBoss, ctx);
+      spawnBoss(world, level.midBoss, ctx, 'laser'); // mid-boss always drops a laser [ROC-PWR-6]
       break;
     case 'WAVES_B':
       startGroup(world, level.wavesB, ctx);
