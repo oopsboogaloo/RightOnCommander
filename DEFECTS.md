@@ -30,9 +30,12 @@ Running list of observed defects to triage/fix later. Newest first.
 ### D2 — Player ship is too large on screen
 - **Area:** rendering scale — `render/renderer2d.ts` (viewport `scale`) / camera distance.
 - **Observed:** the player Cobra Mk III is drawn too big.
-- **Expected:** render at **half its current on-screen size**.
-- **Notes:** likely a one-line change to the pixels-per-unit `scale` (currently
-  `min(w,h) * 0.5`) or the camera distance/focal; confirm it scales enemies consistently too.
+- **Expected:** render at **1/3 of current on-screen size** (updated from 1/2 — matches the
+  enemy factor in D4, so everything shrinks by the same 1/3).
+- **Notes:** since player and enemies now use the **same 1/3 factor**, a single global change
+  works — reduce pixels-per-unit `scale` (currently `min(w,h) * 0.5`) to ~`min(w,h) * 0.5/3`,
+  or equivalently increase camera distance. No per-entity scaling needed (supersedes the D4
+  note). Re-check formation spacing/readability after shrinking.
 - **Severity:** cosmetic.
 - **Reported:** 2026-06-28.
 
