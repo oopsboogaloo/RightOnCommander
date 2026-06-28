@@ -115,6 +115,14 @@ export class Renderer2D implements Renderer {
     this.drawLine(pa, pb, opts);
   }
 
+  // Project world-space points and draw them as small dots (explosion particles). [ROC-VIS-6]
+  drawWorldParticles(points: Vec3[], opts: DrawOpts = {}): void {
+    this.drawParticles(
+      points.map((p) => this.toPixel(projectPoint(this.camera, p))),
+      opts,
+    );
+  }
+
   // The 2D primitives below take canvas-pixel coordinates; they get richer use in later tasks.
   drawLine(a: Vec2, b: Vec2, opts: DrawOpts = {}): void {
     const { ctx } = this;

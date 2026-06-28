@@ -40,7 +40,7 @@ export interface World {
   waves: { active: Map<number, WaveRecord> }; // [ROC-ECO-1a]
   unlocks: { eliteMode: boolean; thargoidShip: boolean }; // [ROC-PROG-1,2]
   events: SimEvent[]; // drained by shell each step
-  pool: { projectiles: Entity[] }; // recycled entities; not serialised (optimisation only)
+  pool: { projectiles: Entity[]; particles: Entity[] }; // recycled entities; not serialised
 }
 
 export function makeWorld(seed: number): World {
@@ -87,6 +87,6 @@ export function makeWorld(seed: number): World {
     waves: { active: new Map<number, WaveRecord>() },
     unlocks: { eliteMode: false, thargoidShip: false },
     events: [],
-    pool: { projectiles: [] },
+    pool: { projectiles: [], particles: [] },
   };
 }

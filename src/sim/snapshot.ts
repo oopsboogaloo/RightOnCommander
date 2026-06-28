@@ -71,5 +71,5 @@ export function restore(world: World, snap: WorldSnapshot): void {
   };
   world.unlocks = { ...snap.unlocks };
   world.events = [];
-  world.pool = { projectiles: [] }; // pool is an allocation cache only; safe to drop on restore
+  world.pool = { projectiles: [], particles: [] }; // allocation cache only; safe to drop on restore
 }
