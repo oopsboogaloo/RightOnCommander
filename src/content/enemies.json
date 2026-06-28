@@ -1,0 +1,9 @@
+{
+  "sidewinder": { "hull": 2, "bounty": 10, "meshId": "sidewinder", "colliderRx": 0.18, "colliderRz": 0.18 },
+  "krait": { "hull": 3, "bounty": 14, "meshId": "krait", "colliderRx": 0.22, "colliderRz": 0.2 },
+  "gecko": { "hull": 3, "bounty": 12, "meshId": "gecko", "colliderRx": 0.2, "colliderRz": 0.2 },
+  "adder": { "hull": 4, "bounty": 16, "meshId": "adder", "colliderRx": 0.22, "colliderRz": 0.22 },
+  "viper": { "hull": 3, "bounty": 20, "meshId": "viper", "colliderRx": 0.2, "colliderRz": 0.22 },
+  "hermit": { "hull": 20, "bounty": 120, "meshId": "coriolis", "colliderRx": 0.5, "colliderRz": 0.5 },
+  "fer_de_lance": { "hull": 30, "shield": 2, "bounty": 250, "meshId": "fer_de_lance", "colliderRx": 0.4, "colliderRz": 0.35 }
+}

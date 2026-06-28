@@ -1,0 +1,16 @@
+{
+  "id": "level1",
+  "name": "Lave",
+  "launchMs": 1500,
+  "wavesA": [
+    { "id": "l1a1", "pattern": "sine_column", "enemy": "sidewinder", "count": 4, "spacingMs": 500, "durationMs": 6000, "params": { "amplitude": 0.6, "cycles": 2 } },
+    { "id": "l1a2", "pattern": "side_stream", "enemy": "krait", "count": 3, "spacingMs": 600, "durationMs": 6000, "fire": { "rate": 0.5, "aimed": true } }
+  ],
+  "midBoss": "hermit",
+  "wavesB": [
+    { "id": "l1b1", "pattern": "vform", "enemy": "gecko", "count": 5, "spacingMs": 400, "durationMs": 6000 },
+    { "id": "l1b2", "pattern": "pincer", "enemy": "adder", "count": 4, "spacingMs": 500, "durationMs": 6000, "fire": { "rate": 0.6, "aimed": true } }
+  ],
+  "endBoss": "fer_de_lance",
+  "viper": { "id": "l1v", "pattern": "side_stream", "enemy": "viper", "count": 3, "spacingMs": 400, "durationMs": 6000, "fire": { "rate": 0.6, "aimed": true } }
+}

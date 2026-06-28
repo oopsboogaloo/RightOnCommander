@@ -16,9 +16,12 @@ import { collisionSystem } from './systems/collision.js';
 import { damageSystem } from './systems/damage.js';
 import { economySystem } from './systems/economy.js';
 import { particlesSystem } from './systems/particles.js';
-import { waveSystem, type EnemyDef, type WaveContext } from './systems/waves.js';
+import { waveSystem, type WaveContext } from './systems/waves.js';
 import { aiSystem } from './systems/ai.js';
 import { missilesSystem } from './systems/missiles.js';
+import { dropsSystem } from './systems/drops.js';
+import { startLevel, levelStateSystem, type LevelDef } from './systems/levelstate.js';
+import { loadContent } from './content/loadContent.js';
 
 // Fixed sim tick, in seconds. Must match the shell loop's DT (platform/loop.ts). [design §3]
 export const SIM_DT = 1 / 120;
@@ -52,8 +55,11 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
   const world = makeWorld(seed);
   const rng: Rng = createRng(world.rngState);
 
-  // Enemy definitions for the wave manager (empty until content/levels are wired in T5).
-  const waveCtx: WaveContext = { enemies: (content?.enemies as Record<string, EnemyDef>) ?? {} };
+  // Parse + validate injected content; start the level if one is provided.
+  const loaded = loadContent(content ?? {});
+  const waveCtx: WaveContext = { enemies: loaded.enemies };
+  const level: LevelDef | undefined = loaded.level;
+  if (level) startLevel(world, level, waveCtx);
 
   function step(input: InputFrame): SimEvent[] {
     rng.setState(world.rngState);
@@ -64,12 +70,14 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     missilesSystem(world, SIM_DT);
     waveSystem(world, rng, SIM_DT, waveCtx);
     aiSystem(world, SIM_DT);
+    if (level) levelStateSystem(world, SIM_DT, level, waveCtx);
     const hits = collisionSystem(world, {
       dt: SIM_DT,
       cellSize: COLLISION_CELL,
       getSilhouette: () => undefined,
     });
     damageSystem(world, hits, SIM_DT);
+    dropsSystem(world);
     economySystem(world);
     particlesSystem(world, rng, SIM_DT);
 

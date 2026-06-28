@@ -51,6 +51,7 @@ export interface Entity {
   path?: unknown; // spline + t for enemies [ROC-ENM-2]
   ai?: unknown; // fire cadence, pattern, boss phase
   pickup?: { type: PickupType };
+  drops?: string; // power-up dropped on destruction (e.g. a guaranteed laser) [ROC-PWR-6]
   contraband?: boolean; // different shape [ROC-ECO-4]
 }
 

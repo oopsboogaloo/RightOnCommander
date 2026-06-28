@@ -47,7 +47,7 @@ export function applyDamage(
   world.events.push({ type: 'fragments', pos: { ...e.pos }, meshId: e.meshId });
 
   if ((e.hull ?? 0) <= 0) {
-    world.events.push({ type: 'destroyed', id: e.id, kind: e.kind, pos: { ...e.pos }, bounty: e.bounty ?? 0 });
+    world.events.push({ type: 'destroyed', id: e.id, kind: e.kind, pos: { ...e.pos }, bounty: e.bounty ?? 0, drops: e.drops });
     world.events.push({ type: 'sfx', id: 'explode_small' });
     world.entities.delete(e.id);
     return;
