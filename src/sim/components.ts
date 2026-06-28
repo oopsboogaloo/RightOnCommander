@@ -39,6 +39,7 @@ export interface Entity {
   hullMax?: number;
   flashTtl?: number; // white damage flash timer [ROC-DMG-6a]
   shieldFlashTtl?: number;
+  thrust?: boolean; // engine-flame flag: thrusting up-screen [ROC-MOV-4]
   bounty?: number;
   waveId?: number; // membership for the 50% bonus [ROC-ECO-1a]
   path?: unknown; // spline + t for enemies [ROC-ENM-2]
