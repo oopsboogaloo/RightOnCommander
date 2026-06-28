@@ -4,6 +4,18 @@ Running list of observed defects to triage/fix later. Newest first.
 
 ## Open
 
+### D3 — Banking rolls the wrong way
+- **Area:** `sim/systems/movement.ts` bank sign and/or `render` roll (`mat4.rotationZ` / model matrix).
+- **Observed:** moving **right** rolls the ship **anticlockwise** (and left rolls clockwise) —
+  inverted.
+- **Expected:** moving **right** rolls **clockwise**, moving **left** rolls **anticlockwise**
+  (bank into the turn).
+- **Notes:** flip the sign where bank is derived from lateral velocity (`bankFactor * vx`) or
+  the roll direction in the renderer. The movement unit test asserts "bank sign matches lateral
+  direction" — update it to encode the correct on-screen direction so it locks the fix.
+- **Severity:** cosmetic.
+- **Reported:** 2026-06-28.
+
 ### D2 — Player ship is too large on screen
 - **Area:** rendering scale — `render/renderer2d.ts` (viewport `scale`) / camera distance.
 - **Observed:** the player Cobra Mk III is drawn too big.
