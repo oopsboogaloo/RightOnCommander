@@ -4,6 +4,17 @@ Running list of observed defects to triage/fix later. Newest first.
 
 ## Open
 
+### D4 — Enemies are too large and overlap
+- **Area:** rendering scale (enemies/bosses) — `platform/main.ts` draw + mesh/world sizing.
+- **Observed:** enemy ships render too big and **overlap each other**, which looks wrong.
+- **Expected:** reduce enemies to **1/3** of current on-screen size.
+- **Notes:** D2 wants the player at 1/2 and this wants enemies at 1/3 — different factors, so a
+  single global viewport `scale` won't do it. Introduce a **per-entity / per-mesh render scale**
+  (or scale meshes at load), and make sure wave/path spacing still reads well once ships shrink
+  (overlap may partly be formation spacing, not just size).
+- **Severity:** cosmetic.
+- **Reported:** 2026-06-28.
+
 ### D3 — Banking rolls the wrong way
 - **Area:** `sim/systems/movement.ts` bank sign and/or `render` roll (`mat4.rotationZ` / model matrix).
 - **Observed:** moving **right** rolls the ship **anticlockwise** (and left rolls clockwise) —
