@@ -11,6 +11,7 @@ export interface WorldSnapshot {
   mode: string;
   levelIndex: number;
   levelState: string;
+  difficulty: number;
   entities: Entity[];
   nextId: number;
   player: PlayerState;
@@ -38,6 +39,7 @@ export function snapshot(world: World): WorldSnapshot {
     mode: world.mode,
     levelIndex: world.levelIndex,
     levelState: world.levelState,
+    difficulty: world.difficulty,
     entities: Array.from(world.entities.values()).map((e) => structuredClone(e)),
     nextId: world.nextId,
     player: structuredClone(world.player),
@@ -66,6 +68,7 @@ export function restore(world: World, snap: WorldSnapshot): void {
   world.mode = snap.mode;
   world.levelIndex = snap.levelIndex;
   world.levelState = snap.levelState;
+  world.difficulty = snap.difficulty;
 
   world.entities = new Map(structuredClone(snap.entities).map((e) => [e.id, e]));
   world.nextId = snap.nextId;

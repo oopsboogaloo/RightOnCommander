@@ -31,6 +31,8 @@ export interface WaveSpawnState {
   pending: number; // members not yet spawned
   timer: number; // seconds until the next spawn
   spawnedIndex: number; // how many have spawned (for per-member variation)
+  fireRate: number; // enemy shots/sec (0 = doesn't fire) [ROC-ENM-11]
+  fireAimed: boolean; // aim at the player vs fire straight down
 }
 
 export interface WaveRecord {
@@ -48,6 +50,7 @@ export interface World {
   mode: string; // gamestate FSM tag
   levelIndex: number;
   levelState: string; // levelstate FSM tag
+  difficulty: number; // global difficulty (1 = normal); scales count + enemy stats [ROC-DIF-1,2]
   entities: Map<number, Entity>;
   nextId: number;
   player: PlayerState;
@@ -84,6 +87,7 @@ export function makeWorld(seed: number): World {
     mode: 'TITLE',
     levelIndex: 0,
     levelState: 'LAUNCH',
+    difficulty: 1,
     entities,
     nextId: PLAYER_ID + 1,
     player: {
