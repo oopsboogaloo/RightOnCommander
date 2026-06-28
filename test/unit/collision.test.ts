@@ -103,6 +103,19 @@ describe('collisionSystem', () => {
     expect(hits).toEqual([{ projectile: hit.id, target: enemy.id }]);
   });
 
+  it('shrinks the collider by colliderScale so the hitbox matches the rendered hull', () => {
+    // A pulse grazing the rim of a full-size collider should miss once the hull is drawn (and
+    // collided) at 1/3 scale. [DEFECTS: collisions felt generous after the 1/3 shrink]
+    const grazing = (scale: number): number => {
+      const w = makeWorld(1);
+      addEnemy(w, { pos: vec3(0, 0, 0), shield: 0, colliderRx: 0.3, colliderRz: 0.3 });
+      addPulse(w, vec3(0.25, 0, 0), vec3(0, 0, 6)); // passes 0.25 to the side of centre
+      return collisionSystem(w, { ...cfg(), colliderScale: scale }).length;
+    };
+    expect(grazing(1)).toBe(1); // within the full 0.3 radius
+    expect(grazing(1 / 3)).toBe(0); // outside the shrunk 0.1 radius
+  });
+
   it('ignores enemy/own projectiles and returns nothing without targets', () => {
     const w = makeWorld(1);
     addPulse(w, vec3(0, 0, 0), vec3(0, 0, 6)); // no targets present

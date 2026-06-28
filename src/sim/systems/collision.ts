@@ -130,26 +130,31 @@ export interface CollisionConfig {
   cellSize: number; // >= largest target collider radius
   getSilhouette: (meshId: string) => Pt[] | undefined; // local-space hull silhouettes
   defaultRadius?: number; // fallback collider size
+  colliderScale?: number; // scales every collider/silhouette to match the rendered hull size
 }
 
-const colliderRadius = (e: Entity, fallback: number): number =>
-  Math.max(e.colliderRx ?? fallback, e.colliderRz ?? fallback);
+const colliderRadius = (e: Entity, fallback: number, scale: number): number =>
+  Math.max(e.colliderRx ?? fallback, e.colliderRz ?? fallback) * scale;
 
 function projectileHitsTarget(a: Pt, b: Pt, t: Entity, cfg: CollisionConfig): boolean {
   const center: Pt = { x: t.pos.x, y: t.pos.z };
   const fallback = cfg.defaultRadius ?? 0.3;
+  const scale = cfg.colliderScale ?? 1;
+  const rx = (t.colliderRx ?? fallback) * scale;
+  const rz = (t.colliderRz ?? fallback) * scale;
 
   if ((t.shield ?? 0) > 0) {
     // Shielded: elliptical shape. [ROC-DMG-1]
-    return segmentIntersectsEllipse(a, b, center, t.colliderRx ?? fallback, t.colliderRz ?? fallback);
+    return segmentIntersectsEllipse(a, b, center, rx, rz);
   }
 
   // Unshielded: hull silhouette if available, else fall back to the collider ellipse. [ROC-DMG-5]
   const local = t.meshId ? cfg.getSilhouette(t.meshId) : undefined;
   if (!local || local.length < 3) {
-    return segmentIntersectsEllipse(a, b, center, t.colliderRx ?? fallback, t.colliderRz ?? fallback);
+    return segmentIntersectsEllipse(a, b, center, rx, rz);
   }
-  return segmentIntersectsConvexPolygon(a, b, transformSilhouette(local, t.pos.x, t.pos.z, t.yaw));
+  const scaled = scale === 1 ? local : local.map((p) => ({ x: p.x * scale, y: p.y * scale }));
+  return segmentIntersectsConvexPolygon(a, b, transformSilhouette(scaled, t.pos.x, t.pos.z, t.yaw));
 }
 
 // Find player-projectile -> target hits this step. Returns the hit list for the damage system.
@@ -161,8 +166,9 @@ export function collisionSystem(world: World, cfg: CollisionConfig): CollisionHi
   if (targets.length === 0) return [];
 
   const hash = new SpatialHash(cfg.cellSize);
+  const scale = cfg.colliderScale ?? 1;
   for (const t of targets) {
-    hash.insert({ id: t.id, x: t.pos.x, y: t.pos.z, r: colliderRadius(t, cfg.defaultRadius ?? 0.3) });
+    hash.insert({ id: t.id, x: t.pos.x, y: t.pos.z, r: colliderRadius(t, cfg.defaultRadius ?? 0.3, scale) });
   }
 
   const hits: CollisionHit[] = [];
