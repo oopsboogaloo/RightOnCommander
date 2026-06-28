@@ -51,6 +51,7 @@ export interface World {
   mode: string; // gamestate FSM tag
   levelIndex: number;
   levelState: string; // levelstate FSM tag
+  levelTimer: number; // seconds remaining for timed level phases (launch/dock)
   difficulty: number; // global difficulty (1 = normal); scales count + enemy stats [ROC-DIF-1,2]
   entities: Map<number, Entity>;
   nextId: number;
@@ -88,6 +89,7 @@ export function makeWorld(seed: number): World {
     mode: 'TITLE',
     levelIndex: 0,
     levelState: 'LAUNCH',
+    levelTimer: 0,
     difficulty: 1,
     entities,
     nextId: PLAYER_ID + 1,
