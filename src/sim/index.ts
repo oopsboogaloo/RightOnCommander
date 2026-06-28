@@ -31,6 +31,11 @@ export const SIM_DT = 1 / 120;
 // loading + enemies land (Phase 4); until then unshielded targets fall back to a circle.
 const COLLISION_CELL = 0.6;
 
+// The single source of truth for on-screen ship size: hull meshes (~1 world unit wide) are
+// drawn — and collided — at this fraction so the hitbox matches the sprite. The renderer
+// imports this for its model matrix; collision scales every collider by it. [DEFECTS D2/D4]
+export const SHIP_SCALE = 1 / 3;
+
 export interface SimConfig {
   [key: string]: unknown;
 }
@@ -76,6 +81,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
       dt: SIM_DT,
       cellSize: COLLISION_CELL,
       getSilhouette: () => undefined,
+      colliderScale: SHIP_SCALE,
     });
     damageSystem(world, hits, SIM_DT);
     dropsSystem(world);

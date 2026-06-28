@@ -2,7 +2,7 @@
 // the fixed-timestep loop, loads Level 1 content, and renders ships, lasers, missiles,
 // particles and pickups. [tasks T1.3/T5.2, design §3]
 
-import { createSim } from '../sim/index.js';
+import { createSim, SHIP_SCALE } from '../sim/index.js';
 import { PLAYER_ID } from '../sim/world.js';
 import { vec3, sub, scale, normalize, type Vec3 } from '../sim/math/vec3.js';
 import { Renderer2D } from '../render/renderer2d.js';
@@ -66,7 +66,6 @@ function readPlayerPose(): Pose {
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const PULSE_LEN = 0.18;
-const SHIP_SCALE = 1 / 3; // shrink hull meshes (~1 unit wide) to a readable size [DEFECTS D2/D4]
 
 let prev = readPlayerPose();
 let curr = prev;
