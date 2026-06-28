@@ -11,6 +11,7 @@ import { createRng, type Rng } from './rng.js';
 import { snapshot, restore, type WorldSnapshot } from './snapshot.js';
 import { makeWorld, type World } from './world.js';
 import { movementSystem } from './systems/movement.js';
+import { weaponsSystem } from './systems/weapons.js';
 
 // Fixed sim tick, in seconds. Must match the shell loop's DT (platform/loop.ts). [design §3]
 export const SIM_DT = 1 / 120;
@@ -45,6 +46,7 @@ export function createSim({ seed }: CreateSimArgs): Sim {
     world.events = [];
 
     movementSystem(world, input, SIM_DT);
+    weaponsSystem(world, input, SIM_DT);
 
     world.rngState = rng.getState();
     world.frame++;

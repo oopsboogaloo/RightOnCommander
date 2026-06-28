@@ -16,6 +16,7 @@ export interface PlayerState {
   energyBombs: number;
   escapePod: boolean;
   lives: number;
+  fireCooldown: number; // seconds until the next pulse may fire [ROC-LAS-3]
 }
 
 export interface WaveRecord {
@@ -39,6 +40,7 @@ export interface World {
   waves: { active: Map<number, WaveRecord> }; // [ROC-ECO-1a]
   unlocks: { eliteMode: boolean; thargoidShip: boolean }; // [ROC-PROG-1,2]
   events: SimEvent[]; // drained by shell each step
+  pool: { projectiles: Entity[] }; // recycled entities; not serialised (optimisation only)
 }
 
 export function makeWorld(seed: number): World {
@@ -77,6 +79,7 @@ export function makeWorld(seed: number): World {
       energyBombs: 0,
       escapePod: false,
       lives: 3,
+      fireCooldown: 0,
     },
     econ: { wallet: 0, score: 0 },
     cargo: {},
@@ -84,5 +87,6 @@ export function makeWorld(seed: number): World {
     waves: { active: new Map<number, WaveRecord>() },
     unlocks: { eliteMode: false, thargoidShip: false },
     events: [],
+    pool: { projectiles: [] },
   };
 }

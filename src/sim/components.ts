@@ -40,6 +40,8 @@ export interface Entity {
   flashTtl?: number; // white damage flash timer [ROC-DMG-6a]
   shieldFlashTtl?: number;
   thrust?: boolean; // engine-flame flag: thrusting up-screen [ROC-MOV-4]
+  ttl?: number; // remaining lifetime in seconds (projectiles, particles)
+  team?: 'player' | 'enemy'; // who fired a projectile
   bounty?: number;
   waveId?: number; // membership for the 50% bonus [ROC-ECO-1a]
   path?: unknown; // spline + t for enemies [ROC-ENM-2]
