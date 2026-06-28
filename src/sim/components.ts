@@ -42,6 +42,8 @@ export interface Entity {
   thrust?: boolean; // engine-flame flag: thrusting up-screen [ROC-MOV-4]
   ttl?: number; // remaining lifetime in seconds (projectiles, particles)
   team?: 'player' | 'enemy'; // who fired a projectile
+  colliderRx?: number; // shield ellipse radii (play plane) [ROC-DMG-1]
+  colliderRz?: number;
   bounty?: number;
   waveId?: number; // membership for the 50% bonus [ROC-ECO-1a]
   path?: unknown; // spline + t for enemies [ROC-ENM-2]
