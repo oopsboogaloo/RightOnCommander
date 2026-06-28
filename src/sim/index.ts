@@ -20,6 +20,7 @@ import { waveSystem, type WaveContext } from './systems/waves.js';
 import { aiSystem } from './systems/ai.js';
 import { missilesSystem } from './systems/missiles.js';
 import { dropsSystem } from './systems/drops.js';
+import { pickupsSystem } from './systems/pickups.js';
 import { startLevel, levelStateSystem, type LevelDef } from './systems/levelstate.js';
 import { loadContent } from './content/loadContent.js';
 
@@ -78,6 +79,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     });
     damageSystem(world, hits, SIM_DT);
     dropsSystem(world);
+    pickupsSystem(world, SIM_DT);
     economySystem(world);
     particlesSystem(world, rng, SIM_DT);
 
