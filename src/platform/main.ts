@@ -78,3 +78,7 @@ startGameLoop({
     renderer.endFrame(alpha);
   },
 });
+
+// Signal a successful boot and clear the watchdog overlay (see index.html).
+(window as unknown as { __rocBooted?: boolean }).__rocBooted = true;
+document.getElementById('boot')?.remove();
