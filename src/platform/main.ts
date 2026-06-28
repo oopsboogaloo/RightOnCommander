@@ -66,6 +66,7 @@ function readPlayerPose(): Pose {
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const PULSE_LEN = 0.18;
+const SHIP_SCALE = 1 / 3; // shrink hull meshes (~1 unit wide) to a readable size [DEFECTS D2/D4]
 
 let prev = readPlayerPose();
 let curr = prev;
@@ -98,7 +99,7 @@ startGameLoop({
         case 'enemy':
         case 'boss': {
           const m = e.meshId ? MESHES[e.meshId] : undefined;
-          if (m) renderer.drawMesh(m, modelMatrix(e.pos, e.yaw, e.bank));
+          if (m) renderer.drawMesh(m, modelMatrix(e.pos, e.yaw, e.bank, SHIP_SCALE));
           break;
         }
         default:
@@ -112,7 +113,7 @@ startGameLoop({
     const player = sim.state.entities.get(PLAYER_ID)!;
     const pmesh = (player.meshId && MESHES[player.meshId]) || MESHES.cobra_mk3;
     const pos = vec3(lerp(prev.x, curr.x, alpha), lerp(prev.y, curr.y, alpha), lerp(prev.z, curr.z, alpha));
-    renderer.drawMesh(pmesh, modelMatrix(pos, lerp(prev.yaw, curr.yaw, alpha), lerp(prev.bank, curr.bank, alpha)));
+    renderer.drawMesh(pmesh, modelMatrix(pos, lerp(prev.yaw, curr.yaw, alpha), lerp(prev.bank, curr.bank, alpha), SHIP_SCALE));
 
     renderer.endFrame(alpha);
   },

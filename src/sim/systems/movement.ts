@@ -69,8 +69,9 @@ export function movementSystem(
   p.vel.x = vx;
   p.vel.z = vz;
 
-  // Bank toward the lateral direction, easing back to level when it ceases. [ROC-MOV-3,5]
-  const bankTarget = clampAbs(cfg.bankFactor * vx, cfg.maxBank);
+  // Bank into the turn: moving right rolls clockwise, left anticlockwise. Eases back to level
+  // when lateral motion ceases. [ROC-MOV-3,5; DEFECTS D3]
+  const bankTarget = clampAbs(-cfg.bankFactor * vx, cfg.maxBank);
   p.bank += (bankTarget - p.bank) * cfg.bankResponsiveness;
 
   // Engine flame only while thrusting up-screen. [ROC-MOV-4]

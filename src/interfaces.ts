@@ -26,6 +26,10 @@ export interface Mesh {
   vertices: Vec3[];
   edges: [number, number][];
   faces: { loop: number[]; normal: Vec3 }[];
+  // Decorative line edges (gun barrel, cockpit/engine detail) that are not polygon
+  // boundaries. Each is drawn only while one of its controlling faces is visible — Elite's
+  // hidden-line rule, so the nose gun shows but the back detailing hides when culled.
+  details?: { edge: [number, number]; faces: [number, number] }[];
 }
 
 export interface DrawOpts {
