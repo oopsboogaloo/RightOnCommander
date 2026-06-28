@@ -77,7 +77,8 @@ export function damageSystem(
     applyDamage(world, target, proj.damage ?? 1, cfg);
 
     world.entities.delete(proj.id);
-    world.pool.projectiles.push(proj); // recycle (no leak)
+    if (proj.kind === 'projectile') world.pool.projectiles.push(proj); // recycle pulses (no leak)
+    else if (proj.kind === 'missile') world.pool.missiles.push(proj);
     spent.add(proj.id);
   }
 }

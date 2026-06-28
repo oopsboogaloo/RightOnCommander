@@ -12,7 +12,8 @@ export interface PlayerState {
   hardpoints: number;
   lasers: { front: string | null; rear: string | null; left: string | null; right: string | null };
   missileGrade: number;
-  missileTimer: number;
+  missileTimer: number; // seconds left at the current grade [ROC-MIS-4]
+  missileCooldown: number; // seconds until the next homing volley
   ecm: number;
   energyBombs: number;
   escapePod: boolean;
@@ -60,7 +61,7 @@ export interface World {
   waves: { active: Map<number, WaveRecord> }; // [ROC-ECO-1a]
   unlocks: { eliteMode: boolean; thargoidShip: boolean }; // [ROC-PROG-1,2]
   events: SimEvent[]; // drained by shell each step
-  pool: { projectiles: Entity[]; particles: Entity[] }; // recycled entities; not serialised
+  pool: { projectiles: Entity[]; particles: Entity[]; missiles: Entity[] }; // recycled; not serialised
 }
 
 export function makeWorld(seed: number): World {
@@ -96,6 +97,7 @@ export function makeWorld(seed: number): World {
       lasers: { front: 'pulse', rear: null, left: null, right: null },
       missileGrade: 0,
       missileTimer: 0,
+      missileCooldown: 0,
       ecm: 0,
       energyBombs: 0,
       escapePod: false,
@@ -108,6 +110,6 @@ export function makeWorld(seed: number): World {
     waves: { active: new Map<number, WaveRecord>() },
     unlocks: { eliteMode: false, thargoidShip: false },
     events: [],
-    pool: { projectiles: [], particles: [] },
+    pool: { projectiles: [], particles: [], missiles: [] },
   };
 }

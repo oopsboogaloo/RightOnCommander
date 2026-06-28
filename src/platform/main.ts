@@ -70,9 +70,9 @@ startGameLoop({
     // Pulse lasers: short white segments drawn behind the firing direction.
     const particles = [];
     for (const e of sim.state.entities.values()) {
-      if (e.kind === 'projectile') {
+      if (e.kind === 'projectile' || e.kind === 'missile') {
         const tail = sub(e.pos, scale(normalize(e.vel), PULSE_LEN));
-        renderer.drawWorldLine(e.pos, tail, { stroke: '#fff', lineWidth: 2 });
+        renderer.drawWorldLine(e.pos, tail, { stroke: '#fff', lineWidth: e.kind === 'missile' ? 3 : 2 });
       } else if (e.kind === 'particle') {
         particles.push(e.pos);
       }
