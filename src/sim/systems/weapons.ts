@@ -32,7 +32,8 @@ const MOUNT_DIRS: { mount: 'front' | 'rear' | 'left' | 'right'; dir: Vec3 }[] = 
   { mount: 'right', dir: vec3(1, 0, 0) },
 ];
 
-function acquireProjectile(world: World): Entity {
+// Take a projectile entity from the pool (or make one) — shared by player and enemy weapons.
+export function acquireProjectile(world: World): Entity {
   const reused = world.pool.projectiles.pop();
   const id = world.nextId++;
   if (reused) {

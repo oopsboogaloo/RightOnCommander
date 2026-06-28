@@ -8,6 +8,7 @@ import type { Entity } from '../components.js';
 import type { Rng } from '../rng.js';
 import type { World, WaveRecord } from '../world.js';
 import { getPattern, yawFromTangent, type PathParams } from './paths.js';
+import { difficultyScale, scaledCount } from './difficulty.js';
 
 export interface EnemyDef {
   hull: number;
@@ -28,6 +29,7 @@ export interface WaveDef {
   durationMs?: number; // member lifetime before it flies off-field
   speed?: number; // scales the path rate
   params?: PathParams;
+  fire?: { rate: number; aimed?: boolean }; // enemy weapon (driven by ai.ts) [ROC-ENM-11]
 }
 
 export interface WaveContext {
@@ -51,22 +53,25 @@ export function startWave(world: World, def: WaveDef, ctx: WaveContext): number 
   if (!enemy) throw new Error(`unknown enemy '${def.enemy}'`);
 
   const id = world.nextId++;
+  const count = scaledCount(def.count, world.difficulty); // enemy-count scaler [ROC-ENM-14, ROC-DIF-2]
   const rec: WaveRecord = {
     members: new Set(),
-    total: def.count,
-    bountySum: def.count * enemy.bounty,
+    total: count,
+    bountySum: count * enemy.bounty,
     killed: 0,
     escaped: false,
     spawn: {
       pattern: def.pattern,
       enemy: def.enemy,
       params: def.params ?? {},
-      count: def.count,
+      count,
       spacingSec: def.spacingMs / 1000,
       durationSec: (def.durationMs ?? 4000) / 1000 / (def.speed ?? 1),
-      pending: def.count,
+      pending: count,
       timer: 0,
       spawnedIndex: 0,
+      fireRate: def.fire?.rate ?? 0,
+      fireAimed: def.fire?.aimed ?? false,
     },
   };
   world.waves.active.set(id, rec);
@@ -84,6 +89,13 @@ function spawnMember(world: World, waveId: number, rec: WaveRecord, ctx: WaveCon
   const params = s.params;
   const start = pattern(0, params, rng);
   const path: PathRuntime = { pattern: s.pattern, params, age: 0, duration: s.durationSec };
+
+  // Enemy stats scale with difficulty (more hull/shields/fire later). [ROC-ENM-12, ROC-DIF-2]
+  const scale = difficultyScale(world.difficulty);
+  const hull = def.hull * scale.hull;
+  const shield = Math.round((def.shield ?? 0) * scale.shield);
+  const fireRate = s.fireRate > 0 ? s.fireRate * scale.fireRate : 0;
+
   const e: Entity = {
     id,
     kind: 'enemy',
@@ -91,16 +103,17 @@ function spawnMember(world: World, waveId: number, rec: WaveRecord, ctx: WaveCon
     vel: vec3(),
     yaw: yawFromTangent(start.tangent),
     bank: 0,
-    hull: def.hull,
-    hullMax: def.hull,
-    shield: def.shield ?? 0,
-    shieldMax: def.shield ?? 0,
+    hull,
+    hullMax: hull,
+    shield,
+    shieldMax: shield,
     bounty: def.bounty,
     meshId: def.meshId,
     colliderRx: def.colliderRx,
     colliderRz: def.colliderRz,
     waveId,
     path,
+    ai: fireRate > 0 ? { rate: fireRate, aimed: s.fireAimed, cooldown: 1 / fireRate } : undefined,
   };
   world.entities.set(id, e);
   rec.members.add(id);
