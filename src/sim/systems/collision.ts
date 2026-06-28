@@ -167,7 +167,8 @@ export function collisionSystem(world: World, cfg: CollisionConfig): CollisionHi
 
   const hits: CollisionHit[] = [];
   for (const e of world.entities.values()) {
-    if (e.kind !== 'projectile' || e.team !== 'player') continue;
+    // Player projectiles and homing missiles are the attackers vs enemy targets.
+    if (e.team !== 'player' || (e.kind !== 'projectile' && e.kind !== 'missile')) continue;
     const b: Pt = { x: e.pos.x, y: e.pos.z };
     const a: Pt = { x: e.pos.x - e.vel.x * cfg.dt, y: e.pos.z - e.vel.z * cfg.dt };
 

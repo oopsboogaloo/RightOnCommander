@@ -18,6 +18,7 @@ import { economySystem } from './systems/economy.js';
 import { particlesSystem } from './systems/particles.js';
 import { waveSystem, type EnemyDef, type WaveContext } from './systems/waves.js';
 import { aiSystem } from './systems/ai.js';
+import { missilesSystem } from './systems/missiles.js';
 
 // Fixed sim tick, in seconds. Must match the shell loop's DT (platform/loop.ts). [design §3]
 export const SIM_DT = 1 / 120;
@@ -60,6 +61,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
 
     movementSystem(world, input, SIM_DT);
     weaponsSystem(world, input, SIM_DT);
+    missilesSystem(world, SIM_DT);
     waveSystem(world, rng, SIM_DT, waveCtx);
     aiSystem(world, SIM_DT);
     const hits = collisionSystem(world, {
