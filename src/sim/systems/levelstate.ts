@@ -49,9 +49,11 @@ function spawnBoss(world: World, name: string, ctx: WaveContext, drops?: string)
   world.entities.set(id, {
     id,
     kind: 'boss',
-    pos: vec3(0, 0, 1.2),
+    // Up-screen but fully on-screen (z=1.2 put its centre past the top edge on landscape), and
+    // turned to face the player below — the mesh nose is +z, so yaw=π points it down-screen.
+    pos: vec3(0, 0, 0.7),
     vel: vec3(),
-    yaw: 0,
+    yaw: Math.PI,
     bank: 0,
     hull: def.hull,
     hullMax: def.hull,
