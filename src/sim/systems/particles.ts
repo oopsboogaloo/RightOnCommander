@@ -11,6 +11,9 @@ export interface ParticlesConfig {
   fragmentCount: [number, number]; // particles per hull-hit fragment burst
   speed: [number, number]; // world units / second
   ttl: [number, number]; // seconds
+  fragSpeed: [number, number]; // wireframe-shard drift speed
+  fragSpin: [number, number]; // wireframe-shard tumble, radians/sec (signed via rng)
+  fragTtl: [number, number]; // wireframe-shard lifetime
 }
 
 export const DEFAULT_PARTICLES: ParticlesConfig = {
@@ -18,7 +21,19 @@ export const DEFAULT_PARTICLES: ParticlesConfig = {
   fragmentCount: [2, 4],
   speed: [0.4, 1.6],
   ttl: [0.4, 1.0],
+  fragSpeed: [0.5, 1.8],
+  fragSpin: [1.5, 5],
+  fragTtl: [0.5, 1.1],
 };
+
+// One edge of a ship mesh, projected to the play plane and pre-scaled to the rendered hull size.
+export interface FragSeg {
+  ax: number;
+  az: number;
+  bx: number;
+  bz: number;
+}
+export type FragGeom = Record<string, FragSeg[]>;
 
 interface XYZ {
   x: number;
@@ -65,20 +80,96 @@ export function spawnExplosion(world: World, rng: Rng, at: XYZ, cfg: ParticlesCo
   burst(world, rng, at, randInt(rng, cfg.explosionCount), cfg);
 }
 
-export function particlesSystem(world: World, rng: Rng, dt: number, cfg: ParticlesConfig = DEFAULT_PARTICLES): void {
+// Break a destroyed ship into its own wireframe: each edge becomes a tumbling shard that drifts
+// out from the centre and fades. Lines, alongside the dot burst. [ROC-DMG-6, ROC-VIS-6]
+export function spawnFragments(
+  world: World,
+  rng: Rng,
+  segs: FragSeg[],
+  at: XYZ,
+  yaw: number,
+  cfg: ParticlesConfig = DEFAULT_PARTICLES,
+): void {
+  const c = Math.cos(yaw);
+  const s = Math.sin(yaw);
+  // Rotate a local play-plane point by the ship's heading (yaw about the height axis).
+  const rot = (x: number, z: number): { x: number; z: number } => ({ x: x * c + z * s, z: -x * s + z * c });
+
+  for (const seg of segs) {
+    const a = rot(seg.ax, seg.az);
+    const b = rot(seg.bx, seg.bz);
+    const mid = { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 };
+    const half = { x: (b.x - a.x) / 2, z: (b.z - a.z) / 2 };
+
+    // Drift outward from the hull centre (fallback to a random direction for a centred edge).
+    let dirx = mid.x;
+    let dirz = mid.z;
+    const len = Math.hypot(dirx, dirz);
+    if (len < 1e-4) {
+      const ang = rng.range(0, Math.PI * 2);
+      dirx = Math.cos(ang);
+      dirz = Math.sin(ang);
+    } else {
+      dirx /= len;
+      dirz /= len;
+    }
+    const speed = randRange(rng, cfg.fragSpeed);
+    const spin = randRange(rng, cfg.fragSpin) * (rng.int(2) === 0 ? -1 : 1);
+    const ttl = randRange(rng, cfg.fragTtl);
+
+    const id = world.nextId++;
+    world.entities.set(id, {
+      id,
+      kind: 'fragment',
+      pos: { x: at.x + mid.x, y: 0, z: at.z + mid.z },
+      vel: { x: dirx * speed, y: 0, z: dirz * speed },
+      yaw: 0,
+      bank: 0,
+      seg: { x: half.x, z: half.z },
+      spin,
+      ttl,
+      ttlMax: ttl,
+    });
+  }
+}
+
+export function particlesSystem(
+  world: World,
+  rng: Rng,
+  dt: number,
+  cfg: ParticlesConfig = DEFAULT_PARTICLES,
+  fragGeom?: FragGeom,
+): void {
   // Spawn from this step's damage events.
   for (const ev of world.events) {
-    if (ev.type === 'destroyed') burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.explosionCount), cfg);
-    else if (ev.type === 'fragments') burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.fragmentCount), cfg);
+    if (ev.type === 'destroyed') {
+      burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.explosionCount), cfg);
+      const segs = fragGeom && typeof ev.meshId === 'string' ? fragGeom[ev.meshId] : undefined;
+      if (segs && segs.length) spawnFragments(world, rng, segs, ev.pos as XYZ, (ev.yaw as number) ?? 0, cfg);
+    } else if (ev.type === 'fragments') {
+      burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.fragmentCount), cfg);
+    }
   }
 
   // Integrate and recycle expired particles.
   for (const e of [...world.entities.values()]) {
-    if (e.kind !== 'particle') continue;
-    e.pos.x += e.vel.x * dt;
-    e.pos.y += e.vel.y * dt;
-    e.pos.z += e.vel.z * dt;
-    e.ttl = (e.ttl ?? 0) - dt;
-    if (e.ttl <= 0) recycleParticle(world, e);
+    if (e.kind === 'particle') {
+      e.pos.x += e.vel.x * dt;
+      e.pos.y += e.vel.y * dt;
+      e.pos.z += e.vel.z * dt;
+      e.ttl = (e.ttl ?? 0) - dt;
+      if (e.ttl <= 0) recycleParticle(world, e);
+    } else if (e.kind === 'fragment') {
+      e.pos.x += e.vel.x * dt;
+      e.pos.z += e.vel.z * dt;
+      if (e.seg && e.spin) {
+        const c = Math.cos(e.spin * dt);
+        const s = Math.sin(e.spin * dt);
+        const { x, z } = e.seg;
+        e.seg = { x: x * c - z * s, z: x * s + z * c }; // tumble the shard
+      }
+      e.ttl = (e.ttl ?? 0) - dt;
+      if (e.ttl <= 0) world.entities.delete(e.id);
+    }
   }
 }

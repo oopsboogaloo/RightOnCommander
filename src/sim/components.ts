@@ -12,6 +12,7 @@ export type EntityKind =
   | 'pickup'
   | 'cargo'
   | 'particle'
+  | 'fragment'
   | 'station';
 
 export type PickupType =
@@ -40,7 +41,10 @@ export interface Entity {
   flashTtl?: number; // white damage flash timer [ROC-DMG-6a]
   shieldFlashTtl?: number;
   thrust?: boolean; // engine-flame flag: thrusting up-screen [ROC-MOV-4]
-  ttl?: number; // remaining lifetime in seconds (projectiles, particles)
+  ttl?: number; // remaining lifetime in seconds (projectiles, particles, fragments)
+  ttlMax?: number; // initial ttl, for fade [ROC-DMG-6]
+  seg?: { x: number; z: number }; // half-segment vector for a wireframe fragment line
+  spin?: number; // fragment angular velocity, radians/sec
   team?: 'player' | 'enemy'; // who fired a projectile
   damage?: number; // damage dealt by a projectile
   colliderRx?: number; // shield ellipse radii (play plane) [ROC-DMG-1]

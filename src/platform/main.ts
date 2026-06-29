@@ -49,7 +49,7 @@ const MESHES: Record<string, Mesh> = {
   coriolis,
 } as unknown as Record<string, Mesh>;
 
-const sim = createSim({ seed: 1, content: { enemies, level: level1 } });
+const sim = createSim({ seed: 1, content: { enemies, level: level1, meshes: MESHES } });
 const renderer = new Renderer2D(ctx);
 const input = new DomInput({ canvas, storage: createLocalStorage() });
 
@@ -115,6 +115,15 @@ startGameLoop({
         case 'particle':
           particles.push(e.pos);
           break;
+        case 'fragment': {
+          // A tumbling wireframe shard from a destroyed hull, fading over its life. [ROC-DMG-6]
+          if (!e.seg) break;
+          const a = vec3(e.pos.x - e.seg.x, e.pos.y, e.pos.z - e.seg.z);
+          const b = vec3(e.pos.x + e.seg.x, e.pos.y, e.pos.z + e.seg.z);
+          const fade = e.ttlMax ? Math.max(0, Math.min(1, (e.ttl ?? 0) / e.ttlMax)) : 1;
+          renderer.drawWorldLine(a, b, { stroke: `rgba(255,255,255,${fade.toFixed(2)})`, lineWidth: 1.5 });
+          break;
+        }
         case 'pickup':
           pickups.push(e.pos);
           break;
