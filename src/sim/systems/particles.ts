@@ -16,14 +16,16 @@ export interface ParticlesConfig {
   fragTtl: [number, number]; // wireframe-shard lifetime
 }
 
+// Tuned to sit on the (1/3-scale) hull rather than spray across the field: low drift speeds keep
+// the blast in place, longer lifetimes make it read as a slow, deliberate break-up. [ROC-VIS-6]
 export const DEFAULT_PARTICLES: ParticlesConfig = {
-  explosionCount: [10, 16],
+  explosionCount: [8, 13],
   fragmentCount: [2, 4],
-  speed: [0.4, 1.6],
-  ttl: [0.4, 1.0],
-  fragSpeed: [0.5, 1.8],
-  fragSpin: [1.5, 5],
-  fragTtl: [0.5, 1.1],
+  speed: [0.1, 0.35],
+  ttl: [0.55, 1.2],
+  fragSpeed: [0.1, 0.4],
+  fragSpin: [0.8, 2.6],
+  fragTtl: [0.7, 1.3],
 };
 
 // One edge of a ship mesh, projected to the play plane and pre-scaled to the rendered hull size.
