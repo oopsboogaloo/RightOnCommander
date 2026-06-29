@@ -15,7 +15,8 @@ import { weaponsSystem } from './systems/weapons.js';
 import { collisionSystem } from './systems/collision.js';
 import { damageSystem } from './systems/damage.js';
 import { economySystem } from './systems/economy.js';
-import { particlesSystem } from './systems/particles.js';
+import { particlesSystem, DEFAULT_PARTICLES, type FragGeom } from './systems/particles.js';
+import type { Mesh } from '../interfaces.js';
 import { waveSystem, type WaveContext } from './systems/waves.js';
 import { aiSystem } from './systems/ai.js';
 import { missilesSystem } from './systems/missiles.js';
@@ -68,6 +69,20 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
   const level: LevelDef | undefined = loaded.level;
   if (level) startLevel(world, level, waveCtx);
 
+  // Pre-project each mesh's edges to the play plane at the rendered hull size, so a destroyed
+  // ship can shatter into its own wireframe deterministically. [ROC-DMG-6]
+  const meshes = (content?.meshes ?? {}) as Record<string, Mesh>;
+  const fragGeom: FragGeom = {};
+  for (const [id, m] of Object.entries(meshes)) {
+    if (!m?.edges || !m?.vertices) continue;
+    fragGeom[id] = m.edges.map(([i, j]) => ({
+      ax: m.vertices[i].x * SHIP_SCALE,
+      az: m.vertices[i].z * SHIP_SCALE,
+      bx: m.vertices[j].x * SHIP_SCALE,
+      bz: m.vertices[j].z * SHIP_SCALE,
+    }));
+  }
+
   // Wipe the current combat and re-run the level's opening after a death that costs a life.
   function restartLevel(): void {
     if (!level) return;
@@ -101,7 +116,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     dropsSystem(world);
     pickupsSystem(world, SIM_DT);
     economySystem(world);
-    particlesSystem(world, rng, SIM_DT);
+    particlesSystem(world, rng, SIM_DT, DEFAULT_PARTICLES, fragGeom);
 
     world.rngState = rng.getState();
     world.frame++;

@@ -55,6 +55,8 @@ export function applyDamage(
       id: e.id,
       kind: e.kind,
       pos: { ...e.pos },
+      yaw: e.yaw,
+      meshId: e.meshId, // lets the renderer/particles break the ship into its wireframe [ROC-DMG-6]
       bounty: isPlayer ? 0 : e.bounty ?? 0,
       drops: isPlayer ? undefined : e.drops,
     });
