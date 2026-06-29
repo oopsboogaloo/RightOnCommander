@@ -7,15 +7,17 @@ import { modelMatrix } from '../project.js';
 import { vec3 } from '../../sim/math/vec3.js';
 import type { Mesh } from '../../interfaces.js';
 import type { World } from '../../sim/world.js';
-import { nextShipId, equippedCount } from '../../sim/systems/ships.js';
+import { nextShipId, equippedCount, DIRECTIONS, type LaserType } from '../../sim/systems/ships.js';
 import type { StationContext } from '../../sim/systems/station.js';
 
 export type StationAction =
   | 'sell'
   | 'buyShip'
-  | 'fitPulse'
-  | 'fitBeam'
-  | 'fitMilitary'
+  | 'laserType'
+  | 'fitFront'
+  | 'fitRear'
+  | 'fitLeft'
+  | 'fitRight'
   | 'ecm'
   | 'bomb'
   | 'pod'
@@ -38,20 +40,31 @@ const hasFreeHardpoint = (world: World): boolean => equippedCount(world.player.l
 
 // Lay out the menu (right column) with current labels + enabled flags. `launchArmed` flips the
 // Launch row into its confirmation state. [ROC-STN-2..7, ROC-ECO-8]
-export function stationButtons(world: World, ctx: StationContext, w: number, h: number, launchArmed: boolean): StationButton[] {
+const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+const fitAction = { front: 'fitFront', rear: 'fitRear', left: 'fitLeft', right: 'fitRight' } as const;
+
+export function stationButtons(world: World, ctx: StationContext, w: number, h: number, launchArmed: boolean, selected: LaserType): StationButton[] {
   const { prices, ships } = ctx;
   const next = nextShipId(ships, world.player.shipClass);
   const free = hasFreeHardpoint(world);
   const cargoTons = Object.values(world.cargo).reduce((n, t) => n + t, 0);
+  const laserPrice = prices.lasers[selected];
 
   const defs: { label: string; enabled: boolean; action: StationAction }[] = [
     { label: `Sell Cargo (${cargoTons}T)`, enabled: cargoTons > 0, action: 'sell' },
     next
       ? { label: `Buy ${ships.ships[next].name}  ${ships.ships[next].price}cr`, enabled: affordable(world, ships.ships[next].price), action: 'buyShip' }
       : { label: 'Top ship owned', enabled: false, action: 'buyShip' },
-    { label: `Fit Pulse  ${prices.lasers.pulse}cr`, enabled: free && affordable(world, prices.lasers.pulse), action: 'fitPulse' },
-    { label: `Fit Beam  ${prices.lasers.beam}cr`, enabled: free && affordable(world, prices.lasers.beam), action: 'fitBeam' },
-    { label: `Fit Military  ${prices.lasers.military}cr`, enabled: free && affordable(world, prices.lasers.military), action: 'fitMilitary' },
+    // Pick a laser type, then fit it to any free direction (so side/rear lasers are buyable). [ROC-STN-4]
+    { label: `Laser type: ${cap(selected)}  (${laserPrice}cr)`, enabled: true, action: 'laserType' },
+    ...DIRECTIONS.map((dir) => {
+      const cur = world.player.lasers[dir];
+      return {
+        label: cur ? `${cap(dir)}: ${cur}` : `Fit ${cap(dir)}  ${laserPrice}cr`,
+        enabled: !cur && free && affordable(world, laserPrice),
+        action: fitAction[dir] as StationAction,
+      };
+    }),
     { label: `Buy ECM  ${prices.equipment.ecm}cr`, enabled: affordable(world, prices.equipment.ecm), action: 'ecm' },
     { label: `Buy Energy Bomb  ${prices.equipment.bomb}cr`, enabled: affordable(world, prices.equipment.bomb), action: 'bomb' },
     { label: `Buy Escape Pod  ${prices.equipment.pod}cr`, enabled: !world.player.escapePod && affordable(world, prices.equipment.pod), action: 'pod' },

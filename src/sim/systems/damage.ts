@@ -44,7 +44,7 @@ export function applyDamage(
 
   e.hull = (e.hull ?? 0) - damage; // unshielded: hull damage [ROC-DMG-6]
   e.flashTtl = cfg.flashDuration; // white flash applies to ANY hull hit [ROC-DMG-6a]
-  world.events.push({ type: 'fragments', pos: { ...e.pos }, meshId: e.meshId });
+  world.events.push({ type: 'fragments', pos: { ...e.pos }, vel: { ...e.vel }, meshId: e.meshId });
 
   if ((e.hull ?? 0) <= 0) {
     // No bounty/drops for the player; gamestate resolves the life/respawn and keeps the entity
@@ -55,6 +55,7 @@ export function applyDamage(
       id: e.id,
       kind: e.kind,
       pos: { ...e.pos },
+      vel: { ...e.vel }, // wrecks inherit the ship's motion [ROC-VIS-6]
       yaw: e.yaw,
       meshId: e.meshId, // lets the renderer/particles break the ship into its wireframe [ROC-DMG-6]
       bounty: isPlayer ? 0 : e.bounty ?? 0,
