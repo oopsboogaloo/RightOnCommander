@@ -14,7 +14,15 @@ export interface ParticlesConfig {
   fragSpeed: [number, number]; // wireframe-shard drift speed
   fragSpin: [number, number]; // wireframe-shard tumble, radians/sec (signed via rng)
   fragTtl: [number, number]; // wireframe-shard lifetime
+  exhaustTtl: [number, number]; // missile thrust-puff lifetime
 }
+
+interface Vel {
+  x: number;
+  y: number;
+  z: number;
+}
+const ZERO: Vel = { x: 0, y: 0, z: 0 };
 
 // Tuned to sit on the (1/3-scale) hull rather than spray across the field: low drift speeds keep
 // the blast in place, longer lifetimes make it read as a slow, deliberate break-up. [ROC-VIS-6]
@@ -26,6 +34,7 @@ export const DEFAULT_PARTICLES: ParticlesConfig = {
   fragSpeed: [0.1, 0.4],
   fragSpin: [0.8, 2.6],
   fragTtl: [0.7, 1.3],
+  exhaustTtl: [0.18, 0.34],
 };
 
 // One edge of a ship mesh, projected to the play plane and pre-scaled to the rendered hull size.
@@ -64,22 +73,35 @@ function recycleParticle(world: World, e: Entity): void {
   world.pool.particles.push(e);
 }
 
-function burst(world: World, rng: Rng, at: XYZ, count: number, cfg: ParticlesConfig): void {
+function burst(world: World, rng: Rng, at: XYZ, count: number, cfg: ParticlesConfig, base: Vel = ZERO): void {
   for (let i = 0; i < count; i++) {
     const e = acquireParticle(world);
     e.kind = 'particle';
     const angle = rng.range(0, Math.PI * 2);
     const speed = randRange(rng, cfg.speed);
     e.pos = { x: at.x, y: at.y, z: at.z };
-    e.vel = { x: Math.cos(angle) * speed, y: 0, z: Math.sin(angle) * speed };
+    e.vel = { x: Math.cos(angle) * speed + base.x, y: 0, z: Math.sin(angle) * speed + base.z }; // drift with the wreck
     e.yaw = 0;
     e.bank = 0;
     e.ttl = randRange(rng, cfg.ttl);
   }
 }
 
-export function spawnExplosion(world: World, rng: Rng, at: XYZ, cfg: ParticlesConfig = DEFAULT_PARTICLES): void {
-  burst(world, rng, at, randInt(rng, cfg.explosionCount), cfg);
+// A single thrust puff left behind a missile: drifts opposite its heading and fades fast.
+function exhaust(world: World, rng: Rng, at: XYZ, vel: Vel, cfg: ParticlesConfig): void {
+  const e = acquireParticle(world);
+  e.kind = 'particle';
+  const sp = Math.hypot(vel.x, vel.z) || 1;
+  const back = 0.15;
+  e.pos = { x: at.x, y: 0, z: at.z };
+  e.vel = { x: (-vel.x / sp) * back + rng.range(-0.1, 0.1), y: 0, z: (-vel.z / sp) * back + rng.range(-0.1, 0.1) };
+  e.yaw = 0;
+  e.bank = 0;
+  e.ttl = randRange(rng, cfg.exhaustTtl);
+}
+
+export function spawnExplosion(world: World, rng: Rng, at: XYZ, cfg: ParticlesConfig = DEFAULT_PARTICLES, base: Vel = ZERO): void {
+  burst(world, rng, at, randInt(rng, cfg.explosionCount), cfg, base);
 }
 
 // Break a destroyed ship into its own wireframe: each edge becomes a tumbling shard that drifts
@@ -91,6 +113,7 @@ export function spawnFragments(
   at: XYZ,
   yaw: number,
   cfg: ParticlesConfig = DEFAULT_PARTICLES,
+  base: Vel = ZERO,
 ): void {
   const c = Math.cos(yaw);
   const s = Math.sin(yaw);
@@ -124,7 +147,7 @@ export function spawnFragments(
       id,
       kind: 'fragment',
       pos: { x: at.x + mid.x, y: 0, z: at.z + mid.z },
-      vel: { x: dirx * speed, y: 0, z: dirz * speed },
+      vel: { x: dirx * speed + base.x, y: 0, z: dirz * speed + base.z },
       yaw: 0,
       bank: 0,
       seg: { x: half.x, z: half.z },
@@ -145,11 +168,14 @@ export function particlesSystem(
   // Spawn from this step's damage events.
   for (const ev of world.events) {
     if (ev.type === 'destroyed') {
-      burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.explosionCount), cfg);
+      const base = (ev.vel as Vel) ?? ZERO;
+      burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.explosionCount), cfg, base);
       const segs = fragGeom && typeof ev.meshId === 'string' ? fragGeom[ev.meshId] : undefined;
-      if (segs && segs.length) spawnFragments(world, rng, segs, ev.pos as XYZ, (ev.yaw as number) ?? 0, cfg);
+      if (segs && segs.length) spawnFragments(world, rng, segs, ev.pos as XYZ, (ev.yaw as number) ?? 0, cfg, base);
     } else if (ev.type === 'fragments') {
-      burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.fragmentCount), cfg);
+      burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.fragmentCount), cfg, (ev.vel as Vel) ?? ZERO);
+    } else if (ev.type === 'exhaust') {
+      exhaust(world, rng, ev.pos as XYZ, (ev.vel as Vel) ?? ZERO, cfg);
     }
   }
 

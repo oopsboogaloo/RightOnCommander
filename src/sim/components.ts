@@ -45,6 +45,7 @@ export interface Entity {
   ttlMax?: number; // initial ttl, for fade [ROC-DMG-6]
   seg?: { x: number; z: number }; // half-segment vector for a wireframe fragment line
   spin?: number; // fragment angular velocity, radians/sec
+  speed?: number; // current scalar speed (missiles accelerate toward their max) [ROC-MIS-3]
   team?: 'player' | 'enemy'; // who fired a projectile
   damage?: number; // damage dealt by a projectile
   colliderRx?: number; // shield ellipse radii (play plane) [ROC-DMG-1]

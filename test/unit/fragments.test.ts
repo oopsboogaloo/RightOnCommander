@@ -64,6 +64,25 @@ describe('wireframe fragments', () => {
     expect(fragments(w).length).toBe(0);
   });
 
+  it('debris inherits the wreck velocity', () => {
+    const w = makeWorld(1);
+    const rng = createRng(1);
+    spawnFragments(w, rng, geom.sq, { x: 0, y: 0, z: 0 }, 0, DEFAULT_PARTICLES, { x: 0, y: 0, z: -2 });
+    const frags = fragments(w);
+    const avgVz = frags.reduce((s, f) => s + f.vel.z, 0) / frags.length;
+    expect(avgVz).toBeLessThan(-1); // dragged along by the wreck's downward motion
+  });
+
+  it('explosion dots inherit the wreck velocity', () => {
+    const w = makeWorld(1);
+    const rng = createRng(2);
+    w.events = [{ type: 'destroyed', kind: 'enemy', pos: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: -3 }, meshId: 'none' }];
+    particlesSystem(w, rng, 1 / 120, DEFAULT_PARTICLES, {});
+    const dots = [...w.entities.values()].filter((e) => e.kind === 'particle');
+    const avgVz = dots.reduce((s, p) => s + p.vel.z, 0) / dots.length;
+    expect(avgVz).toBeLessThan(0);
+  });
+
   it('is deterministic for a seed', () => {
     const run = (): number[] => {
       const w = makeWorld(1);

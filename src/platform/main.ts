@@ -26,7 +26,7 @@ import {
   type PricesContent,
   type StationContext,
 } from '../sim/systems/station.js';
-import { loadShips, DIRECTIONS, equippedCount, type Direction, type LaserType } from '../sim/systems/ships.js';
+import { loadShips, type LaserType } from '../sim/systems/ships.js';
 import { stationButtons, buttonAt, drawStation, type StationAction } from '../render/screens/station.js';
 
 import enemies from '../content/enemies.json';
@@ -76,26 +76,20 @@ const input = new DomInput({ canvas, storage: createLocalStorage() });
 // Station shop wiring: the dock screen shows when the level reaches DOCK; taps route to intents.
 const stationCtx: StationContext = { ships: loadShips(shipsJson), prices: economyJson as PricesContent };
 let launchArmed = false;
+let selectedLaser: LaserType = 'pulse';
+const LASER_CYCLE: LaserType[] = ['pulse', 'beam', 'military'];
 const dockActive = (): boolean => sim.state.levelState === 'DOCK';
-
-function firstFreeDirection(): Direction | undefined {
-  if (equippedCount(sim.state.player.lasers) >= sim.state.player.hardpoints) return undefined;
-  return DIRECTIONS.find((d) => !sim.state.player.lasers[d]);
-}
 
 function runStationAction(action: StationAction): void {
   const w = sim.state;
   switch (action) {
     case 'sell': sellCargo(w, stationCtx); break;
     case 'buyShip': buyShip(w, stationCtx); break;
-    case 'fitPulse':
-    case 'fitBeam':
-    case 'fitMilitary': {
-      const dir = firstFreeDirection();
-      const type = ({ fitPulse: 'pulse', fitBeam: 'beam', fitMilitary: 'military' } as const)[action] as LaserType;
-      if (dir) fitLaserAt(w, stationCtx, dir, type);
-      break;
-    }
+    case 'laserType': selectedLaser = LASER_CYCLE[(LASER_CYCLE.indexOf(selectedLaser) + 1) % LASER_CYCLE.length]; break;
+    case 'fitFront': fitLaserAt(w, stationCtx, 'front', selectedLaser); break;
+    case 'fitRear': fitLaserAt(w, stationCtx, 'rear', selectedLaser); break;
+    case 'fitLeft': fitLaserAt(w, stationCtx, 'left', selectedLaser); break;
+    case 'fitRight': fitLaserAt(w, stationCtx, 'right', selectedLaser); break;
     case 'ecm': buyEcm(w, stationCtx); break;
     case 'bomb': buyEnergyBomb(w, stationCtx); break;
     case 'pod': buyEscapePod(w, stationCtx); break;
@@ -112,7 +106,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if (!dockActive()) return;
   const w = canvas!.clientWidth || canvas!.width;
   const h = canvas!.clientHeight || canvas!.height;
-  const btn = buttonAt(stationButtons(sim.state, stationCtx, w, h, launchArmed), e.offsetX, e.offsetY);
+  const btn = buttonAt(stationButtons(sim.state, stationCtx, w, h, launchArmed, selectedLaser), e.offsetX, e.offsetY);
   if (btn && btn.enabled) runStationAction(btn.action);
 });
 
@@ -169,7 +163,7 @@ startGameLoop({
     if (dockActive()) {
       const w = canvas!.clientWidth || canvas!.width;
       const h = canvas!.clientHeight || canvas!.height;
-      const buttons = stationButtons(sim.state, stationCtx, w, h, launchArmed);
+      const buttons = stationButtons(sim.state, stationCtx, w, h, launchArmed, selectedLaser);
       drawStation(renderer, sim.state, stationCtx, MESHES, buttons, { w, h, time: performance.now() / 1000 });
       renderer.endFrame(alpha);
       return;

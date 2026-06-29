@@ -153,7 +153,10 @@ export function waveSystem(world: World, rng: Rng, dt: number, ctx: WaveContext)
     path.age += dt;
     const t = Math.min(path.age / path.duration, 1);
     const pt = pattern(t, path.params, rng);
-    e.pos = vec3(pt.pos.x, pt.pos.y, pt.pos.z);
+    const prev = e.pos;
+    const np = vec3(pt.pos.x, pt.pos.y, pt.pos.z);
+    e.vel = vec3((np.x - prev.x) / dt, (np.y - prev.y) / dt, (np.z - prev.z) / dt); // real motion, so wrecks inherit it
+    e.pos = np;
     const yaw = yawFromTangent(pt.tangent);
     e.bank = clampAbs((yaw - e.yaw) * BANK_K, MAX_BANK); // [ROC-ENM-3]
     e.yaw = yaw;

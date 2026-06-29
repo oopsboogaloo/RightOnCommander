@@ -11,7 +11,9 @@ export interface MissilesConfig {
   durationSec: number; // timer per grade [ROC-MIS-4]
   maxGrade: number; // [ROC-MIS-2]
   volleyRate: number; // volleys per second (continuous autofire) [ROC-MIS-1]
-  speed: number; // world units / second
+  speed: number; // top speed, world units / second
+  initialSpeed: number; // launch speed before the motor builds up [ROC-MIS-3]
+  accel: number; // acceleration toward `speed`, world units / s^2
   ttl: number; // missile lifetime, seconds
   turnRate: number; // homing turn rate, rad/s [ROC-MIS-3]
   damage: number;
@@ -23,7 +25,9 @@ export const DEFAULT_MISSILES: MissilesConfig = {
   durationSec: 60,
   maxGrade: 4,
   volleyRate: 1,
-  speed: 4,
+  speed: 4.5,
+  initialSpeed: 1,
+  accel: 7,
   ttl: 4,
   turnRate: 6,
   damage: 2,
@@ -81,7 +85,8 @@ function fireVolley(world: World, grade: number, cfg: MissilesConfig): void {
     m.kind = 'missile';
     m.team = 'player';
     m.pos = vec3(player.pos.x + dx * cfg.muzzleOffset, 0, player.pos.z + dz * cfg.muzzleOffset);
-    m.vel = vec3(dx * cfg.speed, 0, dz * cfg.speed);
+    m.speed = cfg.initialSpeed; // launches slow, then the motor builds up [ROC-MIS-3]
+    m.vel = vec3(dx * cfg.initialSpeed, 0, dz * cfg.initialSpeed);
     m.yaw = a;
     m.bank = 0;
     m.ttl = cfg.ttl;
@@ -93,15 +98,21 @@ function fireVolley(world: World, grade: number, cfg: MissilesConfig): void {
 }
 
 function steerHoming(world: World, m: Entity, dt: number, cfg: MissilesConfig): void {
-  const target = nearestEnemy(world, m.pos);
-  if (!target) return; // no lock: fly straight
-  const desired = angleOf(target.pos.x - m.pos.x, target.pos.z - m.pos.z);
+  // Build up to top speed over the first moments of flight. [ROC-MIS-3]
+  const speed = Math.min(cfg.speed, (m.speed ?? cfg.speed) + cfg.accel * dt);
+  m.speed = speed;
+
   const current = angleOf(m.vel.x, m.vel.z);
-  let delta = desired - current;
-  delta = Math.atan2(Math.sin(delta), Math.cos(delta)); // wrap to [-pi, pi]
-  const maxTurn = cfg.turnRate * dt;
-  const a = current + Math.max(-maxTurn, Math.min(maxTurn, delta));
-  m.vel = vec3(Math.sin(a) * cfg.speed, 0, Math.cos(a) * cfg.speed);
+  let a = current;
+  const target = nearestEnemy(world, m.pos);
+  if (target) {
+    const desired = angleOf(target.pos.x - m.pos.x, target.pos.z - m.pos.z);
+    let delta = desired - current;
+    delta = Math.atan2(Math.sin(delta), Math.cos(delta)); // wrap to [-pi, pi]
+    const maxTurn = cfg.turnRate * dt;
+    a = current + Math.max(-maxTurn, Math.min(maxTurn, delta));
+  }
+  m.vel = vec3(Math.sin(a) * speed, 0, Math.cos(a) * speed);
   m.yaw = a;
 }
 
@@ -133,6 +144,7 @@ export function missilesSystem(world: World, dt: number, cfg: MissilesConfig = D
     m.pos.x += m.vel.x * dt;
     m.pos.y += m.vel.y * dt;
     m.pos.z += m.vel.z * dt;
+    if (world.frame % 2 === 0) world.events.push({ type: 'exhaust', pos: { ...m.pos }, vel: { ...m.vel } }); // thrust trail [ROC-MIS-3]
     m.ttl = (m.ttl ?? 0) - dt;
     if (m.ttl <= 0) {
       world.entities.delete(m.id);
