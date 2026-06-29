@@ -13,10 +13,29 @@ import { createLocalStorage } from './storage.js';
 import type { Mesh } from '../interfaces.js';
 import type { Entity } from '../sim/components.js';
 
+import {
+  sellCargo,
+  buyShip,
+  fitLaserAt,
+  buyEcm,
+  buyEnergyBomb,
+  buyEscapePod,
+  buyLife,
+  upgradeMissile,
+  launch,
+  type PricesContent,
+  type StationContext,
+} from '../sim/systems/station.js';
+import { loadShips, DIRECTIONS, equippedCount, type Direction, type LaserType } from '../sim/systems/ships.js';
+import { stationButtons, buttonAt, drawStation, type StationAction } from '../render/screens/station.js';
+
 import enemies from '../content/enemies.json';
 import level1 from '../content/level1.json';
+import shipsJson from '../content/ships.json';
+import economyJson from '../content/economy.json';
 import cobra_mk3 from '../content/meshes/cobra_mk3.json';
 import sidewinder from '../content/meshes/sidewinder.json';
+import asp_mk2 from '../content/meshes/asp_mk2.json';
 import krait from '../content/meshes/krait.json';
 import gecko from '../content/meshes/gecko.json';
 import adder from '../content/meshes/adder.json';
@@ -41,6 +60,7 @@ window.addEventListener('resize', resize);
 const MESHES: Record<string, Mesh> = {
   cobra_mk3,
   sidewinder,
+  asp_mk2,
   krait,
   gecko,
   adder,
@@ -52,6 +72,49 @@ const MESHES: Record<string, Mesh> = {
 const sim = createSim({ seed: 1, content: { enemies, level: level1, meshes: MESHES } });
 const renderer = new Renderer2D(ctx);
 const input = new DomInput({ canvas, storage: createLocalStorage() });
+
+// Station shop wiring: the dock screen shows when the level reaches DOCK; taps route to intents.
+const stationCtx: StationContext = { ships: loadShips(shipsJson), prices: economyJson as PricesContent };
+let launchArmed = false;
+const dockActive = (): boolean => sim.state.levelState === 'DOCK';
+
+function firstFreeDirection(): Direction | undefined {
+  if (equippedCount(sim.state.player.lasers) >= sim.state.player.hardpoints) return undefined;
+  return DIRECTIONS.find((d) => !sim.state.player.lasers[d]);
+}
+
+function runStationAction(action: StationAction): void {
+  const w = sim.state;
+  switch (action) {
+    case 'sell': sellCargo(w, stationCtx); break;
+    case 'buyShip': buyShip(w, stationCtx); break;
+    case 'fitPulse':
+    case 'fitBeam':
+    case 'fitMilitary': {
+      const dir = firstFreeDirection();
+      const type = ({ fitPulse: 'pulse', fitBeam: 'beam', fitMilitary: 'military' } as const)[action] as LaserType;
+      if (dir) fitLaserAt(w, stationCtx, dir, type);
+      break;
+    }
+    case 'ecm': buyEcm(w, stationCtx); break;
+    case 'bomb': buyEnergyBomb(w, stationCtx); break;
+    case 'pod': buyEscapePod(w, stationCtx); break;
+    case 'life': buyLife(w, stationCtx); break;
+    case 'missile': upgradeMissile(w, stationCtx); break;
+    case 'launch':
+      if (!launchArmed) { launchArmed = true; break; } // first tap arms the confirm [ROC-STN-6]
+      if (launch(w, true).ok) { sim.relaunch(); launchArmed = false; }
+      break;
+  }
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (!dockActive()) return;
+  const w = canvas!.clientWidth || canvas!.width;
+  const h = canvas!.clientHeight || canvas!.height;
+  const btn = buttonAt(stationButtons(sim.state, stationCtx, w, h, launchArmed), e.offsetX, e.offsetY);
+  if (btn && btn.enabled) runStationAction(btn.action);
+});
 
 interface Pose {
   x: number;
@@ -102,6 +165,16 @@ startGameLoop({
   render: (alpha) => {
     renderer.beginFrame();
 
+    // Docked: show the station shop instead of the play field. [ROC-STN-1]
+    if (dockActive()) {
+      const w = canvas!.clientWidth || canvas!.width;
+      const h = canvas!.clientHeight || canvas!.height;
+      const buttons = stationButtons(sim.state, stationCtx, w, h, launchArmed);
+      drawStation(renderer, sim.state, stationCtx, MESHES, buttons, { w, h, time: performance.now() / 1000 });
+      renderer.endFrame(alpha);
+      return;
+    }
+
     const particles: Vec3[] = [];
     const pickups: Vec3[] = [];
     for (const e of sim.state.entities.values()) {
@@ -147,7 +220,7 @@ startGameLoop({
     const invuln = sim.state.player.invulnTtl;
     const blinkOff = invuln > 0 && Math.floor(invuln / 0.1) % 2 === 1;
     if (sim.state.mode !== 'GAME_OVER' && !blinkOff) {
-      const pmesh = (player.meshId && MESHES[player.meshId]) || MESHES.cobra_mk3;
+      const pmesh = (player.meshId && MESHES[player.meshId]) || MESHES.sidewinder;
       const pos = vec3(lerp(prev.x, curr.x, alpha), lerp(prev.y, curr.y, alpha), lerp(prev.z, curr.z, alpha));
       renderer.drawMesh(pmesh, modelMatrix(pos, lerp(prev.yaw, curr.yaw, alpha), lerp(prev.bank, curr.bank, alpha), SHIP_SCALE), hullFlash(player));
       drawShield(player, pos);
