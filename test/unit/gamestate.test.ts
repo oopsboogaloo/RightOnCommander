@@ -45,13 +45,31 @@ describe('player takes damage', () => {
 
   it('ramming costs a hit, then i-frames stop an immediate second drain', () => {
     const w = makeWorld(1);
-    addEnemyShip(w, vec3(0, 0, 0)); // overlapping the player at origin
+    const e = addEnemyShip(w, vec3(0, 0, 0)); // overlapping the player at origin
+    e.hull = 99; // durable, so it survives the ram and we can test the player i-frames
+    e.hullMax = 99;
     gamestateSystem(w, DT, undefined, { ...DEFAULT_GAMESTATE, colliderScale: 1 });
     expect(w.entities.get(PLAYER_ID)!.shield).toBe(3);
     expect(w.player.invulnTtl).toBeGreaterThan(0);
     const before = w.entities.get(PLAYER_ID)!.shield;
     gamestateSystem(w, DT, undefined, { ...DEFAULT_GAMESTATE, colliderScale: 1 });
     expect(w.entities.get(PLAYER_ID)!.shield).toBe(before); // i-frames held
+  });
+
+  it('ramming wrecks a fighter and only dents a boss', () => {
+    const w = makeWorld(1);
+    const fighter = addEnemyShip(w, vec3(0, 0, 0)); // hull 3 < ramDamage 4
+    gamestateSystem(w, DT, undefined, { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    expect(w.entities.has(fighter.id)).toBe(false); // destroyed by the ram
+
+    const w2 = makeWorld(1);
+    const boss = addEnemyShip(w2, vec3(0, 0, 0));
+    boss.kind = 'boss';
+    boss.hull = 30;
+    boss.hullMax = 30;
+    gamestateSystem(w2, DT, undefined, { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    expect(w2.entities.has(boss.id)).toBe(true); // survives
+    expect(boss.hull).toBe(26); // chipped by ramDamage
   });
 });
 
