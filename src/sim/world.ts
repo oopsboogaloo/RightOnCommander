@@ -74,12 +74,13 @@ export function makeWorld(seed: number): World {
     vel: vec3(0, 0, 0),
     yaw: 0,
     bank: 0,
-    meshId: 'cobra_mk3',
-    shield: 4,
-    shieldMax: 4,
-    hull: 16,
-    hullMax: 16,
-    colliderRx: 0.45, // play-plane hit ellipse (full-mesh; collision scales by SHIP_SCALE)
+    // Start in a Sidewinder (matches content/ships.json). [ROC-SHIP-1,2,3]
+    meshId: 'sidewinder',
+    shield: 1,
+    shieldMax: 1,
+    hull: 2,
+    hullMax: 2,
+    colliderRx: 0.3, // play-plane hit ellipse (full-mesh; collision scales by SHIP_SCALE)
     colliderRz: 0.3,
   };
 
@@ -97,8 +98,8 @@ export function makeWorld(seed: number): World {
     entities,
     nextId: PLAYER_ID + 1,
     player: {
-      shipClass: 'cobra_mk3',
-      hardpoints: 4,
+      shipClass: 'sidewinder',
+      hardpoints: 1,
       lasers: { front: 'pulse', rear: null, left: null, right: null },
       missileGrade: 0,
       missileTimer: 0,

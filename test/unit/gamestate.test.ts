@@ -27,8 +27,16 @@ function addEnemyShip(w: ReturnType<typeof makeWorld>, pos = vec3(0, 0, 0)): Ent
 }
 
 describe('player takes damage', () => {
+  // Give the player a few shield rings independent of the starting hull's defaults.
+  const shielded = (w: ReturnType<typeof makeWorld>, rings = 4): void => {
+    const p = w.entities.get(PLAYER_ID)!;
+    p.shield = rings;
+    p.shieldMax = rings;
+  };
+
   it('an enemy shot depletes a shield ring and is consumed', () => {
     const w = makeWorld(1);
+    shielded(w);
     const shot = addEnemyShot(w);
     damageSystem(w, collisionSystem(w, collCfg), DT);
     expect(w.entities.get(PLAYER_ID)!.shield).toBe(3); // one ring gone
@@ -37,6 +45,7 @@ describe('player takes damage', () => {
 
   it('invulnerability soaks enemy fire with no damage', () => {
     const w = makeWorld(1);
+    shielded(w);
     w.player.invulnTtl = 1;
     addEnemyShot(w);
     damageSystem(w, collisionSystem(w, collCfg), DT);
@@ -45,6 +54,7 @@ describe('player takes damage', () => {
 
   it('ramming costs a hit, then i-frames stop an immediate second drain', () => {
     const w = makeWorld(1);
+    shielded(w);
     const e = addEnemyShip(w, vec3(0, 0, 0)); // overlapping the player at origin
     e.hull = 99; // durable, so it survives the ram and we can test the player i-frames
     e.hullMax = 99;

@@ -9,7 +9,8 @@ import type { InputFrame } from '../interfaces.js';
 import type { SimEvent } from './components.js';
 import { createRng, type Rng } from './rng.js';
 import { snapshot, restore, type WorldSnapshot } from './snapshot.js';
-import { makeWorld, type World } from './world.js';
+import { makeWorld, PLAYER_ID, type World } from './world.js';
+import { vec3 } from './math/vec3.js';
 import { movementSystem } from './systems/movement.js';
 import { weaponsSystem } from './systems/weapons.js';
 import { collisionSystem } from './systems/collision.js';
@@ -57,6 +58,7 @@ export interface Sim {
   readonly state: World;
   snapshot(): WorldSnapshot;
   restore(snap: WorldSnapshot): void;
+  relaunch(): void; // leave the station for a fresh level run, keeping ship/wallet/lives [ROC-STN-6]
 }
 
 export function createSim({ seed, content }: CreateSimArgs): Sim {
@@ -132,6 +134,19 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     restore: (snap: WorldSnapshot): void => {
       restore(world, snap);
       rng.setState(world.rngState);
+    },
+    relaunch: (): void => {
+      // Undock: wipe the old run, repair the hull and re-fly the level with progress intact.
+      restartLevel();
+      const p = world.entities.get(PLAYER_ID);
+      if (p) {
+        p.pos = vec3(0, 0, 0);
+        p.vel = vec3(0, 0, 0);
+        p.hull = p.hullMax ?? p.hull;
+        p.shield = p.shieldMax ?? 0;
+      }
+      world.player.invulnTtl = 0;
+      world.mode = '';
     },
   };
 }
