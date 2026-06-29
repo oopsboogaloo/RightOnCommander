@@ -10,7 +10,8 @@ import { applyDamage } from './damage.js';
 export const MAX_LIVES = 5; // [ROC-LIFE-5]
 
 export interface GamestateConfig {
-  contactDamage: number; // hull/shield lost when an enemy rams the player
+  contactDamage: number; // hull/shield the player loses when rammed
+  ramDamage: number; // hull/shield the rammed ship loses — enough to wreck a fighter, chip a boss
   contactInvuln: number; // brief i-frames after a contact so a touch costs one ring, not the lot
   respawnInvuln: number; // i-frames granted on respawn / level restart
   colliderScale: number; // matches the rendered hull size (SHIP_SCALE)
@@ -18,6 +19,7 @@ export interface GamestateConfig {
 
 export const DEFAULT_GAMESTATE: GamestateConfig = {
   contactDamage: 1,
+  ramDamage: 4,
   contactInvuln: 0.6,
   respawnInvuln: 1.5,
   colliderScale: 1,
@@ -65,6 +67,7 @@ export function gamestateSystem(
       const dx = e.pos.x - player.pos.x;
       const dz = e.pos.z - player.pos.z;
       if (dx * dx + dz * dz <= (pr + er) * (pr + er)) {
+        applyDamage(world, e, cfg.ramDamage); // the ram wrecks a fighter, dents a boss
         applyDamage(world, player, cfg.contactDamage);
         world.player.invulnTtl = cfg.contactInvuln;
         break;
