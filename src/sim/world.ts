@@ -9,8 +9,8 @@ export const PLAYER_ID = 1;
 
 export interface PlayerState {
   shipClass: string;
-  hardpoints: number;
-  lasers: { front: string | null; rear: string | null; left: string | null; right: string | null };
+  hardpoints: { front: number; rear: number; left: number; right: number }; // capacity per direction [ROC-HP-1,2]
+  lasers: { front: string[]; rear: string[]; left: string[]; right: string[] }; // installed lasers per direction
   missileGrade: number;
   missileTimer: number; // seconds left at the current grade [ROC-MIS-4]
   missileCooldown: number; // seconds until the next missile launch
@@ -100,8 +100,8 @@ export function makeWorld(seed: number): World {
     nextId: PLAYER_ID + 1,
     player: {
       shipClass: 'sidewinder',
-      hardpoints: 1,
-      lasers: { front: 'pulse', rear: null, left: null, right: null },
+      hardpoints: { front: 2, rear: 1, left: 0, right: 0 }, // matches ships.json Sidewinder
+      lasers: { front: ['pulse'], rear: [], left: [], right: [] },
       missileGrade: 0,
       missileTimer: 0,
       missileCooldown: 0,

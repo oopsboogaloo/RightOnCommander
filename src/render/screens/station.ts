@@ -36,7 +36,7 @@ export interface StationButton {
 }
 
 const affordable = (world: World, cost: number): boolean => world.econ.wallet >= cost;
-const hasFreeHardpoint = (world: World): boolean => equippedCount(world.player.lasers) < world.player.hardpoints;
+const freeIn = (world: World, dir: (typeof DIRECTIONS)[number]): number => world.player.hardpoints[dir] - world.player.lasers[dir].length;
 
 // Lay out the menu (right column) with current labels + enabled flags. `launchArmed` flips the
 // Launch row into its confirmation state. [ROC-STN-2..7, ROC-ECO-8]
@@ -46,7 +46,6 @@ const fitAction = { front: 'fitFront', rear: 'fitRear', left: 'fitLeft', right: 
 export function stationButtons(world: World, ctx: StationContext, w: number, h: number, launchArmed: boolean, selected: LaserType): StationButton[] {
   const { prices, ships } = ctx;
   const next = nextShipId(ships, world.player.shipClass);
-  const free = hasFreeHardpoint(world);
   const cargoTons = Object.values(world.cargo).reduce((n, t) => n + t, 0);
   const laserPrice = prices.lasers[selected];
 
@@ -58,10 +57,11 @@ export function stationButtons(world: World, ctx: StationContext, w: number, h: 
     // Pick a laser type, then fit it to any free direction (so side/rear lasers are buyable). [ROC-STN-4]
     { label: `Laser type: ${cap(selected)}  (${laserPrice}cr)`, enabled: true, action: 'laserType' },
     ...DIRECTIONS.map((dir) => {
-      const cur = world.player.lasers[dir];
+      const cap_ = world.player.hardpoints[dir];
+      const used = world.player.lasers[dir].length;
       return {
-        label: cur ? `${cap(dir)}: ${cur}` : `Fit ${cap(dir)}  ${laserPrice}cr`,
-        enabled: !cur && free && affordable(world, laserPrice),
+        label: `Fit ${cap(dir)} (${used}/${cap_})  ${laserPrice}cr`,
+        enabled: freeIn(world, dir) > 0 && affordable(world, laserPrice),
         action: fitAction[dir] as StationAction,
       };
     }),
@@ -113,11 +113,12 @@ export function drawStation(
 
   // Status column (left).
   const lasers = world.player.lasers;
-  const fitted = (['front', 'rear', 'left', 'right'] as const).filter((d) => lasers[d]).map((d) => `${d[0].toUpperCase()}:${lasers[d]}`).join('  ') || 'none';
+  const fitted = DIRECTIONS.filter((d) => lasers[d].length).map((d) => `${cap(d)}:${lasers[d].join('/')}`).join('  ') || 'none';
+  const totalHp = DIRECTIONS.reduce((n, d) => n + world.player.hardpoints[d], 0);
   const lines = [
     `Credits: ${world.econ.wallet}cr`,
     `Ship: ${ctx.ships.ships[world.player.shipClass]?.name ?? world.player.shipClass}`,
-    `Lasers (${world.player.hardpoints} hp): ${fitted}`,
+    `Lasers (${equippedCount(lasers)}/${totalHp} hp): ${fitted}`,
     `Lives: ${world.player.lives}   Pod: ${world.player.escapePod ? 'yes' : 'no'}`,
     `ECM: ${world.player.ecm}  Bombs: ${world.player.energyBombs}  Missile: L${world.player.missileGrade}`,
   ];

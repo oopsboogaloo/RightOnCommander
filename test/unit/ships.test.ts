@@ -16,37 +16,35 @@ import {
 const ships = loadShips(shipsJson);
 
 describe('ships content', () => {
-  it('is a four-hull ladder with in-range hardpoints', () => {
+  it('is a four-hull ladder with per-direction hardpoints', () => {
     expect(ships.ladder).toEqual(['sidewinder', 'cobra_mk3', 'asp_mk2', 'fer_de_lance']);
-    expect(ships.ships.sidewinder.hardpoints).toBe(1);
-    expect(ships.ships.fer_de_lance.hardpoints).toBe(4);
+    expect(ships.ships.sidewinder.hardpoints).toEqual({ front: 2, rear: 1, left: 0, right: 0 });
+    expect(ships.ships.fer_de_lance.hardpoints).toEqual({ front: 3, rear: 3, left: 3, right: 3 });
   });
 });
 
 describe('laser fitting rules', () => {
-  it('caps at the hardpoint count and one laser per direction', () => {
-    const w = makeWorld(1); // Sidewinder: 1 hardpoint, front pulse already fitted
+  it('fills each direction up to its hardpoint capacity', () => {
+    const w = makeWorld(1); // Sidewinder: front 2 (one pulse fitted), rear 1, no sides
     expect(equippedCount(w.player.lasers)).toBe(1);
-    expect(canFitLaser(w, 'front').ok).toBe(false); // direction already armed
-    expect(canFitLaser(w, 'rear').ok).toBe(false); // no free hardpoint
-    expect(fitLaser(w, 'rear', 'pulse')).toBe(false);
-
-    applyShip(w, ships, 'cobra_mk3'); // 2 hardpoints
-    expect(canFitLaser(w, 'rear').ok).toBe(true);
-    expect(fitLaser(w, 'rear', 'beam')).toBe(true);
-    expect(w.player.lasers.rear).toBe('beam');
-    expect(canFitLaser(w, 'left').ok).toBe(false); // both hardpoints now used
+    expect(canFitLaser(w, 'front').ok).toBe(true); // 1 of 2 front used
+    expect(fitLaser(w, 'front', 'beam')).toBe(true); // second front hardpoint
+    expect(w.player.lasers.front).toEqual(['pulse', 'beam']);
+    expect(canFitLaser(w, 'front').ok).toBe(false); // front now full (2/2)
+    expect(canFitLaser(w, 'left').ok).toBe(false); // Sidewinder has no left hardpoint
+    expect(fitLaser(w, 'rear', 'pulse')).toBe(true);
+    expect(canFitLaser(w, 'rear').ok).toBe(false); // rear full (1/1)
   });
 });
 
 describe('buying up the ladder', () => {
   it('carries lasers forward and applies the new hull stats', () => {
     const w = makeWorld(1);
-    expect(w.player.lasers.front).toBe('pulse');
+    expect(w.player.lasers.front).toEqual(['pulse']);
     applyShip(w, ships, 'cobra_mk3');
     expect(w.player.shipClass).toBe('cobra_mk3');
-    expect(w.player.hardpoints).toBe(2);
-    expect(w.player.lasers.front).toBe('pulse'); // carried forward, no loss [ROC-SHIP-5]
+    expect(w.player.hardpoints).toEqual({ front: 2, rear: 1, left: 1, right: 1 });
+    expect(w.player.lasers.front).toEqual(['pulse']); // carried forward, no loss [ROC-SHIP-5]
     const p = w.entities.get(PLAYER_ID)!;
     expect(p.meshId).toBe('cobra_mk3');
     expect(p.shieldMax).toBe(2);
@@ -59,13 +57,13 @@ describe('buying up the ladder', () => {
     expect(nextShipId(ships, 'fer_de_lance')).toBeNull();
   });
 
-  it('clamps lasers if applied to a hull with fewer hardpoints', () => {
+  it('clamps lasers when a hull has fewer hardpoints in a direction', () => {
     const w = makeWorld(1);
-    applyShip(w, ships, 'cobra_mk3');
-    fitLaser(w, 'rear', 'pulse');
-    applyShip(w, ships, 'sidewinder'); // back down to 1 hardpoint
-    expect(equippedCount(w.player.lasers)).toBe(1);
-    expect(w.player.lasers.front).toBe('pulse');
-    expect(w.player.lasers.rear).toBeNull();
+    applyShip(w, ships, 'cobra_mk3'); // left capacity 1
+    fitLaser(w, 'left', 'pulse');
+    expect(w.player.lasers.left).toEqual(['pulse']);
+    applyShip(w, ships, 'sidewinder'); // Sidewinder has no left hardpoint
+    expect(w.player.lasers.left).toEqual([]); // dropped
+    expect(w.player.lasers.front).toEqual(['pulse']); // kept (both hulls have front)
   });
 });

@@ -13,6 +13,7 @@ export interface WeaponsConfig {
   pulseSpeed: number; // world units / second
   pulseTtl: number; // projectile lifetime, seconds
   muzzleOffset: number; // spawn distance from the ship centre
+  muzzleSpread: number; // lateral gap between multiple lasers in one direction
   pulseDamage: number; // damage per pulse hit
 }
 
@@ -21,6 +22,7 @@ export const DEFAULT_WEAPONS: WeaponsConfig = {
   pulseSpeed: 6,
   pulseTtl: 1.2,
   muzzleOffset: 0.25,
+  muzzleSpread: 0.08,
   pulseDamage: 1,
 };
 
@@ -73,15 +75,25 @@ export function weaponsSystem(
   if (player) {
     world.player.fireCooldown = Math.max(0, world.player.fireCooldown - dt);
 
-    // Held autofires; a tap fires one shot. Both honour the cooldown. [ROC-CTL-1, ROC-LAS-3]
+    // Held autofires; a tap fires one shot. Both honour the cooldown. Every installed laser
+    // fires along its mount; multiple lasers in one direction fan out slightly. [ROC-LAS-3, ROC-HP-3]
     if ((input.firing || input.fireTapped) && world.player.fireCooldown <= 0) {
       const lasers = world.player.lasers;
+      let fired = false;
       for (const { mount, dir } of MOUNT_DIRS) {
-        if (lasers[mount] === null) continue;
-        spawnPulse(world, add(player.pos, scale(dir, cfg.muzzleOffset)), dir, cfg);
+        const n = lasers[mount].length;
+        const perp = vec3(dir.z, 0, -dir.x); // in-plane perpendicular, for side-by-side muzzles
+        for (let i = 0; i < n; i++) {
+          const offset = (i - (n - 1) / 2) * cfg.muzzleSpread;
+          const origin = add(add(player.pos, scale(dir, cfg.muzzleOffset)), scale(perp, offset));
+          spawnPulse(world, origin, dir, cfg);
+          fired = true;
+        }
       }
-      world.player.fireCooldown = 1 / cfg.pulseRate;
-      world.events.push({ type: 'sfx', id: 'laser_pulse' });
+      if (fired) {
+        world.player.fireCooldown = 1 / cfg.pulseRate;
+        world.events.push({ type: 'sfx', id: 'laser_pulse' });
+      }
     }
   }
 

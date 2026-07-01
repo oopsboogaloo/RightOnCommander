@@ -7,6 +7,7 @@ import { type Vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
 import { PLAYER_ID, type World } from '../world.js';
 import { collectMissile } from './missiles.js';
+import { firstFreeDirection } from './ships.js';
 
 export interface PickupsConfig {
   scoopRadius: number; // player collection radius
@@ -35,15 +36,14 @@ function bankCargo(world: World, name: string, tons: number, pos: Vec3): void {
 }
 
 function fitLaser(world: World, pos: Vec3): void {
-  const lasers = world.player.lasers;
-  for (const mount of ['front', 'rear', 'left', 'right'] as const) {
-    if (lasers[mount] === null) {
-      lasers[mount] = 'pulse';
-      world.events.push({ type: 'floatingText', category: 'fit', text: 'Laser', pos: { ...pos } });
-      return;
-    }
+  // Fill the first free hardpoint, preferring Front → Rear → Left → Right. [ROC-HP-4]
+  const dir = firstFreeDirection(world);
+  if (dir) {
+    world.player.lasers[dir].push('pulse');
+    world.events.push({ type: 'floatingText', category: 'fit', text: 'Laser', pos: { ...pos } });
+    return;
   }
-  bankCargo(world, 'laser', 1, pos); // all mounts full -> sellable
+  bankCargo(world, 'laser', 1, pos); // all hardpoints full -> sellable
 }
 
 function collect(world: World, pickup: Entity, player: Entity, cfg: PickupsConfig): void {
