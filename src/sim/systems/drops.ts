@@ -53,9 +53,11 @@ export function dropsSystem(world: World, rng?: Rng): void {
       continue;
     }
 
-    // A destroyed transporter always yields a significant haul. [ROC-TR-4]
+    // A destroyed transporter always yields a significant haul, plus a missile-grade
+    // upgrade — it's running weapon supplies, not just cargo. [ROC-TR-4]
     if (ev.meshId === 'transporter') {
       spawnPickup(world, at, 'cargo', TRANSPORTER_LOOT[rng ? rng.int(TRANSPORTER_LOOT.length) : 0]);
+      spawnPickup(world, { x: at.x + 0.15, y: at.y, z: at.z }, 'missile');
       continue;
     }
 

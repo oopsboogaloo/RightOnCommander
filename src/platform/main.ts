@@ -223,10 +223,15 @@ startGameLoop({
       switch (e.kind) {
         case 'projectile':
         case 'missile': {
-          // Missiles render as a small dart; pulses as a slightly longer streak. [ROC-MIS-6]
-          const len = e.kind === 'missile' ? 0.09 : PULSE_LEN;
+          // Missiles render as a small dart; pulses as a slightly longer streak. Enemy laser
+          // bolts render at half size so incoming fire reads as smaller than the player's own.
+          const isEnemyBolt = e.kind === 'projectile' && e.team === 'enemy';
+          const len = e.kind === 'missile' ? 0.09 : isEnemyBolt ? PULSE_LEN * 0.5 : PULSE_LEN;
           const tail = sub(e.pos, scale(normalize(e.vel), len));
-          renderer.drawWorldLine(e.pos, tail, { stroke: e.kind === 'missile' ? '#ffb060' : '#fff', lineWidth: 2 });
+          renderer.drawWorldLine(e.pos, tail, {
+            stroke: e.kind === 'missile' ? '#ffb060' : '#fff',
+            lineWidth: isEnemyBolt ? 1 : 2,
+          });
           break;
         }
         case 'particle':
