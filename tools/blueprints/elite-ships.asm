@@ -835,3 +835,85 @@
  FACE    0,   38,   17,   31
  FACE    0,    0,  121,   31
 
+.SHIP_ASTEROID_VERTICES
+
+      \    x,    y,    z, face1, face2, face3, face4, visibility
+ VERTEX    0,   80,    0,   15,   15,   15,   15,   31
+ VERTEX  -80,  -10,    0,   15,   15,   15,   15,   31
+ VERTEX    0,  -80,    0,   15,   15,   15,   15,   31
+ VERTEX   70,  -40,    0,   15,   15,   15,   15,   31
+ VERTEX   60,   50,    0,    5,    6,   12,   13,   31
+ VERTEX   50,    0,   60,   15,   15,   15,   15,   31
+ VERTEX  -40,    0,   70,    0,    1,    2,    3,   31
+ VERTEX    0,   30,  -75,   15,   15,   15,   15,   31
+ VERTEX    0,  -50,  -60,    8,    9,   10,   11,   31
+
+.SHIP_ASTEROID_EDGES
+
+    \ vertex1, vertex2, face1, face2, visibility
+ EDGE    0,    1,    2,    7,   31
+ EDGE    0,    4,    6,   13,   31
+ EDGE    3,    4,    5,   12,   31
+ EDGE    2,    3,    4,   11,   31
+ EDGE    1,    2,    3,   10,   31
+ EDGE    1,    6,    2,    3,   31
+ EDGE    2,    6,    1,    3,   31
+ EDGE    2,    5,    1,    4,   31
+ EDGE    5,    6,    0,    1,   31
+ EDGE    0,    5,    0,    6,   31
+ EDGE    3,    5,    4,    5,   31
+ EDGE    0,    6,    0,    2,   31
+ EDGE    4,    5,    5,    6,   31
+ EDGE    1,    8,    8,   10,   31
+ EDGE    1,    7,    7,    8,   31
+ EDGE    0,    7,    7,   13,   31
+ EDGE    4,    7,   12,   13,   31
+ EDGE    3,    7,    9,   12,   31
+ EDGE    3,    8,    9,   11,   31
+ EDGE    2,    8,   10,   11,   31
+ EDGE    7,    8,    8,    9,   31
+
+.SHIP_ASTEROID_FACES
+
+    \ normal_x, normal_y, normal_z, visibility
+ FACE    9,   66,   81,   31
+ FACE    9,  -66,   81,   31
+ FACE  -72,   64,   31,   31
+ FACE  -64,  -73,   47,   31
+ FACE   45,  -79,   65,   31
+ FACE  135,   15,   35,   31
+ FACE   38,   76,   70,   31
+ FACE  -66,   59,  -39,   31
+ FACE  -67,  -15,  -80,   31
+ FACE   66,  -14,  -75,   31
+ FACE  -70,  -80,  -40,   31
+ FACE   58, -102,  -51,   31
+ FACE   81,    9,  -67,   31
+ FACE   47,   94,  -63,   31
+
+.SHIP_SPLINTER_VERTICES
+
+      \    x,    y,    z, face1, face2, face3, face4, visibility
+ VERTEX  -24,  -25,   16,    2,    1,    3,    3,   31
+ VERTEX    0,   12,  -10,    2,    0,    3,    3,   31
+ VERTEX   11,   -6,    2,    1,    0,    3,    3,   31
+ VERTEX   12,   42,    7,    1,    0,    2,    2,   31
+
+.SHIP_SPLINTER_EDGES
+
+    \ vertex1, vertex2, face1, face2, visibility
+ EDGE    0,    1,    3,    2,   31
+ EDGE    1,    2,    3,    0,   31
+ EDGE    2,    3,    1,    0,   31
+ EDGE    3,    0,    2,    1,   31
+ EDGE    0,    2,    3,    1,   31
+ EDGE    3,    1,    2,    0,   31
+
+.SHIP_SPLINTER_FACES
+
+    \ normal_x, normal_y, normal_z, visibility
+ FACE   35,    0,    4,   31
+ FACE    3,    4,    8,   31
+ FACE    1,    8,   12,   31
+ FACE   18,   12,    0,   31
+

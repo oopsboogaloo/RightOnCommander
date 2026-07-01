@@ -43,6 +43,8 @@ import viper from '../content/meshes/viper.json';
 import fer_de_lance from '../content/meshes/fer_de_lance.json';
 import coriolis from '../content/meshes/coriolis.json';
 import transporter from '../content/meshes/transporter.json';
+import asteroid from '../content/meshes/asteroid.json';
+import splinter from '../content/meshes/splinter.json';
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
 if (!canvas) throw new Error('gameCanvas element not found');
@@ -69,6 +71,8 @@ const MESHES: Record<string, Mesh> = {
   fer_de_lance,
   coriolis,
   transporter,
+  asteroid,
+  splinter,
 } as unknown as Record<string, Mesh>;
 
 const sim = createSim({ seed: 1, content: { enemies, level: level1, meshes: MESHES } });
@@ -224,6 +228,12 @@ startGameLoop({
           const m = e.meshId ? MESHES[e.meshId] : undefined;
           if (m) renderer.drawMesh(m, modelMatrix(e.pos, e.yaw, e.bank, SHIP_SCALE), hullFlash(e));
           drawShield(e);
+          break;
+        }
+        case 'asteroid': {
+          // Tumbles freely (yaw + bank both spin independently of its drift). [ROC-L1-1]
+          const m = e.meshId ? MESHES[e.meshId] : undefined;
+          if (m) renderer.drawMesh(m, modelMatrix(e.pos, e.yaw, e.bank, SHIP_SCALE), hullFlash(e));
           break;
         }
         default:

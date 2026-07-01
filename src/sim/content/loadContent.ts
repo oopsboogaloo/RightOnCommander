@@ -3,6 +3,7 @@
 
 import type { EnemyDef, WaveDef } from '../systems/waves.js';
 import type { LevelDef } from '../systems/levelstate.js';
+import type { AsteroidFieldDef } from '../systems/asteroids.js';
 import { PATTERNS } from '../systems/paths.js';
 
 export interface Content {
@@ -60,6 +61,16 @@ function parseWave(raw: unknown, enemies: Record<string, EnemyDef>, where: strin
   };
 }
 
+function parseAsteroidField(raw: unknown): AsteroidFieldDef {
+  if (!isObj(raw)) throw new Error('content: "level.asteroidField" must be an object');
+  return {
+    count: num(raw.count, 'level.asteroidField.count'),
+    spacingMs: num(raw.spacingMs, 'level.asteroidField.spacingMs'),
+    speed: raw.speed === undefined ? undefined : num(raw.speed, 'level.asteroidField.speed'),
+    xSpread: raw.xSpread === undefined ? undefined : num(raw.xSpread, 'level.asteroidField.xSpread'),
+  };
+}
+
 function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
   if (!isObj(raw)) throw new Error('content: "level" must be an object');
   const boss = (key: string): string => {
@@ -77,6 +88,7 @@ function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
   return {
     id: typeof raw.id === 'string' ? raw.id : 'level',
     launchMs: raw.launchMs === undefined ? undefined : num(raw.launchMs, 'level.launchMs'),
+    asteroidField: raw.asteroidField === undefined ? undefined : parseAsteroidField(raw.asteroidField),
     wavesA: group('wavesA'),
     midBoss: boss('midBoss'),
     wavesB: group('wavesB'),

@@ -20,6 +20,7 @@ import { economySystem } from './systems/economy.js';
 import { particlesSystem, DEFAULT_PARTICLES, type FragGeom } from './systems/particles.js';
 import type { Mesh } from '../interfaces.js';
 import { waveSystem, type WaveContext } from './systems/waves.js';
+import { asteroidFieldSystem, asteroidSplitSystem } from './systems/asteroids.js';
 import { aiSystem } from './systems/ai.js';
 import { missilesSystem } from './systems/missiles.js';
 import { dropsSystem } from './systems/drops.js';
@@ -92,7 +93,14 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
   function restartLevel(): void {
     if (!level) return;
     for (const e of [...world.entities.values()]) {
-      if (e.kind === 'enemy' || e.kind === 'boss' || e.kind === 'projectile' || e.kind === 'missile' || e.kind === 'pickup') {
+      if (
+        e.kind === 'enemy' ||
+        e.kind === 'boss' ||
+        e.kind === 'asteroid' ||
+        e.kind === 'projectile' ||
+        e.kind === 'missile' ||
+        e.kind === 'pickup'
+      ) {
         world.entities.delete(e.id);
       }
     }
@@ -108,6 +116,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     weaponsSystem(world, input, SIM_DT);
     missilesSystem(world, SIM_DT);
     waveSystem(world, rng, SIM_DT, waveCtx);
+    asteroidFieldSystem(world, rng, SIM_DT);
     aiSystem(world, SIM_DT);
     if (level) levelStateSystem(world, SIM_DT, level, waveCtx);
     const hits = collisionSystem(world, {
@@ -118,6 +127,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     });
     damageSystem(world, hits, SIM_DT);
     gamestateSystem(world, SIM_DT, restartLevel, { ...DEFAULT_GAMESTATE, colliderScale: SHIP_SCALE });
+    asteroidSplitSystem(world, rng);
     dropsSystem(world, rng);
     pickupsSystem(world, SIM_DT);
     economySystem(world);

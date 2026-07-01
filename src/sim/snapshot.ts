@@ -3,7 +3,7 @@
 // be stored or replayed. [ROC-TEST-4,5]
 
 import type { Entity } from './components.js';
-import type { PlayerState, WaveSpawnState, World } from './world.js';
+import type { AsteroidFieldState, PlayerState, WaveSpawnState, World } from './world.js';
 
 export interface WorldSnapshot {
   frame: number;
@@ -31,6 +31,7 @@ export interface WorldSnapshot {
     }[];
   };
   unlocks: { eliteMode: boolean; thargoidShip: boolean };
+  asteroidField: AsteroidFieldState | null;
 }
 
 export function snapshot(world: World): WorldSnapshot {
@@ -60,6 +61,7 @@ export function snapshot(world: World): WorldSnapshot {
       })),
     },
     unlocks: { ...world.unlocks },
+    asteroidField: world.asteroidField ? { ...world.asteroidField } : null,
   };
 }
 
@@ -96,6 +98,7 @@ export function restore(world: World, snap: WorldSnapshot): void {
     ),
   };
   world.unlocks = { ...snap.unlocks };
+  world.asteroidField = snap.asteroidField ? { ...snap.asteroidField } : null;
   world.events = [];
   world.pool = { projectiles: [], particles: [], missiles: [] }; // allocation cache; safe to drop on restore
 }

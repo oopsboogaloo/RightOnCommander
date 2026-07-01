@@ -65,4 +65,30 @@ describe('cargo drops', () => {
     dropsSystem(w);
     expect([...w.entities.values()].some((e) => e.kind === 'pickup')).toBe(false);
   });
+
+  it('a cracked splinter sometimes yields mined loot (alloys, gems, or raw cargo)', () => {
+    const w = makeWorld(1);
+    const rng = createRng(2);
+    for (let i = 0; i < 60; i++) {
+      w.events = [{ type: 'destroyed', kind: 'asteroid', pos: vec3(0, 0, 0), meshId: 'splinter' }];
+      dropsSystem(w, rng);
+    }
+    const pickups = [...w.entities.values()].filter((e) => e.kind === 'pickup');
+    expect(pickups.length).toBeGreaterThan(0); // "sometimes" [ROC-L1-3]
+    expect(pickups.length).toBeLessThan(60); // ...not always
+    for (const p of pickups) {
+      expect(['alloys', 'gems', 'cargo']).toContain(p.pickup?.type);
+      if (p.pickup?.type === 'cargo') expect(['Metals', 'Crystals']).toContain(p.pickup.commodity);
+    }
+  });
+
+  it('a large asteroid never drops loot directly (only its splinters can)', () => {
+    const w = makeWorld(1);
+    const rng = createRng(5);
+    for (let i = 0; i < 40; i++) {
+      w.events = [{ type: 'destroyed', kind: 'asteroid', pos: vec3(0, 0, 0), meshId: 'asteroid' }];
+      dropsSystem(w, rng);
+    }
+    expect([...w.entities.values()].some((e) => e.kind === 'pickup')).toBe(false);
+  });
 });

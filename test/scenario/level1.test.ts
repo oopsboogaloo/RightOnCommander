@@ -9,6 +9,7 @@ import { loadContent } from '../../src/sim/content/loadContent.js';
 import { makeWorld } from '../../src/sim/world.js';
 import { createRng } from '../../src/sim/rng.js';
 import { waveSystem } from '../../src/sim/systems/waves.js';
+import { asteroidFieldSystem, asteroidSplitSystem } from '../../src/sim/systems/asteroids.js';
 import { startLevel, levelStateSystem } from '../../src/sim/systems/levelstate.js';
 import { applyDamage } from '../../src/sim/systems/damage.js';
 import { dropsSystem } from '../../src/sim/systems/drops.js';
@@ -32,11 +33,13 @@ describe('Level 1', () => {
     for (let i = 0; i < 30000 && w.levelState !== 'DOCK'; i++) {
       w.events = [];
       waveSystem(w, rng, DT, ctx);
+      asteroidFieldSystem(w, rng, DT);
       levelStateSystem(w, DT, level!, ctx);
       for (const e of [...w.entities.values()]) {
-        if (e.kind === 'enemy' || e.kind === 'boss') applyDamage(w, e, 999); // player destroys it
+        if (e.kind === 'enemy' || e.kind === 'boss' || e.kind === 'asteroid') applyDamage(w, e, 999); // player destroys it
       }
-      dropsSystem(w);
+      asteroidSplitSystem(w, rng);
+      dropsSystem(w, rng);
 
       states.add(w.levelState);
       if ([...w.entities.values()].some((e) => e.kind === 'pickup' && e.pickup?.type === 'laser')) laserDropped = true;
@@ -44,6 +47,7 @@ describe('Level 1', () => {
     }
 
     expect(w.levelState).toBe('DOCK');
+    expect(states.has('ASTEROIDS')).toBe(true); // opening asteroid field [ROC-L1-1]
     expect(states.has('MID_BOSS')).toBe(true);
     expect(states.has('END_BOSS')).toBe(true);
     expect(laserDropped).toBe(true); // guaranteed mid-boss laser [ROC-PWR-6]

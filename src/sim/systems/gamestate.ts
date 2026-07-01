@@ -57,12 +57,14 @@ export function gamestateSystem(
   const player = world.entities.get(PLAYER_ID);
   if (!player) return;
 
-  // Ramming: an enemy/boss overlapping the player costs a hit, then a short i-frame window so a
-  // sustained overlap drains one ring per window rather than every step. [ROC-DMG-6a]
+  // Ramming: an enemy/boss/asteroid overlapping the player costs a hit, then a short i-frame
+  // window so a sustained overlap drains one ring per window rather than every step. Asteroids
+  // are solid obstacles too — flying into one costs a hit just like ramming a ship. [ROC-DMG-6a,
+  // ROC-L1-1]
   if (world.player.invulnTtl <= 0 && (player.hull ?? 0) > 0) {
     const pr = radius(player.colliderRx, player.colliderRz, cfg.colliderScale);
     for (const e of world.entities.values()) {
-      if (e.kind !== 'enemy' && e.kind !== 'boss') continue;
+      if (e.kind !== 'enemy' && e.kind !== 'boss' && e.kind !== 'asteroid') continue;
       const er = radius(e.colliderRx, e.colliderRz, cfg.colliderScale);
       const dx = e.pos.x - player.pos.x;
       const dz = e.pos.z - player.pos.z;

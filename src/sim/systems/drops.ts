@@ -18,6 +18,16 @@ export const COMMODITIES = [
 export const ALIEN_ITEMS = 'Alien Items';
 const TRANSPORTER_LOOT = ['Platinum', 'Gold', 'Gem-Stones', 'Computers']; // significant haul [ROC-TR-4]
 
+// A cracked-open splinter sometimes yields raw mined loot: the two functional pickups (hull/
+// shield) or straight sellable cargo. [ROC-L1-3]
+const ASTEROID_LOOT_CHANCE = 0.6;
+const ASTEROID_LOOT: { type: PickupType; commodity?: string }[] = [
+  { type: 'alloys' },
+  { type: 'gems' },
+  { type: 'cargo', commodity: 'Metals' },
+  { type: 'cargo', commodity: 'Crystals' },
+];
+
 function spawnPickup(world: World, at: Vec3, type: PickupType, commodity?: string): void {
   const id = world.nextId++;
   world.entities.set(id, {
@@ -46,6 +56,15 @@ export function dropsSystem(world: World, rng?: Rng): void {
     // A destroyed transporter always yields a significant haul. [ROC-TR-4]
     if (ev.meshId === 'transporter') {
       spawnPickup(world, at, 'cargo', TRANSPORTER_LOOT[rng ? rng.int(TRANSPORTER_LOOT.length) : 0]);
+      continue;
+    }
+
+    // A cracked splinter — the terminal asteroid fragment — sometimes yields loot. [ROC-L1-3]
+    if (ev.meshId === 'splinter') {
+      if (rng && rng.range(0, 1) < ASTEROID_LOOT_CHANCE) {
+        const pick = ASTEROID_LOOT[rng.int(ASTEROID_LOOT.length)];
+        spawnPickup(world, at, pick.type, pick.commodity);
+      }
       continue;
     }
 

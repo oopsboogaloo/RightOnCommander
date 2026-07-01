@@ -1,16 +1,19 @@
-// Per-level finite state machine. Every level launches from a Coriolis station, plays wave
-// combat around a mid-boss and an end-boss, optionally fights a Viper interception if the
-// player is carrying contraband, then docks. [tasks T5.1, design §12, ROC-LVL-1,2]
+// Per-level finite state machine. Every level launches from a Coriolis station, drifts through
+// an opening asteroid field, plays wave combat around a mid-boss and an end-boss, optionally
+// fights a Viper interception if the player is carrying contraband, then docks. [tasks T5.1,
+// design §12, ROC-LVL-1,2, ROC-L1-1]
 //
-//   LAUNCH -> WAVES_A -> MID_BOSS -> WAVES_B -> END_BOSS -> [VIPER_INTERCEPT] -> DOCK
+//   LAUNCH -> [ASTEROIDS] -> WAVES_A -> MID_BOSS -> WAVES_B -> END_BOSS -> [VIPER_INTERCEPT] -> DOCK
 
 import { vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
 import type { World } from '../world.js';
 import { startWave, type WaveDef, type WaveContext } from './waves.js';
+import { startAsteroidField, type AsteroidFieldDef } from './asteroids.js';
 
 export type LevelState =
   | 'LAUNCH'
+  | 'ASTEROIDS'
   | 'WAVES_A'
   | 'MID_BOSS'
   | 'WAVES_B'
@@ -21,6 +24,7 @@ export type LevelState =
 export interface LevelDef {
   id: string;
   launchMs?: number;
+  asteroidField?: AsteroidFieldDef; // opening asteroid field, if the level has one [ROC-L1-1]
   wavesA: WaveDef[];
   midBoss: string; // enemy name (spawned as a boss)
   wavesB: WaveDef[];
@@ -37,6 +41,10 @@ const hasKind = (world: World, kind: Entity['kind']): boolean => {
 const groupCleared = (world: World): boolean => world.waves.active.size === 0 && !hasKind(world, 'enemy');
 const bossCleared = (world: World): boolean => !hasKind(world, 'boss');
 const hasContraband = (world: World): boolean => (world.cargo.contraband ?? 0) > 0; // [ROC-ECO-4, ROC-LVL-4]
+
+// Clear once every asteroid has spawned and none remain (large or splinter). [ROC-L1-1]
+const asteroidFieldCleared = (world: World): boolean =>
+  (!world.asteroidField || world.asteroidField.pending <= 0) && !hasKind(world, 'asteroid');
 
 function startGroup(world: World, waves: WaveDef[], ctx: WaveContext): void {
   for (const w of waves) startWave(world, w, ctx);
@@ -75,6 +83,9 @@ function enter(world: World, state: LevelState, level: LevelDef, ctx: WaveContex
     case 'LAUNCH':
       world.levelTimer = (level.launchMs ?? 1000) / 1000;
       break;
+    case 'ASTEROIDS':
+      if (level.asteroidField) startAsteroidField(world, level.asteroidField);
+      break;
     case 'WAVES_A':
       startGroup(world, level.wavesA, ctx);
       break;
@@ -104,7 +115,10 @@ export function levelStateSystem(world: World, dt: number, level: LevelDef, ctx:
   switch (world.levelState as LevelState) {
     case 'LAUNCH':
       world.levelTimer -= dt;
-      if (world.levelTimer <= 0) enter(world, 'WAVES_A', level, ctx);
+      if (world.levelTimer <= 0) enter(world, level.asteroidField ? 'ASTEROIDS' : 'WAVES_A', level, ctx);
+      break;
+    case 'ASTEROIDS':
+      if (asteroidFieldCleared(world)) enter(world, 'WAVES_A', level, ctx);
       break;
     case 'WAVES_A':
       if (groupCleared(world)) enter(world, 'MID_BOSS', level, ctx);

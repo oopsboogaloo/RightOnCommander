@@ -5,6 +5,7 @@
     "fuel": 5, "gems": 120, "laser": 80, "default": 10,
     "Food": 5, "Textiles": 8, "Radioactives": 20, "Slaves": 12, "Liquor/Wines": 18,
     "Firearms": 60, "Narcotics": 100, "Computers": 90, "Machinery": 40, "Alloys": 20,
-    "Furs": 55, "Minerals": 15, "Gold": 80, "Platinum": 150, "Gem-Stones": 120, "Alien Items": 220
+    "Furs": 55, "Minerals": 15, "Gold": 80, "Platinum": 150, "Gem-Stones": 120, "Alien Items": 220,
+    "Metals": 18, "Crystals": 110
   }
 }

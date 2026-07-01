@@ -22,6 +22,8 @@ KNOWN_COUNTS = {
     "viper": (15, 20, 7),
     "coriolis": (16, 28, 14),
     "krait": (17, 21, 6),
+    "asteroid": (9, 21, 14),
+    "splinter": (4, 6, 4),
 }
 
 

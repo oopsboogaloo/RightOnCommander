@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { makeWorld } from '../../src/sim/world.js';
 import { createRng } from '../../src/sim/rng.js';
 import { waveSystem, type WaveContext } from '../../src/sim/systems/waves.js';
+import { asteroidFieldSystem } from '../../src/sim/systems/asteroids.js';
 import { startLevel, levelStateSystem, type LevelDef } from '../../src/sim/systems/levelstate.js';
 
 const DT = 1 / 120;
@@ -78,6 +79,30 @@ describe('level FSM', () => {
       'VIPER_INTERCEPT',
       'DOCK',
     ]);
+  });
+
+  it('inserts an opening ASTEROIDS phase when the level has an asteroid field', () => {
+    const withField: LevelDef = { ...level, asteroidField: { count: 2, spacingMs: 0 } };
+    const w = makeWorld(1);
+    const rng = createRng(1);
+    startLevel(w, withField, ctx);
+
+    const seq: string[] = [];
+    const record = () => {
+      if (seq[seq.length - 1] !== w.levelState) seq.push(w.levelState);
+    };
+    record();
+
+    for (let i = 0; i < 5000 && w.levelState !== 'DOCK'; i++) {
+      waveSystem(w, rng, DT, ctx);
+      asteroidFieldSystem(w, rng, DT);
+      levelStateSystem(w, DT, withField, ctx);
+      for (const e of [...w.entities.values()]) {
+        if (e.kind === 'enemy' || e.kind === 'boss' || e.kind === 'asteroid') w.entities.delete(e.id);
+      }
+      record();
+    }
+    expect(seq).toEqual(['LAUNCH', 'ASTEROIDS', 'WAVES_A', 'MID_BOSS', 'WAVES_B', 'END_BOSS', 'DOCK']);
   });
 
   it('emits a dock event on arrival', () => {

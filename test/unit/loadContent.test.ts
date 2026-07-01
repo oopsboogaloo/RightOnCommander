@@ -17,6 +17,16 @@ describe('loadContent', () => {
     // Waves are sequenced by delayMs (the loader must preserve it, not just startWave).
     expect(level?.wavesA[1].delayMs).toBeGreaterThan(0);
     expect(level?.wavesA[2].delayMs).toBeGreaterThan(level!.wavesA[1].delayMs!);
+    expect(level?.asteroidField?.count).toBeGreaterThan(0); // opening asteroid field [ROC-L1-1]
+  });
+
+  it('rejects a malformed asteroidField', () => {
+    expect(() =>
+      loadContent({
+        enemies: { grunt: { hull: 1, bounty: 1 } },
+        level: { id: 'x', asteroidField: 'nope', wavesA: [], midBoss: 'grunt', wavesB: [], endBoss: 'grunt' },
+      }),
+    ).toThrow();
   });
 
   it('rejects a wave referencing an unknown enemy', () => {

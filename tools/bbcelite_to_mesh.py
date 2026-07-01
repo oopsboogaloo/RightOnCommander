@@ -49,6 +49,8 @@ DEFAULT_SHIPS: dict[str, str] = {
     "coriolis": "SHIP_CORIOLIS",
     "thargoid": "SHIP_THARGOID",
     "transporter": "SHIP_TRANSPORTER",
+    "asteroid": "SHIP_ASTEROID",
+    "splinter": "SHIP_SPLINTER",
 }
 
 _VERTICES_LABEL = re.compile(r"^\.(SHIP_[A-Z0-9_]+)_VERTICES\s*$")

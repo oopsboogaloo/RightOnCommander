@@ -2,6 +2,12 @@
   "id": "level1",
   "name": "Lave",
   "launchMs": 1500,
+  "asteroidField": {
+    "count": 9,
+    "spacingMs": 650,
+    "speed": 0.26,
+    "xSpread": 0.85
+  },
   "wavesA": [
     {
       "id": "l1a1",
