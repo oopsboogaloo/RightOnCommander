@@ -83,28 +83,6 @@ describe('wireframe fragments', () => {
     expect(avgVz).toBeLessThan(0);
   });
 
-  it('a destroyed asteroid sheds tumbling rock-mesh debris, not wireframe shards', () => {
-    const w = makeWorld(1);
-    const rng = createRng(5);
-    w.events = [{ type: 'destroyed', kind: 'asteroid', pos: { x: 0, y: 0, z: 0 }, meshId: 'asteroid' }];
-    particlesSystem(w, rng, DT, DEFAULT_PARTICLES, geom);
-
-    const frags = fragments(w);
-    expect(frags.length).toBeGreaterThan(0);
-    for (const f of frags) {
-      expect(f.meshId).toBe('asteroid');
-      expect(f.tumble).toBeDefined();
-      expect(f.seg).toBeUndefined(); // rock debris tumbles as a mesh, not a rotating line segment
-      expect(f.ttlMax).toBeGreaterThan(0);
-      expect(f.ttl).toBeLessThanOrEqual(f.ttlMax!); // this call both spawned and integrated one dt
-    }
-
-    const f = frags[0];
-    const yaw0 = f.yaw;
-    particlesSystem(w, rng, DT, DEFAULT_PARTICLES, geom);
-    expect(f.yaw).not.toBe(yaw0); // tumbles via yaw/bank, like a free-floating asteroid
-  });
-
   it('is deterministic for a seed', () => {
     const run = (): number[] => {
       const w = makeWorld(1);

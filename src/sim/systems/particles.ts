@@ -54,7 +54,6 @@ interface XYZ {
 
 const randInt = (rng: Rng, [lo, hi]: [number, number]): number => lo + rng.int(hi - lo + 1);
 const randRange = (rng: Rng, [lo, hi]: [number, number]): number => rng.range(lo, hi);
-const randSign = (rng: Rng): number => (rng.int(2) === 0 ? -1 : 1);
 
 function acquireParticle(world: World): Entity {
   const reused = world.pool.particles.pop();
@@ -159,34 +158,6 @@ export function spawnFragments(
   }
 }
 
-// A destroyed asteroid/splinter sheds a few small tumbling rock chunks (the same asteroid mesh,
-// rendered tiny) instead of the generic wireframe shard — reads as broken-off rock, not an
-// abstract line segment. [ROC-L1-1]
-function spawnRockDebris(world: World, rng: Rng, at: XYZ, base: Vel, cfg: ParticlesConfig): void {
-  const count = randInt(rng, cfg.fragmentCount);
-  for (let i = 0; i < count; i++) {
-    const angle = rng.range(0, Math.PI * 2);
-    const speed = randRange(rng, cfg.fragSpeed);
-    const ttl = randRange(rng, cfg.fragTtl);
-    const id = world.nextId++;
-    world.entities.set(id, {
-      id,
-      kind: 'fragment',
-      meshId: 'asteroid',
-      pos: { x: at.x, y: 0, z: at.z },
-      vel: { x: Math.cos(angle) * speed + base.x, y: 0, z: Math.sin(angle) * speed + base.z },
-      yaw: rng.range(0, Math.PI * 2),
-      bank: rng.range(0, Math.PI * 2),
-      tumble: {
-        yawRate: randRange(rng, cfg.fragSpin) * randSign(rng),
-        bankRate: randRange(rng, cfg.fragSpin) * randSign(rng),
-      },
-      ttl,
-      ttlMax: ttl,
-    });
-  }
-}
-
 export function particlesSystem(
   world: World,
   rng: Rng,
@@ -199,12 +170,8 @@ export function particlesSystem(
     if (ev.type === 'destroyed') {
       const base = (ev.vel as Vel) ?? ZERO;
       burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.explosionCount), cfg, base);
-      if (ev.kind === 'asteroid') {
-        spawnRockDebris(world, rng, ev.pos as XYZ, base, cfg);
-      } else {
-        const segs = fragGeom && typeof ev.meshId === 'string' ? fragGeom[ev.meshId] : undefined;
-        if (segs && segs.length) spawnFragments(world, rng, segs, ev.pos as XYZ, (ev.yaw as number) ?? 0, cfg, base);
-      }
+      const segs = fragGeom && typeof ev.meshId === 'string' ? fragGeom[ev.meshId] : undefined;
+      if (segs && segs.length) spawnFragments(world, rng, segs, ev.pos as XYZ, (ev.yaw as number) ?? 0, cfg, base);
     } else if (ev.type === 'fragments') {
       burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.fragmentCount), cfg, (ev.vel as Vel) ?? ZERO);
     } else if (ev.type === 'exhaust') {
@@ -223,10 +190,7 @@ export function particlesSystem(
     } else if (e.kind === 'fragment') {
       e.pos.x += e.vel.x * dt;
       e.pos.z += e.vel.z * dt;
-      if (e.tumble) {
-        e.yaw += e.tumble.yawRate * dt; // free 3D roll, a mini rock chunk [ROC-L1-1]
-        e.bank += e.tumble.bankRate * dt;
-      } else if (e.seg && e.spin) {
+      if (e.seg && e.spin) {
         const c = Math.cos(e.spin * dt);
         const s = Math.sin(e.spin * dt);
         const { x, z } = e.seg;
