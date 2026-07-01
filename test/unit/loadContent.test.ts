@@ -11,8 +11,9 @@ describe('loadContent', () => {
     expect(enemies.fer_de_lance.bounty).toBe(250);
     expect(level?.midBoss).toBe('hermit');
     expect(level?.endBoss).toBe('fer_de_lance');
-    expect(level?.wavesA.length).toBe(10);
-    expect(level?.wavesB.length).toBe(10);
+    expect(level?.wavesA.length).toBe(11);
+    expect(level?.wavesB.length).toBe(11);
+    expect(enemies.transporter.hull).toBe(12); // tanky, unarmed freighter [ROC-TR-3]
   });
 
   it('rejects a wave referencing an unknown enemy', () => {

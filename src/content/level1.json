@@ -12,7 +12,8 @@
     { "id": "l1a7", "pattern": "vform", "enemy": "gecko", "count": 6, "spacingMs": 350, "delayMs": 27000, "durationMs": 6000, "params": { "x0": 0.8, "x1": -0.2 } },
     { "id": "l1a8", "pattern": "sine_column", "enemy": "krait", "count": 4, "spacingMs": 500, "delayMs": 31500, "durationMs": 6000, "fire": { "rate": 0.5, "aimed": true }, "params": { "amplitude": 0.5, "cycles": 2 } },
     { "id": "l1a9", "pattern": "pincer", "enemy": "sidewinder", "count": 5, "spacingMs": 400, "delayMs": 36000, "durationMs": 6000, "params": { "x0": -1.2 } },
-    { "id": "l1a10", "pattern": "side_stream", "enemy": "adder", "count": 4, "spacingMs": 500, "delayMs": 40500, "durationMs": 6000, "fire": { "rate": 0.6, "aimed": true } }
+    { "id": "l1a10", "pattern": "side_stream", "enemy": "adder", "count": 4, "spacingMs": 500, "delayMs": 40500, "durationMs": 6000, "fire": { "rate": 0.6, "aimed": true } },
+    { "id": "l1aT", "pattern": "side_stream", "enemy": "transporter", "count": 1, "spacingMs": 0, "delayMs": 24000, "durationMs": 12000, "speed": 0.5, "params": { "x0": -1.4, "x1": 1.4, "z0": 1.0, "z1": 0.7, "arc": 0.2 } }
   ],
   "midBoss": "hermit",
   "wavesB": [
@@ -25,7 +26,8 @@
     { "id": "l1b7", "pattern": "pincer", "enemy": "krait", "count": 4, "spacingMs": 500, "delayMs": 27000, "durationMs": 6000, "fire": { "rate": 0.6, "aimed": true }, "params": { "x0": 1.2 } },
     { "id": "l1b8", "pattern": "side_stream", "enemy": "sidewinder", "count": 6, "spacingMs": 350, "delayMs": 31500, "durationMs": 6000, "params": { "x0": -1.4, "x1": 1.4, "arc": 0.5 } },
     { "id": "l1b9", "pattern": "pincer", "enemy": "adder", "count": 5, "spacingMs": 450, "delayMs": 36000, "durationMs": 6000, "fire": { "rate": 0.7, "aimed": true }, "params": { "x0": -1.2 } },
-    { "id": "l1b10", "pattern": "side_stream", "enemy": "krait", "count": 4, "spacingMs": 500, "delayMs": 40500, "durationMs": 6000, "fire": { "rate": 0.6, "aimed": true } }
+    { "id": "l1b10", "pattern": "side_stream", "enemy": "krait", "count": 4, "spacingMs": 500, "delayMs": 40500, "durationMs": 6000, "fire": { "rate": 0.6, "aimed": true } },
+    { "id": "l1bT", "pattern": "side_stream", "enemy": "transporter", "count": 1, "spacingMs": 0, "delayMs": 30000, "durationMs": 12000, "speed": 0.5, "params": { "x0": 1.4, "x1": -1.4, "z0": 0.9, "z1": 0.6, "arc": 0.2 } }
   ],
   "endBoss": "fer_de_lance",
   "viper": { "id": "l1v", "pattern": "side_stream", "enemy": "viper", "count": 3, "spacingMs": 400, "durationMs": 6000, "fire": { "rate": 0.6, "aimed": true } }

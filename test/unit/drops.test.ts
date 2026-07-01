@@ -47,6 +47,18 @@ describe('cargo drops', () => {
     expect(pickups[0].pickup?.type).toBe('laser');
   });
 
+  it('a destroyed transporter always drops a significant haul', () => {
+    for (const seed of [1, 2, 3]) {
+      const w = makeWorld(1);
+      const rng = createRng(seed);
+      w.events = [{ type: 'destroyed', kind: 'enemy', pos: vec3(0, 0, 0), meshId: 'transporter' }];
+      dropsSystem(w, rng);
+      const loot = [...w.entities.values()].filter((e) => e.kind === 'pickup');
+      expect(loot).toHaveLength(1); // always [ROC-TR-4]
+      expect(['Platinum', 'Gold', 'Gem-Stones', 'Computers']).toContain(loot[0].pickup?.commodity);
+    }
+  });
+
   it('drops no cargo when called without an rng', () => {
     const w = makeWorld(1);
     w.events = [{ type: 'destroyed', kind: 'enemy', pos: vec3(0, 0, 0), meshId: 'sidewinder' }];

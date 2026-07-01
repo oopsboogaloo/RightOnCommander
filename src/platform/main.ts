@@ -42,6 +42,7 @@ import adder from '../content/meshes/adder.json';
 import viper from '../content/meshes/viper.json';
 import fer_de_lance from '../content/meshes/fer_de_lance.json';
 import coriolis from '../content/meshes/coriolis.json';
+import transporter from '../content/meshes/transporter.json';
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
 if (!canvas) throw new Error('gameCanvas element not found');
@@ -67,6 +68,7 @@ const MESHES: Record<string, Mesh> = {
   viper,
   fer_de_lance,
   coriolis,
+  transporter,
 } as unknown as Record<string, Mesh>;
 
 const sim = createSim({ seed: 1, content: { enemies, level: level1, meshes: MESHES } });
