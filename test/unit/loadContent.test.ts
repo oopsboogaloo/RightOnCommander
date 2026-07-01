@@ -11,7 +11,8 @@ describe('loadContent', () => {
     expect(enemies.fer_de_lance.bounty).toBe(250);
     expect(level?.midBoss).toBe('hermit');
     expect(level?.endBoss).toBe('fer_de_lance');
-    expect(level?.wavesA.length).toBe(2);
+    expect(level?.wavesA.length).toBe(10);
+    expect(level?.wavesB.length).toBe(10);
   });
 
   it('rejects a wave referencing an unknown enemy', () => {

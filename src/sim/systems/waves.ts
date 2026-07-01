@@ -26,6 +26,7 @@ export interface WaveDef {
   enemy: string;
   count: number;
   spacingMs: number;
+  delayMs?: number; // wait before this wave starts spawning (sequences waves within a phase)
   durationMs?: number; // member lifetime before it flies off-field
   speed?: number; // scales the path rate
   params?: PathParams;
@@ -68,7 +69,7 @@ export function startWave(world: World, def: WaveDef, ctx: WaveContext): number 
       spacingSec: def.spacingMs / 1000,
       durationSec: (def.durationMs ?? 4000) / 1000 / (def.speed ?? 1),
       pending: count,
-      timer: 0,
+      timer: (def.delayMs ?? 0) / 1000, // hold off until the wave's turn [sequenced phases]
       spawnedIndex: 0,
       fireRate: def.fire?.rate ?? 0,
       fireAimed: def.fire?.aimed ?? false,

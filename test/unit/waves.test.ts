@@ -28,6 +28,17 @@ describe('wave spawning', () => {
     expect(rec.spawn?.pending).toBe(0);
   });
 
+  it('delays a wave so it starts spawning only after its delayMs', () => {
+    const w = makeWorld(1);
+    startWave(w, { id: 'w', pattern: 'vform', enemy: 'grunt', count: 2, spacingMs: 100, delayMs: 500, durationMs: 1e7 }, ctx);
+
+    waveSystem(w, rng, DT, ctx);
+    expect(enemies(w).length).toBe(0); // nothing yet — still within the delay
+
+    for (let i = 0; i < 60; i++) waveSystem(w, rng, DT, ctx); // ~0.5s elapses
+    expect(enemies(w).length).toBeGreaterThan(0); // now spawning
+  });
+
   it('forfeits the bonus when one member escapes even if others are killed', () => {
     const w = makeWorld(1);
     startWave(w, { id: 'w', pattern: 'sine_column', enemy: 'grunt', count: 2, spacingMs: 0, durationMs: 200 }, ctx);

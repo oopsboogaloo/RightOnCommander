@@ -1,9 +1,11 @@
 # Right on Commander — Requirements Specification
 
-**Version:** 1.4 (draft — all design decisions resolved)
+**Version:** 1.5 (draft — all design decisions resolved)
 **Author:** Chloe
 **Notation:** EARS (Easy Approach to Requirements Syntax)
 **Status:** Spec under construction — review
+
+> **Changelog 1.4 → 1.5:** **Collectables are now inert to weapons fire** — bullets and missiles pass through pickups/cargo; only the player scoop collects them (ROC-PWR-2, ROC-PWR-3, ROC-CARGO-2, revising the earlier "shot fuel explodes / gems shatter"). Added **§3.20 Cargo drops** (enemies sometimes drop cargo from the full commodity list; Alien Items only from Thargoids; collected type shown), **§3.21 Kill-credit display** (floating credit/bonus text rising from the explosion), a **§3.4a directional-hardpoint model** (per-ship hardpoint counts per direction, multiple per direction), a **§3.5a missile-behaviour revision** (smaller, slower, ≤4 alive with oldest-removed, one-at-a-time alternating wings, fire only with an on-screen target, 30 s hard lifetime, per-ship capacity), and **§3.22 Transporters** (slow, unarmed, high-hull enemy that always drops a significant pickup). Playtest tuning: wave fighters weakened and **Level 1 wave count ~5×**.
 
 > **Changelog 1.3 → 1.4:** Project renamed **EliteShooter → Right on Commander** (the game's title is Elite's victory cry on reaching the Elite rating, ROC-RTG-3). Requirement-ID prefix changed `ES-` → `ROC-` throughout. Matching domain available.
 
@@ -117,8 +119,9 @@ Applies to enemies and (assumed) the player — see §5.
 Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desirable. Uncollected functional pickups that aren't needed convert to **sellable cargo** at dock.
 
 - **ROC-PWR-1** Where a **Fuel** pickup is collected, the system shall **restore shield power**; if the shield is already full, the system shall bank it as **sellable cargo**.
-- **ROC-PWR-2** If a **Fuel** pickup is shot, then the system shall make it **explode with no splash damage**.
-- **ROC-PWR-3** Where a **Gems** pickup is collected, the system shall **restore shield power**; if full, bank it as **sellable cargo**. If a Gems pickup is shot, the system shall make it **shatter**.
+- **ROC-PWR-2** Where a **Fuel** pickup is collected, the system shall **restore shield power**; if full, bank it as **sellable cargo**.
+- **ROC-PWR-2a** The system shall make **collectables inert to weapons fire**: bullets and missiles shall **pass through pickups and cargo without colliding**; only the player's **scoop** collects them. *(Revises the earlier fuel-explodes / gems-shatter behaviour — v1.5.)*
+- **ROC-PWR-3** Where a **Gems** pickup is collected, the system shall **restore shield power**; if full, bank it as **sellable cargo**.
 - **ROC-PWR-4** Where an **Alloys** pickup is collected, the system shall **repair hull**; if shot, the system shall make it **shatter**.
 - **ROC-PWR-5** The system shall make the weapon/utility pickups (lasers §3.4, missiles §3.5, ECM, Energy Bomb) **collectable in flight as well as purchasable**.
 - **ROC-PWR-6** When a **mid-level boss** is destroyed, the system shall **always drop a laser power-up** (guaranteed), collectable by the player.
@@ -335,6 +338,54 @@ Shown on docking (§3.9), between levels.
 - **ROC-TTL-3** When the player presses/taps **start**, the system shall **fly the rotating Sidewinder into gameplay position** and hand control to the player (a continuous transition into play, not a hard cut).
 - **ROC-TTL-4** The system shall show a **privacy disclaimer at the bottom** of the intro screen, informing the player that **local storage is used to save mission progress** (and settings/high scores) — the disclosure expected of web games — with an expandable/link for detail.
 - **ROC-TTL-5** Where online features (leaderboard/Firebase) are enabled, the disclaimer shall also cover that data path and defer to the consent flow (ROC-LBD-3).
+
+
+### 3.4a Directional hardpoints (v1.5)
+
+- **ROC-HP-1** The system shall define weapon **hardpoints per ship and per firing direction** (front / rear / left / right), allowing **more than one hardpoint in a direction**.
+- **ROC-HP-2** The system shall use the following hardpoint layout:
+
+  | Ship | Front | Rear | Left | Right |
+  |------|-------|------|------|-------|
+  | Sidewinder | 2 | 1 | 0 | 0 |
+  | Cobra Mk III | 2 | 1 | 1 | 1 |
+  | Asp Mk II | 3 | 2 | 2 | 2 |
+  | Fer-de-Lance | 3 | 3 | 3 | 3 |
+
+- **ROC-HP-3** When a weapon is installed in a directional hardpoint, the system shall let that weapon **fire in that direction**; all installed weapons fire together on the trigger.
+- **ROC-HP-4** When the player **picks up** a weapon, the system shall place it in an empty hardpoint if one is available, preferring directions in the order **Front → Rear → Left → Right**.
+- **ROC-HP-5** The system shall supersede the earlier "one laser per direction" rule (ROC-SHIP-4 / ROC-LAS-2) with this multi-hardpoint model.
+
+### 3.5a Missile behaviour revision (v1.5)
+
+- **ROC-MIS-6** The system shall render missiles **smaller** and move them **slower** than the pre-v1.5 implementation.
+- **ROC-MIS-7** When the player fires missiles, the system shall **only launch if at least one enemy is on screen**.
+- **ROC-MIS-8** When missiles are fired, the system shall launch them **one at a time with a short delay**, **alternating** between the ship's **left and right wing** launch positions.
+- **ROC-MIS-9** The system shall cap **alive missiles at 4**; when a fifth would launch, the system shall **remove the oldest** active missile.
+- **ROC-MIS-10** The system shall expire every missile after **30 seconds** (a hard lifetime that also prevents missiles stuck orbiting a target from persisting).
+- **ROC-MIS-11** When a missile is moving, the system shall emit **more exhaust particles** than the pre-v1.5 implementation.
+- **ROC-MIS-12** The system shall limit **per-ship missile capacity**: Sidewinder 1, Cobra Mk III 2, Asp 3, Fer-de-Lance 4.
+
+### 3.20 Cargo drops (v1.5)
+
+- **ROC-CARGO-1** When an enemy is destroyed, the system shall **sometimes drop cargo**.
+- **ROC-CARGO-2** The system shall **not** let bullets or missiles collide with cargo (see ROC-PWR-2a).
+- **ROC-CARGO-3** When the player collects cargo, the system shall **display the collected cargo type**.
+- **ROC-CARGO-4** The system shall support the cargo types: **Food, Textiles, Radioactives, Slaves (illegal), Liquor/Wines, Firearms (illegal), Narcotics (illegal), Computers, Machinery, Alloys, Furs, Minerals, Gold, Platinum, Gem-Stones, Alien Items**.
+- **ROC-CARGO-5** Where cargo is dropped by a **non-Thargoid** enemy, the system shall **not** drop **Alien Items**; where dropped by a **Thargoid**, it **may**.
+
+### 3.21 Kill-credit display (v1.5)
+
+- **ROC-KC-1** When an enemy is destroyed, the system shall **briefly display the credits earned** for that kill.
+- **ROC-KC-2** When a **wave bonus** is awarded, the system shall **briefly display the bonus amount**.
+- **ROC-KC-3** When a credit value is displayed, the system shall show it **at/under the explosion, drifting upward as it fades out**.
+
+### 3.22 Transporters (v1.5)
+
+- **ROC-TR-1** The system shall add **transporter** enemy ships using the original Elite transporter visual.
+- **ROC-TR-2** When a transporter appears, the system shall move it **slowly** across the screen and **prevent it from shooting**.
+- **ROC-TR-3** The system shall make a transporter **take more hits to destroy** than the player might expect (high hull).
+- **ROC-TR-4** When a transporter is destroyed, the system shall **always drop a significant pickup**.
 
 
 ---
