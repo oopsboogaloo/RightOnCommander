@@ -13,7 +13,8 @@ export interface PlayerState {
   lasers: { front: string | null; rear: string | null; left: string | null; right: string | null };
   missileGrade: number;
   missileTimer: number; // seconds left at the current grade [ROC-MIS-4]
-  missileCooldown: number; // seconds until the next homing volley
+  missileCooldown: number; // seconds until the next missile launch
+  missileWing: number; // 0/1: which wing launches next (alternates) [ROC-MIS-8]
   ecm: number;
   energyBombs: number;
   escapePod: boolean;
@@ -104,6 +105,7 @@ export function makeWorld(seed: number): World {
       missileGrade: 0,
       missileTimer: 0,
       missileCooldown: 0,
+      missileWing: 0,
       ecm: 0,
       energyBombs: 0,
       escapePod: false,

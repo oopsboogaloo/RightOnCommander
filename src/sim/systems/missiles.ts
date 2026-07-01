@@ -10,29 +10,39 @@ import { PLAYER_ID, type World } from '../world.js';
 export interface MissilesConfig {
   durationSec: number; // timer per grade [ROC-MIS-4]
   maxGrade: number; // [ROC-MIS-2]
-  volleyRate: number; // volleys per second (continuous autofire) [ROC-MIS-1]
-  speed: number; // top speed, world units / second
+  launchDelay: number; // seconds between one-at-a-time launches [ROC-MIS-8]
+  aliveCap: number; // hard ceiling on live missiles; a new launch evicts the oldest [ROC-MIS-9]
+  speed: number; // top speed, world units / second [ROC-MIS-6]
   initialSpeed: number; // launch speed before the motor builds up [ROC-MIS-3]
   accel: number; // acceleration toward `speed`, world units / s^2
-  ttl: number; // missile lifetime, seconds
+  ttl: number; // hard lifetime, seconds [ROC-MIS-10]
   turnRate: number; // homing turn rate, rad/s [ROC-MIS-3]
   damage: number;
-  spread: number; // fan angle between missiles in a volley
-  muzzleOffset: number;
+  wingOffset: number; // lateral launch offset (alternating wings) [ROC-MIS-8]
+  muzzleOffset: number; // forward launch offset
 }
 
 export const DEFAULT_MISSILES: MissilesConfig = {
   durationSec: 60,
   maxGrade: 4,
-  volleyRate: 1,
-  speed: 4.5,
-  initialSpeed: 0.4,
+  launchDelay: 0.35,
+  aliveCap: 4,
+  speed: 3,
+  initialSpeed: 0.3,
   accel: 2.5,
-  ttl: 4,
+  ttl: 30,
   turnRate: 6,
   damage: 2,
-  spread: 0.25,
-  muzzleOffset: 0.25,
+  wingOffset: 0.16,
+  muzzleOffset: 0.1,
+};
+
+// Per-ship missile capacity — how many of the player's missiles may be airborne at once. [ROC-MIS-12]
+export const SHIP_MISSILE_CAP: Record<string, number> = {
+  sidewinder: 1,
+  cobra_mk3: 2,
+  asp_mk2: 3,
+  fer_de_lance: 4,
 };
 
 // Collect a missile power-up: raise the grade (capped) and restart the timer. [ROC-MIS-1,2]
@@ -71,30 +81,36 @@ function acquireMissile(world: World): Entity {
   return fresh;
 }
 
-function fireVolley(world: World, grade: number, cfg: MissilesConfig): void {
+// Is any enemy/boss on screen (within the visible play field)? Missiles only fire if so. [ROC-MIS-7]
+function enemyOnScreen(world: World): boolean {
+  for (const e of world.entities.values()) {
+    if (e.kind !== 'enemy' && e.kind !== 'boss') continue;
+    if (e.pos.z >= -1.7 && e.pos.z <= 1.9 && Math.abs(e.pos.x) <= 1.3) return true;
+  }
+  return false;
+}
+
+const liveMissiles = (world: World): Entity[] => [...world.entities.values()].filter((e) => e.kind === 'missile');
+
+// Launch a single missile from the given wing, aimed at the nearest enemy. [ROC-MIS-8]
+function fireOne(world: World, wing: 1 | -1, cfg: MissilesConfig): void {
   const player = world.entities.get(PLAYER_ID);
   if (!player) return;
   const target = nearestEnemy(world, player.pos);
-  const baseAngle = target ? angleOf(target.pos.x - player.pos.x, target.pos.z - player.pos.z) : 0; // 0 = +z
-
-  for (let i = 0; i < grade; i++) {
-    const a = baseAngle + (i - (grade - 1) / 2) * cfg.spread;
-    const dx = Math.sin(a);
-    const dz = Math.cos(a);
-    const m = acquireMissile(world);
-    m.kind = 'missile';
-    m.team = 'player';
-    m.pos = vec3(player.pos.x + dx * cfg.muzzleOffset, 0, player.pos.z + dz * cfg.muzzleOffset);
-    m.speed = cfg.initialSpeed; // launches slow, then the motor builds up [ROC-MIS-3]
-    m.vel = vec3(dx * cfg.initialSpeed, 0, dz * cfg.initialSpeed);
-    m.yaw = a;
-    m.bank = 0;
-    m.ttl = cfg.ttl;
-    m.hull = 1; // destructible [ROC-MIS-5]
-    m.hullMax = 1;
-    m.shield = 0;
-    m.damage = cfg.damage;
-  }
+  const a = target ? angleOf(target.pos.x - player.pos.x, target.pos.z - player.pos.z) : 0; // 0 = +z
+  const m = acquireMissile(world);
+  m.kind = 'missile';
+  m.team = 'player';
+  m.pos = vec3(player.pos.x + wing * cfg.wingOffset, 0, player.pos.z + cfg.muzzleOffset);
+  m.speed = cfg.initialSpeed; // launches slow, then the motor builds up [ROC-MIS-3,6]
+  m.vel = vec3(Math.sin(a) * cfg.initialSpeed, 0, Math.cos(a) * cfg.initialSpeed);
+  m.yaw = a;
+  m.bank = 0;
+  m.ttl = cfg.ttl;
+  m.hull = 1; // destructible [ROC-MIS-5]
+  m.hullMax = 1;
+  m.shield = 0;
+  m.damage = cfg.damage;
 }
 
 function steerHoming(world: World, m: Entity, dt: number, cfg: MissilesConfig): void {
@@ -128,12 +144,27 @@ export function missilesSystem(world: World, dt: number, cfg: MissilesConfig = D
     }
   }
 
-  // Continuous autofire while active; volley size == grade. [ROC-MIS-1]
-  if (p.missileGrade > 0) {
+  // Continuous autofire, one missile at a time, alternating wings, only while a target is on
+  // screen. Keep up to `cap` (min of the timed grade and the ship's capacity) airborne; the hard
+  // ceiling evicts the oldest so nothing lives forever. [ROC-MIS-1,7,8,9,12]
+  if (p.missileGrade > 0 && enemyOnScreen(world)) {
     p.missileCooldown -= dt;
     if (p.missileCooldown <= 0) {
-      fireVolley(world, p.missileGrade, cfg);
-      p.missileCooldown = 1 / cfg.volleyRate;
+      const cap = Math.min(p.missileGrade, SHIP_MISSILE_CAP[p.shipClass] ?? 1);
+      let live = liveMissiles(world);
+      if (live.length < cap) {
+        const wing: 1 | -1 = p.missileWing === 0 ? -1 : 1;
+        // Global ceiling safety (e.g. after a ship downgrade): evict oldest (lowest id) first.
+        while (live.length >= cfg.aliveCap) {
+          const oldest = live.reduce((a, b) => (a.id < b.id ? a : b));
+          world.entities.delete(oldest.id);
+          world.pool.missiles.push(oldest);
+          live = liveMissiles(world);
+        }
+        fireOne(world, wing, cfg);
+        p.missileWing = p.missileWing === 0 ? 1 : 0; // alternate next time [ROC-MIS-8]
+      }
+      p.missileCooldown = cfg.launchDelay;
     }
   }
 
@@ -144,7 +175,7 @@ export function missilesSystem(world: World, dt: number, cfg: MissilesConfig = D
     m.pos.x += m.vel.x * dt;
     m.pos.y += m.vel.y * dt;
     m.pos.z += m.vel.z * dt;
-    if (world.frame % 2 === 0) world.events.push({ type: 'exhaust', pos: { ...m.pos }, vel: { ...m.vel } }); // thrust trail [ROC-MIS-3]
+    world.events.push({ type: 'exhaust', pos: { ...m.pos }, vel: { ...m.vel } }); // thick thrust trail [ROC-MIS-11]
     m.ttl = (m.ttl ?? 0) - dt;
     if (m.ttl <= 0) {
       world.entities.delete(m.id);
