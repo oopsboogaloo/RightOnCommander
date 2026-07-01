@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Right On Commander</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    #gameCanvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+    #boot {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: #8ad; font: 14px/1.6 monospace; text-align: center; padding: 24px; pointer-events: none;
+    }
+    #version {
+      position: fixed; top: 4px; right: 6px; color: #567; font: 11px/1 monospace;
+      opacity: 0.7; pointer-events: none; z-index: 10;
+    }
+  </style>
+  <script type="module" crossorigin src="./assets/index-CHm_Xx4q.js"></script>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="boot">Loading Right On Commander…</div>
+  <div id="version"></div>
+  <script>
+    // Classic (non-module) boot watchdog. It runs even when the module bundle fails to load,
+    // so a misconfigured deploy shows a message instead of a silent black screen.
+    addEventListener('error', function (e) {
+      if (window.__rocBooted) return;
+      var b = document.getElementById('boot');
+      var src = e && e.target && e.target.src;
+      if (b) b.textContent = 'Load error: ' + (src || (e && e.message) || 'failed to load app bundle');
+    }, true);
+    setTimeout(function () {
+      if (window.__rocBooted) return;
+      var b = document.getElementById('boot');
+      if (b) b.innerHTML =
+        'The app bundle did not start.<br>' +
+        'If this is the deployed site, GitHub Pages is serving the raw source.<br>' +
+        'Set Settings &rarr; Pages &rarr; Source to the <b>gh-pages</b> branch.';
+    }, 5000);
+  </script>
+</body>
+</html>
