@@ -9,7 +9,7 @@ import { vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
 import type { World } from '../world.js';
 import { startWave, type WaveDef, type WaveContext } from './waves.js';
-import { startAsteroidField, type AsteroidFieldDef } from './asteroids.js';
+import { startAsteroidWaves, type AsteroidFieldDef } from './asteroids.js';
 
 export type LevelState =
   | 'LAUNCH'
@@ -24,7 +24,7 @@ export type LevelState =
 export interface LevelDef {
   id: string;
   launchMs?: number;
-  asteroidField?: AsteroidFieldDef; // opening asteroid field, if the level has one [ROC-L1-1]
+  asteroidWaves?: AsteroidFieldDef[]; // opening asteroid waves, if the level has any [ROC-L1-1]
   wavesA: WaveDef[];
   midBoss: string; // enemy name (spawned as a boss)
   wavesB: WaveDef[];
@@ -42,9 +42,9 @@ const groupCleared = (world: World): boolean => world.waves.active.size === 0 &&
 const bossCleared = (world: World): boolean => !hasKind(world, 'boss');
 const hasContraband = (world: World): boolean => (world.cargo.contraband ?? 0) > 0; // [ROC-ECO-4, ROC-LVL-4]
 
-// Clear once every asteroid has spawned and none remain (large or splinter). [ROC-L1-1]
+// Clear once every wave has finished spawning and no asteroid remains (large or splinter). [ROC-L1-1]
 const asteroidFieldCleared = (world: World): boolean =>
-  (!world.asteroidField || world.asteroidField.pending <= 0) && !hasKind(world, 'asteroid');
+  world.asteroidWaves.every((w) => w.pending <= 0) && !hasKind(world, 'asteroid');
 
 function startGroup(world: World, waves: WaveDef[], ctx: WaveContext): void {
   for (const w of waves) startWave(world, w, ctx);
@@ -84,7 +84,7 @@ function enter(world: World, state: LevelState, level: LevelDef, ctx: WaveContex
       world.levelTimer = (level.launchMs ?? 1000) / 1000;
       break;
     case 'ASTEROIDS':
-      if (level.asteroidField) startAsteroidField(world, level.asteroidField);
+      if (level.asteroidWaves) startAsteroidWaves(world, level.asteroidWaves);
       break;
     case 'WAVES_A':
       startGroup(world, level.wavesA, ctx);
@@ -115,7 +115,7 @@ export function levelStateSystem(world: World, dt: number, level: LevelDef, ctx:
   switch (world.levelState as LevelState) {
     case 'LAUNCH':
       world.levelTimer -= dt;
-      if (world.levelTimer <= 0) enter(world, level.asteroidField ? 'ASTEROIDS' : 'WAVES_A', level, ctx);
+      if (world.levelTimer <= 0) enter(world, level.asteroidWaves?.length ? 'ASTEROIDS' : 'WAVES_A', level, ctx);
       break;
     case 'ASTEROIDS':
       if (asteroidFieldCleared(world)) enter(world, 'WAVES_A', level, ctx);

@@ -1,7 +1,8 @@
 // Drifting asteroid field: the Level 1 opener. Large rocks drift down-screen tumbling freely
 // (yaw and bank spin independently of heading/motion, unlike ships), and shooting one apart
-// fragments it into a few faster, smaller splinters — the terminal fragment, which the drops/
-// economy systems reward with a small bounty and a chance of mined loot. [ROC-L1-1]
+// fragments it into a handful of slower, smaller splinters — the terminal fragment, which the
+// drops/economy systems reward with a small bounty and a chance of mined loot. Several waves of
+// rocks can be sequenced (like wavesA sequences fighter waves). [ROC-L1-1]
 
 import { vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
@@ -12,6 +13,7 @@ import { scaledCount } from './difficulty.js';
 export interface AsteroidFieldDef {
   count: number;
   spacingMs: number;
+  delayMs?: number; // wait before this wave starts spawning (sequences waves, as in wavesA)
   speed?: number; // downward drift speed, world units/sec
   xSpread?: number; // half-width of the spawn x range
 }
@@ -28,15 +30,16 @@ const randTumble = (rng: Rng, [lo, hi]: [number, number]): { yawRate: number; ba
   bankRate: rng.range(lo, hi) * randSign(rng),
 });
 
-// Register the field; members spawn over the following steps. [ROC-L1-1]
-export function startAsteroidField(world: World, def: AsteroidFieldDef): void {
-  world.asteroidField = {
+// Register one or more asteroid waves; each spawns its members over the following steps,
+// sequenced by its own delayMs so the field can ramp up in bursts. [ROC-L1-1]
+export function startAsteroidWaves(world: World, defs: AsteroidFieldDef[]): void {
+  world.asteroidWaves = defs.map((def) => ({
     pending: scaledCount(def.count, world.difficulty),
-    timer: 0,
+    timer: (def.delayMs ?? 0) / 1000,
     spacingSec: def.spacingMs / 1000,
     speed: def.speed ?? 0.28,
     xSpread: def.xSpread ?? 0.85,
-  };
+  }));
 }
 
 function spawnLarge(world: World, rng: Rng, field: AsteroidFieldState): void {
@@ -60,11 +63,11 @@ function spawnLarge(world: World, rng: Rng, field: AsteroidFieldState): void {
   world.entities.set(id, e);
 }
 
-// Shatter a destroyed large asteroid into a few faster, smaller splinters that scatter outward
+// Shatter a destroyed large asteroid into a handful of smaller splinters that scatter outward
 // from the break point, inheriting its drift. [ROC-L1-1]
 function spawnSplinters(world: World, rng: Rng, at: Entity['pos'], baseVel: Entity['vel']): void {
-  const count = 2 + rng.int(2); // 2-3 pieces
-  const speed = (Math.hypot(baseVel.x, baseVel.z) || 0.28) * rng.range(2.0, 3.0);
+  const count = 4 + rng.int(2); // 4-5 pieces
+  const speed = (Math.hypot(baseVel.x, baseVel.z) || 0.28) * rng.range(0.6, 1.0);
   const spread = (Math.PI * 2) / count;
   for (let i = 0; i < count; i++) {
     const angle = i * spread + rng.range(-0.4, 0.4);
@@ -87,11 +90,11 @@ function spawnSplinters(world: World, rng: Rng, at: Entity['pos'], baseVel: Enti
   }
 }
 
-// Spawn pending members, drift + tumble every asteroid, and cull whatever drifts off-field.
-// Runs before collision so freshly spawned/moved rocks are hit-tested the same step as ships.
+// Spawn pending members of every active wave, drift + tumble every asteroid, and cull whatever
+// drifts off-field. Runs before collision so freshly spawned/moved rocks are hit-tested the same
+// step as ships.
 export function asteroidFieldSystem(world: World, rng: Rng, dt: number): void {
-  const field = world.asteroidField;
-  if (field) {
+  for (const field of world.asteroidWaves) {
     field.timer -= dt;
     while (field.pending > 0 && field.timer <= 0) {
       spawnLarge(world, rng, field);

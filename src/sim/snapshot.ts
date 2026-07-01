@@ -31,7 +31,7 @@ export interface WorldSnapshot {
     }[];
   };
   unlocks: { eliteMode: boolean; thargoidShip: boolean };
-  asteroidField: AsteroidFieldState | null;
+  asteroidWaves: AsteroidFieldState[];
 }
 
 export function snapshot(world: World): WorldSnapshot {
@@ -61,7 +61,7 @@ export function snapshot(world: World): WorldSnapshot {
       })),
     },
     unlocks: { ...world.unlocks },
-    asteroidField: world.asteroidField ? { ...world.asteroidField } : null,
+    asteroidWaves: world.asteroidWaves.map((w) => ({ ...w })),
   };
 }
 
@@ -98,7 +98,7 @@ export function restore(world: World, snap: WorldSnapshot): void {
     ),
   };
   world.unlocks = { ...snap.unlocks };
-  world.asteroidField = snap.asteroidField ? { ...snap.asteroidField } : null;
+  world.asteroidWaves = snap.asteroidWaves.map((w) => ({ ...w }));
   world.events = [];
   world.pool = { projectiles: [], particles: [], missiles: [] }; // allocation cache; safe to drop on restore
 }

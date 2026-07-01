@@ -7,7 +7,7 @@ import { makeWorld } from '../../src/sim/world.js';
 import { createRng } from '../../src/sim/rng.js';
 import { vec3 } from '../../src/sim/math/vec3.js';
 import {
-  startAsteroidField,
+  startAsteroidWaves,
   asteroidFieldSystem,
   asteroidSplitSystem,
 } from '../../src/sim/systems/asteroids.js';
@@ -19,20 +19,36 @@ describe('asteroid field', () => {
   it('spawns members spaced over time up to count', () => {
     const w = makeWorld(1);
     const rng = createRng(1);
-    startAsteroidField(w, { count: 3, spacingMs: 100 });
+    startAsteroidWaves(w, [{ count: 3, spacingMs: 100 }]);
 
     asteroidFieldSystem(w, rng, DT);
     expect(asteroids(w).length).toBe(1); // first spawns immediately
 
     for (let i = 0; i < 40; i++) asteroidFieldSystem(w, rng, DT); // ~0.3s elapses
     expect(asteroids(w).length).toBe(3);
-    expect(w.asteroidField?.pending).toBe(0);
+    expect(w.asteroidWaves[0]?.pending).toBe(0);
+  });
+
+  it('sequences multiple waves by delayMs, like wavesA sequences fighter waves', () => {
+    const w = makeWorld(1);
+    const rng = createRng(1);
+    startAsteroidWaves(w, [
+      { count: 1, spacingMs: 0, delayMs: 0 },
+      { count: 1, spacingMs: 0, delayMs: 500 },
+    ]);
+
+    asteroidFieldSystem(w, rng, DT);
+    expect(asteroids(w).length).toBe(1); // only the first wave's member is due
+
+    for (let i = 0; i < 60; i++) asteroidFieldSystem(w, rng, DT); // ~0.5s elapses
+    expect(asteroids(w).length).toBe(2); // the second wave's member has now spawned
+    expect(w.asteroidWaves.every((wave) => wave.pending <= 0)).toBe(true);
   });
 
   it('tumbles freely: yaw and bank advance independently of position/heading', () => {
     const w = makeWorld(1);
     const rng = createRng(1);
-    startAsteroidField(w, { count: 1, spacingMs: 0 });
+    startAsteroidWaves(w, [{ count: 1, spacingMs: 0 }]);
     asteroidFieldSystem(w, rng, DT);
 
     const rock = asteroids(w)[0];
@@ -50,7 +66,7 @@ describe('asteroid field', () => {
   it('drifts downward and culls once it passes the bottom edge', () => {
     const w = makeWorld(1);
     const rng = createRng(1);
-    startAsteroidField(w, { count: 1, spacingMs: 0, speed: 5 }); // fast, so it culls quickly
+    startAsteroidWaves(w, [{ count: 1, spacingMs: 0, speed: 5 }]); // fast, so it culls quickly
     asteroidFieldSystem(w, rng, DT);
     expect(asteroids(w).length).toBe(1);
 
@@ -58,22 +74,22 @@ describe('asteroid field', () => {
     expect(asteroids(w).length).toBe(0); // drifted off-field
   });
 
-  it('fragments a destroyed large asteroid into 2-3 faster splinters', () => {
+  it('fragments a destroyed large asteroid into 4-5 slower splinters', () => {
     const w = makeWorld(1);
     const rng = createRng(1);
-    w.events = [
-      { type: 'destroyed', kind: 'asteroid', meshId: 'asteroid', pos: vec3(0.1, 0, 0.2), vel: vec3(0, 0, -0.28) },
-    ];
+    // A stationary parent isolates the kick speed from the inherited-velocity component.
+    w.events = [{ type: 'destroyed', kind: 'asteroid', meshId: 'asteroid', pos: vec3(0.1, 0, 0.2), vel: vec3() }];
     asteroidSplitSystem(w, rng);
 
     const children = asteroids(w);
-    expect(children.length).toBeGreaterThanOrEqual(2);
-    expect(children.length).toBeLessThanOrEqual(3);
+    expect(children.length).toBeGreaterThanOrEqual(4);
+    expect(children.length).toBeLessThanOrEqual(5);
     for (const c of children) {
       expect(c.meshId).toBe('splinter');
       expect(c.bounty).toBeGreaterThan(0); // terminal fragment rewards the kill [ROC-L1-3]
       const speed = Math.hypot(c.vel.x, c.vel.z);
-      expect(speed).toBeGreaterThan(0.28); // faster than the parent's drift
+      expect(speed).toBeGreaterThan(0); // still scatters...
+      expect(speed).toBeLessThanOrEqual(0.28); // ...but no faster than the fallback reference speed
     }
   });
 

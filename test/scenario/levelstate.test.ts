@@ -82,7 +82,7 @@ describe('level FSM', () => {
   });
 
   it('inserts an opening ASTEROIDS phase when the level has an asteroid field', () => {
-    const withField: LevelDef = { ...level, asteroidField: { count: 2, spacingMs: 0 } };
+    const withField: LevelDef = { ...level, asteroidWaves: [{ count: 2, spacingMs: 0 }] };
     const w = makeWorld(1);
     const rng = createRng(1);
     startLevel(w, withField, ctx);

@@ -47,11 +47,12 @@ export interface WaveRecord {
   spawn: WaveSpawnState | null;
 }
 
-// Pending-spawn schedule for the level-opening asteroid field (drifting rocks that tumble in
-// place, fragment into faster splinters when shot). [ROC-L1-1]
+// Pending-spawn schedule for one wave of the level-opening asteroid field (drifting rocks that
+// tumble in place, fragment into splinters when shot). Several of these can be active/pending
+// at once — sequenced by `timer`, the same way wavesA sequences fighter waves. [ROC-L1-1]
 export interface AsteroidFieldState {
   pending: number; // large asteroids not yet spawned
-  timer: number; // seconds until the next spawn
+  timer: number; // seconds until the next spawn (also holds the wave's initial delay)
   spacingSec: number;
   speed: number; // downward drift speed, world units/sec
   xSpread: number; // half-width of the spawn x range
@@ -72,7 +73,7 @@ export interface World {
   cargo: Record<string, number>; // type -> tonnage, sellable at dock
   rating: { kills: number; weightedTally: number; rank: string }; // [ROC-RTG-1]
   waves: { active: Map<number, WaveRecord> }; // [ROC-ECO-1a]
-  asteroidField: AsteroidFieldState | null; // active level-opening asteroid field, if any [ROC-L1-1]
+  asteroidWaves: AsteroidFieldState[]; // active/pending level-opening asteroid waves [ROC-L1-1]
   unlocks: { eliteMode: boolean; thargoidShip: boolean }; // [ROC-PROG-1,2]
   events: SimEvent[]; // drained by shell each step
   pool: { projectiles: Entity[]; particles: Entity[]; missiles: Entity[] }; // recycled; not serialised
@@ -128,7 +129,7 @@ export function makeWorld(seed: number): World {
     cargo: {},
     rating: { kills: 0, weightedTally: 0, rank: 'Harmless' },
     waves: { active: new Map<number, WaveRecord>() },
-    asteroidField: null,
+    asteroidWaves: [],
     unlocks: { eliteMode: false, thargoidShip: false },
     events: [],
     pool: { projectiles: [], particles: [], missiles: [] },

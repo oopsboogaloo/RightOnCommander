@@ -61,13 +61,14 @@ function parseWave(raw: unknown, enemies: Record<string, EnemyDef>, where: strin
   };
 }
 
-function parseAsteroidField(raw: unknown): AsteroidFieldDef {
-  if (!isObj(raw)) throw new Error('content: "level.asteroidField" must be an object');
+function parseAsteroidWave(raw: unknown, where: string): AsteroidFieldDef {
+  if (!isObj(raw)) throw new Error(`content: ${where} must be an object`);
   return {
-    count: num(raw.count, 'level.asteroidField.count'),
-    spacingMs: num(raw.spacingMs, 'level.asteroidField.spacingMs'),
-    speed: raw.speed === undefined ? undefined : num(raw.speed, 'level.asteroidField.speed'),
-    xSpread: raw.xSpread === undefined ? undefined : num(raw.xSpread, 'level.asteroidField.xSpread'),
+    count: num(raw.count, `${where}.count`),
+    spacingMs: num(raw.spacingMs, `${where}.spacingMs`),
+    delayMs: raw.delayMs === undefined ? undefined : num(raw.delayMs, `${where}.delayMs`),
+    speed: raw.speed === undefined ? undefined : num(raw.speed, `${where}.speed`),
+    xSpread: raw.xSpread === undefined ? undefined : num(raw.xSpread, `${where}.xSpread`),
   };
 }
 
@@ -85,10 +86,14 @@ function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
     if (!Array.isArray(arr)) throw new Error(`content: level.${key} must be an array`);
     return arr.map((w, i) => parseWave(w, enemies, `level.${key}[${i}]`));
   };
+  const asteroidWaves = raw.asteroidWaves;
+  if (asteroidWaves !== undefined && !Array.isArray(asteroidWaves)) {
+    throw new Error('content: "level.asteroidWaves" must be an array');
+  }
   return {
     id: typeof raw.id === 'string' ? raw.id : 'level',
     launchMs: raw.launchMs === undefined ? undefined : num(raw.launchMs, 'level.launchMs'),
-    asteroidField: raw.asteroidField === undefined ? undefined : parseAsteroidField(raw.asteroidField),
+    asteroidWaves: asteroidWaves?.map((w, i) => parseAsteroidWave(w, `level.asteroidWaves[${i}]`)),
     wavesA: group('wavesA'),
     midBoss: boss('midBoss'),
     wavesB: group('wavesB'),
