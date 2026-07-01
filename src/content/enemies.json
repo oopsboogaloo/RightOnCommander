@@ -4,6 +4,7 @@
   "gecko": { "hull": 1, "bounty": 12, "meshId": "gecko", "colliderRx": 0.2, "colliderRz": 0.2 },
   "adder": { "hull": 2, "bounty": 16, "meshId": "adder", "colliderRx": 0.22, "colliderRz": 0.22 },
   "viper": { "hull": 2, "bounty": 20, "meshId": "viper", "colliderRx": 0.2, "colliderRz": 0.22 },
+  "transporter": { "hull": 12, "bounty": 60, "meshId": "transporter", "colliderRx": 0.5, "colliderRz": 0.45 },
   "hermit": { "hull": 20, "bounty": 120, "meshId": "coriolis", "colliderRx": 0.5, "colliderRz": 0.5 },
   "fer_de_lance": { "hull": 30, "shield": 2, "bounty": 250, "meshId": "fer_de_lance", "colliderRx": 0.4, "colliderRz": 0.35 }
 }

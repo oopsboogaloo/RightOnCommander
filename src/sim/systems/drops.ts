@@ -16,6 +16,7 @@ export const COMMODITIES = [
   'Computers', 'Machinery', 'Alloys', 'Furs', 'Minerals', 'Gold', 'Platinum', 'Gem-Stones',
 ];
 export const ALIEN_ITEMS = 'Alien Items';
+const TRANSPORTER_LOOT = ['Platinum', 'Gold', 'Gem-Stones', 'Computers']; // significant haul [ROC-TR-4]
 
 function spawnPickup(world: World, at: Vec3, type: PickupType, commodity?: string): void {
   const id = world.nextId++;
@@ -39,6 +40,12 @@ export function dropsSystem(world: World, rng?: Rng): void {
     // Explicit power-up drop (guaranteed, e.g. the mid-boss laser).
     if (typeof ev.drops === 'string') {
       spawnPickup(world, at, ev.drops as PickupType);
+      continue;
+    }
+
+    // A destroyed transporter always yields a significant haul. [ROC-TR-4]
+    if (ev.meshId === 'transporter') {
+      spawnPickup(world, at, 'cargo', TRANSPORTER_LOOT[rng ? rng.int(TRANSPORTER_LOOT.length) : 0]);
       continue;
     }
 

@@ -28,6 +28,13 @@ from pathlib import Path
 NORM_DIVISOR = 255.0
 FLOAT_PRECISION = 6
 
+# Per-ship size multiplier. Elite stores a separate scale nibble per ship that we otherwise
+# ignore; the Transporter's raw coordinates are tiny, so scale it up to read as the big freighter
+# it is. (Others keep 1.0.)
+MESH_SCALE: dict[str, float] = {
+    "transporter": 4.0,
+}
+
 # Default manifest: output mesh name -> bbcelite ship label root.
 DEFAULT_SHIPS: dict[str, str] = {
     "sidewinder": "SHIP_SIDEWINDER",
@@ -41,6 +48,7 @@ DEFAULT_SHIPS: dict[str, str] = {
     "viper": "SHIP_VIPER",
     "coriolis": "SHIP_CORIOLIS",
     "thargoid": "SHIP_THARGOID",
+    "transporter": "SHIP_TRANSPORTER",
 }
 
 _VERTICES_LABEL = re.compile(r"^\.(SHIP_[A-Z0-9_]+)_VERTICES\s*$")
@@ -214,8 +222,9 @@ def build_mesh(name: str, bp: Blueprint) -> dict:
     """Turn a raw blueprint into the renderer's mesh JSON structure."""
     pts: list[Vec3] = [(v[0], v[1], v[2]) for v in bp.vertices]
 
+    k = MESH_SCALE.get(name, 1.0) / NORM_DIVISOR
     vertices = [
-        {"x": _round(x / NORM_DIVISOR), "y": _round(y / NORM_DIVISOR), "z": _round(z / NORM_DIVISOR)}
+        {"x": _round(x * k), "y": _round(y * k), "z": _round(z * k)}
         for (x, y, z) in pts
     ]
     edges = [[e[0], e[1]] for e in bp.edges]
