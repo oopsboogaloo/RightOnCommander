@@ -47,6 +47,7 @@ describe('missile homing', () => {
 
   it('launches slow, accelerates toward top speed, and trails exhaust', () => {
     const w = makeWorld(1);
+    add(w, { kind: 'enemy', pos: vec3(0, 0, 1), vel: vec3(), yaw: 0, bank: 0, hull: 3, hullMax: 3, shield: 0 }); // on screen [ROC-MIS-7]
     collectMissile(w);
     w.player.missileCooldown = 0;
     missilesSystem(w, 1 / 120); // spawn one missile
