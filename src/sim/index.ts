@@ -13,7 +13,8 @@ import { makeWorld, PLAYER_ID, type World } from './world.js';
 import { vec3 } from './math/vec3.js';
 import { movementSystem } from './systems/movement.js';
 import { weaponsSystem } from './systems/weapons.js';
-import { collisionSystem } from './systems/collision.js';
+import { collisionSystem, meshSilhouette } from './systems/collision.js';
+import type { Pt } from './math/geom2.js';
 import { damageSystem } from './systems/damage.js';
 import { economySystem } from './systems/economy.js';
 import { particlesSystem, DEFAULT_PARTICLES, type FragGeom } from './systems/particles.js';
@@ -75,6 +76,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
   // ship can shatter into its own wireframe deterministically. [ROC-DMG-6]
   const meshes = (content?.meshes ?? {}) as Record<string, Mesh>;
   const fragGeom: FragGeom = {};
+  const silhouettes: Record<string, Pt[]> = {}; // per-mesh convex hull outline, for tight collisions
   for (const [id, m] of Object.entries(meshes)) {
     if (!m?.edges || !m?.vertices) continue;
     fragGeom[id] = m.edges.map(([i, j]) => ({
@@ -83,6 +85,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
       bx: m.vertices[j].x * SHIP_SCALE,
       bz: m.vertices[j].z * SHIP_SCALE,
     }));
+    silhouettes[id] = meshSilhouette(m);
   }
 
   // Wipe the current combat and re-run the level's opening after a death that costs a life.
@@ -110,7 +113,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     const hits = collisionSystem(world, {
       dt: SIM_DT,
       cellSize: COLLISION_CELL,
-      getSilhouette: () => undefined,
+      getSilhouette: (id) => silhouettes[id], // unshielded hits use the hull outline, not a circle
       colliderScale: SHIP_SCALE,
     });
     damageSystem(world, hits, SIM_DT);

@@ -14,12 +14,6 @@ function addPickup(w: ReturnType<typeof makeWorld>, type: PickupType, pos = vec3
   w.entities.set(id, e);
   return e;
 }
-function addPlayerPulse(w: ReturnType<typeof makeWorld>, pos = vec3(0, 0, 0)): Entity {
-  const id = w.nextId++;
-  const e: Entity = { id, kind: 'projectile', team: 'player', pos, vel: vec3(0, 0, 6), yaw: 0, bank: 0, ttl: 1, damage: 1 };
-  w.entities.set(id, e);
-  return e;
-}
 function player(w: ReturnType<typeof makeWorld>): Entity {
   return w.entities.get(PLAYER_ID)!;
 }
@@ -79,25 +73,16 @@ describe('pickup collection', () => {
   });
 });
 
-describe('pickup shot effects', () => {
-  it('shooting a fuel pickup destroys it (no splash) and consumes the shot', () => {
+describe('collectables are inert to weapons fire', () => {
+  it('a projectile passing through a pickup neither destroys it nor is consumed', () => {
     const w = makeWorld(1);
     player(w).pos = vec3(5, 0, 5); // far away so it is not scooped
-    const pk = addPickup(w, 'fuel', vec3(0, 0, 1));
-    const shot = addPlayerPulse(w, vec3(0, 0, 1));
-    pickupsSystem(w, DT);
-    expect(w.entities.has(pk.id)).toBe(false);
-    expect(w.entities.has(shot.id)).toBe(false); // consumed
-    expect(w.events.some((e) => e.type === 'fragments')).toBe(true);
-  });
-
-  it('shooting gems shatters them', () => {
-    const w = makeWorld(1);
-    player(w).pos = vec3(5, 0, 5);
     const pk = addPickup(w, 'gems', vec3(0, 0, 1));
-    addPlayerPulse(w, vec3(0, 0, 1));
+    const id = w.nextId++;
+    const shot: Entity = { id, kind: 'projectile', team: 'player', pos: vec3(0, 0, 1), vel: vec3(0, 0, 6), yaw: 0, bank: 0, ttl: 1, damage: 1 };
+    w.entities.set(id, shot);
     pickupsSystem(w, DT);
-    expect(w.entities.has(pk.id)).toBe(false);
-    expect(w.events.some((e) => e.type === 'fragments')).toBe(true);
+    expect(w.entities.has(pk.id)).toBe(true); // untouched [ROC-CARGO-2]
+    expect(w.entities.has(shot.id)).toBe(true); // passes through
   });
 });

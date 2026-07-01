@@ -4,13 +4,12 @@
 // design §6 step 10, ROC-PWR-1..6, ROC-ECO-3]
 
 import { type Vec3 } from '../math/vec3.js';
-import type { Entity, PickupType } from '../components.js';
+import type { Entity } from '../components.js';
 import { PLAYER_ID, type World } from '../world.js';
 import { collectMissile } from './missiles.js';
 
 export interface PickupsConfig {
   scoopRadius: number; // player collection radius
-  shotRadius: number; // projectile-vs-pickup radius
   shieldPerPickup: number; // shield rings restored by fuel/gems
   hullPerAlloy: number; // hull repaired by alloys
   driftSpeed: number; // pickups drift down-screen toward the player
@@ -18,7 +17,6 @@ export interface PickupsConfig {
 
 export const DEFAULT_PICKUPS: PickupsConfig = {
   scoopRadius: 0.35,
-  shotRadius: 0.2,
   shieldPerPickup: 1,
   hullPerAlloy: 4,
   driftSpeed: 0.5,
@@ -29,12 +27,6 @@ const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
 function removePickup(world: World, e: Entity): void {
   world.entities.delete(e.id);
-}
-
-function consumeAttacker(world: World, e: Entity): void {
-  world.entities.delete(e.id);
-  if (e.kind === 'projectile') world.pool.projectiles.push(e);
-  else if (e.kind === 'missile') world.pool.missiles.push(e);
 }
 
 function bankCargo(world: World, name: string, tons: number, pos: Vec3): void {
@@ -94,15 +86,6 @@ function collect(world: World, pickup: Entity, player: Entity, cfg: PickupsConfi
   removePickup(world, pickup);
 }
 
-function shoot(world: World, pickup: Entity, attacker: Entity): void {
-  consumeAttacker(world, attacker);
-  const type: PickupType = pickup.pickup!.type;
-  // Fuel explodes (no splash damage — we just spawn particles); everything else shatters.
-  world.events.push({ type: 'fragments', pos: { ...pickup.pos }, meshId: undefined });
-  world.events.push({ type: 'sfx', id: type === 'fuel' ? 'explode_small' : 'shatter' });
-  removePickup(world, pickup);
-}
-
 export function pickupsSystem(world: World, dt: number, cfg: PickupsConfig = DEFAULT_PICKUPS): void {
   const player = world.entities.get(PLAYER_ID);
 
@@ -116,21 +99,8 @@ export function pickupsSystem(world: World, dt: number, cfg: PickupsConfig = DEF
       continue;
     }
 
-    // Shot by a player projectile/missile?
-    let shotBy: Entity | undefined;
-    for (const a of world.entities.values()) {
-      if ((a.kind !== 'projectile' && a.kind !== 'missile') || a.team !== 'player') continue;
-      if (dist2(a.pos, e.pos) <= cfg.shotRadius ** 2) {
-        shotBy = a;
-        break;
-      }
-    }
-    if (shotBy) {
-      shoot(world, e, shotBy);
-      continue;
-    }
-
-    // Scooped by the player?
+    // Collectables are inert to weapons fire — bullets and missiles pass straight through. Only
+    // the player scoop collects them. [ROC-PWR-2a, ROC-CARGO-2]
     if (player && dist2(player.pos, e.pos) <= cfg.scoopRadius ** 2) {
       collect(world, e, player, cfg);
     }
