@@ -150,11 +150,32 @@ function drawShield(e: Entity, center: Vec3 = e.pos): void {
 let prev = readPlayerPose();
 let curr = prev;
 
+// Floating credit/bonus text that rises from a kill and fades. [ROC-KC-1,2,3]
+interface Floater { x: number; z: number; text: string; color: string; age: number; ttl: number }
+const floaters: Floater[] = [];
+const FLOATER_TTL = 1.1;
+
+function drainFloaters(events: ReturnType<typeof sim.step>): void {
+  for (const ev of events) {
+    if (ev.type === 'floatingText' && (ev.category === 'bounty' || ev.category === 'cargo')) {
+      const pos = (ev.pos as { x: number; z: number }) ?? curr;
+      floaters.push({ x: pos.x, z: pos.z, text: String(ev.text ?? ''), color: ev.category === 'bounty' ? '#ffd76b' : '#7cd0ff', age: 0, ttl: FLOATER_TTL });
+    } else if (ev.type === 'waveBonus') {
+      floaters.push({ x: 0, z: curr.z + 0.4, text: `BONUS +${ev.amount}`, color: '#ffd76b', age: 0, ttl: FLOATER_TTL * 1.4 });
+    }
+  }
+  for (let i = floaters.length - 1; i >= 0; i--) {
+    floaters[i].age += DT;
+    if (floaters[i].age >= floaters[i].ttl) floaters.splice(i, 1);
+  }
+}
+
 startGameLoop({
   step: () => {
     prev = curr;
-    sim.step(input.sample(DT));
+    const events = sim.step(input.sample(DT));
     curr = readPlayerPose();
+    drainFloaters(events);
   },
   render: (alpha) => {
     renderer.beginFrame();
@@ -218,6 +239,14 @@ startGameLoop({
       const pos = vec3(lerp(prev.x, curr.x, alpha), lerp(prev.y, curr.y, alpha), lerp(prev.z, curr.z, alpha));
       renderer.drawMesh(pmesh, modelMatrix(pos, lerp(prev.yaw, curr.yaw, alpha), lerp(prev.bank, curr.bank, alpha), SHIP_SCALE), hullFlash(player));
       drawShield(player, pos);
+    }
+
+    // Floating credit/bonus numbers, rising and fading from the explosion. [ROC-KC-1,2,3]
+    for (const f of floaters) {
+      const u = f.age / f.ttl;
+      const alpha = (1 - u).toFixed(2);
+      const col = f.color === '#ffd76b' ? `rgba(255,215,107,${alpha})` : `rgba(124,208,255,${alpha})`;
+      renderer.drawWorldText(vec3(f.x, 0, f.z), f.text, { fill: col, font: '13px monospace', align: 'center', dy: -18 - u * 34 });
     }
 
     if (sim.state.mode === 'GAME_OVER') {

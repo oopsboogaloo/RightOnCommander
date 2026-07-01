@@ -148,6 +148,12 @@ export class Renderer2D implements Renderer {
     );
   }
 
+  // Project a world point and draw text there (optionally nudged in pixels for a rising float).
+  drawWorldText(world: Vec3, text: string, opts: DrawOpts = {}): void {
+    const p = this.toPixel(projectPoint(this.camera, world));
+    this.drawText(text, { x: p.x + ((opts.dx as number) ?? 0), y: p.y + ((opts.dy as number) ?? 0) }, opts);
+  }
+
   // The 2D primitives below take canvas-pixel coordinates; they get richer use in later tasks.
   drawLine(a: Vec2, b: Vec2, opts: DrawOpts = {}): void {
     const { ctx } = this;
