@@ -45,7 +45,7 @@
       "enemy": "gecko",
       "count": 5,
       "spacingMs": 450,
-      "delayMs": 1050,
+      "delayMs": 2250,
       "durationMs": 6000,
       "params": {
         "x0": -0.8,
@@ -58,7 +58,7 @@
       "enemy": "krait",
       "count": 3,
       "spacingMs": 450,
-      "delayMs": 2550,
+      "delayMs": 4950,
       "durationMs": 6000,
       "fire": {
         "rate": 0.5,
@@ -71,7 +71,7 @@
       "enemy": "sidewinder",
       "count": 5,
       "spacingMs": 450,
-      "delayMs": 3150,
+      "delayMs": 6750,
       "durationMs": 6000,
       "params": {
         "amplitude": 0.8,
@@ -85,7 +85,7 @@
       "enemy": "gecko",
       "count": 4,
       "spacingMs": 450,
-      "delayMs": 4650,
+      "delayMs": 9450,
       "durationMs": 6000,
       "params": {
         "x0": -1.2
@@ -97,7 +97,7 @@
       "enemy": "sidewinder",
       "count": 4,
       "spacingMs": 450,
-      "delayMs": 5700,
+      "delayMs": 11700,
       "durationMs": 6000,
       "params": {
         "x0": 1.4,
@@ -111,7 +111,7 @@
       "enemy": "adder",
       "count": 4,
       "spacingMs": 450,
-      "delayMs": 6750,
+      "delayMs": 13950,
       "durationMs": 6000,
       "params": {
         "x0": 1.2
@@ -127,7 +127,7 @@
       "enemy": "gecko",
       "count": 6,
       "spacingMs": 450,
-      "delayMs": 7800,
+      "delayMs": 16200,
       "durationMs": 6000,
       "params": {
         "x0": 0.8,
@@ -140,7 +140,7 @@
       "enemy": "krait",
       "count": 4,
       "spacingMs": 450,
-      "delayMs": 9750,
+      "delayMs": 19350,
       "durationMs": 6000,
       "params": {
         "amplitude": 0.5,
@@ -157,7 +157,7 @@
       "enemy": "sidewinder",
       "count": 5,
       "spacingMs": 450,
-      "delayMs": 10800,
+      "delayMs": 21600,
       "durationMs": 6000,
       "params": {
         "x0": -1.2
@@ -169,7 +169,7 @@
       "enemy": "adder",
       "count": 4,
       "spacingMs": 450,
-      "delayMs": 12300,
+      "delayMs": 24300,
       "durationMs": 6000,
       "params": {
         "x0": -0.9,
@@ -186,7 +186,7 @@
       "enemy": "gecko",
       "count": 5,
       "spacingMs": 450,
-      "delayMs": 13350,
+      "delayMs": 26550,
       "durationMs": 6000
     },
     {
@@ -195,7 +195,7 @@
       "enemy": "transporter",
       "count": 1,
       "spacingMs": 0,
-      "delayMs": 6000,
+      "delayMs": 13295,
       "durationMs": 8000,
       "speed": 0.45,
       "params": {
@@ -224,7 +224,7 @@
       "enemy": "adder",
       "count": 4,
       "spacingMs": 450,
-      "delayMs": 1500,
+      "delayMs": 2700,
       "durationMs": 6000,
       "fire": {
         "rate": 0.6,
@@ -237,7 +237,7 @@
       "enemy": "sidewinder",
       "count": 6,
       "spacingMs": 450,
-      "delayMs": 2550,
+      "delayMs": 4950,
       "durationMs": 6000,
       "params": {
         "amplitude": 0.7,
@@ -250,7 +250,7 @@
       "enemy": "krait",
       "count": 4,
       "spacingMs": 450,
-      "delayMs": 4500,
+      "delayMs": 8100,
       "durationMs": 6000,
       "fire": {
         "rate": 0.6,
@@ -263,7 +263,7 @@
       "enemy": "gecko",
       "count": 5,
       "spacingMs": 450,
-      "delayMs": 5550,
+      "delayMs": 10350,
       "durationMs": 6000,
       "params": {
         "x0": -1.2
@@ -275,7 +275,7 @@
       "enemy": "adder",
       "count": 4,
       "spacingMs": 450,
-      "delayMs": 7050,
+      "delayMs": 13050,
       "durationMs": 6000,
       "params": {
         "x0": -0.9,
@@ -292,7 +292,7 @@
       "enemy": "gecko",
       "count": 6,
       "spacingMs": 450,
-      "delayMs": 8100,
+      "delayMs": 15300,
       "durationMs": 6000,
       "params": {
         "amplitude": 0.9,
@@ -305,7 +305,7 @@
       "enemy": "sidewinder",
       "count": 6,
       "spacingMs": 450,
-      "delayMs": 10050,
+      "delayMs": 18450,
       "durationMs": 6000,
       "params": {
         "x0": -1.4,
@@ -319,7 +319,7 @@
       "enemy": "krait",
       "count": 4,
       "spacingMs": 450,
-      "delayMs": 12000,
+      "delayMs": 21600,
       "durationMs": 6000,
       "params": {
         "x0": 1.2
@@ -335,7 +335,7 @@
       "enemy": "adder",
       "count": 5,
       "spacingMs": 450,
-      "delayMs": 13050,
+      "delayMs": 23850,
       "durationMs": 6000,
       "params": {
         "amplitude": 0.6,
@@ -352,7 +352,7 @@
       "enemy": "adder",
       "count": 5,
       "spacingMs": 450,
-      "delayMs": 14550,
+      "delayMs": 26550,
       "durationMs": 6000,
       "params": {
         "x0": -1.2
@@ -368,7 +368,7 @@
       "enemy": "krait",
       "count": 4,
       "spacingMs": 450,
-      "delayMs": 16050,
+      "delayMs": 29250,
       "durationMs": 6000,
       "fire": {
         "rate": 0.6,
@@ -381,7 +381,7 @@
       "enemy": "transporter",
       "count": 1,
       "spacingMs": 0,
-      "delayMs": 7000,
+      "delayMs": 14318,
       "durationMs": 8000,
       "speed": 0.45,
       "params": {

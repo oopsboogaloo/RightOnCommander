@@ -140,6 +140,7 @@ function readPlayerPose(): Pose {
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const PULSE_LEN = 0.18;
 const PICKUP_SCALE = 1 / 9; // canister/gem read as small props, not ship-sized [was 1/3]
+const ROCK_DEBRIS_SCALE = 0.18; // mini asteroid-mesh chunks, sized like the wireframe shards they replace
 
 // Asteroid-mined loot (alloys/gems power-ups and their Metals/Crystals cargo, ROC-L1-3) reads as
 // a gem, not salvage; everything else (equipment power-ups, market cargo from ships) is a drifting
@@ -232,11 +233,17 @@ startGameLoop({
           particles.push(e.pos);
           break;
         case 'fragment': {
+          const fade = e.ttlMax ? Math.max(0, Math.min(1, (e.ttl ?? 0) / e.ttlMax)) : 1;
+          if (e.meshId) {
+            // A small tumbling rock chunk from a destroyed asteroid/splinter. [ROC-L1-1]
+            const m = MESHES[e.meshId];
+            if (m) renderer.drawMesh(m, modelMatrix(e.pos, e.yaw, e.bank, ROCK_DEBRIS_SCALE), { stroke: `rgba(255,255,255,${fade.toFixed(2)})` });
+            break;
+          }
           // A tumbling wireframe shard from a destroyed hull, fading over its life. [ROC-DMG-6]
           if (!e.seg) break;
           const a = vec3(e.pos.x - e.seg.x, e.pos.y, e.pos.z - e.seg.z);
           const b = vec3(e.pos.x + e.seg.x, e.pos.y, e.pos.z + e.seg.z);
-          const fade = e.ttlMax ? Math.max(0, Math.min(1, (e.ttl ?? 0) / e.ttlMax)) : 1;
           renderer.drawWorldLine(a, b, { stroke: `rgba(255,255,255,${fade.toFixed(2)})`, lineWidth: 1.5 });
           break;
         }
