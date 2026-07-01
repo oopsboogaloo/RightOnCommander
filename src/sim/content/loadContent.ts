@@ -52,6 +52,7 @@ function parseWave(raw: unknown, enemies: Record<string, EnemyDef>, where: strin
     enemy,
     count: num(raw.count, `${where}.count`),
     spacingMs: num(raw.spacingMs, `${where}.spacingMs`),
+    delayMs: raw.delayMs === undefined ? undefined : num(raw.delayMs, `${where}.delayMs`),
     durationMs: raw.durationMs === undefined ? undefined : num(raw.durationMs, `${where}.durationMs`),
     speed: raw.speed === undefined ? undefined : num(raw.speed, `${where}.speed`),
     params: isObj(raw.params) ? (raw.params as Record<string, number>) : undefined,
