@@ -3,32 +3,384 @@
   "name": "Lave",
   "launchMs": 1500,
   "wavesA": [
-    { "id": "l1a1", "pattern": "sine_column", "enemy": "sidewinder", "count": 4, "spacingMs": 500, "delayMs": 0, "durationMs": 6000, "params": { "amplitude": 0.6, "cycles": 2 } },
-    { "id": "l1a2", "pattern": "side_stream", "enemy": "krait", "count": 3, "spacingMs": 600, "delayMs": 4500, "durationMs": 6000, "fire": { "rate": 0.5, "aimed": true } },
-    { "id": "l1a3", "pattern": "vform", "enemy": "gecko", "count": 5, "spacingMs": 400, "delayMs": 9000, "durationMs": 6000, "params": { "x0": -0.8, "x1": 0.2 } },
-    { "id": "l1a4", "pattern": "sine_column", "enemy": "sidewinder", "count": 5, "spacingMs": 450, "delayMs": 13500, "durationMs": 6000, "params": { "amplitude": 0.8, "cycles": 3, "x0": 0.2 } },
-    { "id": "l1a5", "pattern": "pincer", "enemy": "adder", "count": 4, "spacingMs": 500, "delayMs": 18000, "durationMs": 6000, "fire": { "rate": 0.5, "aimed": true }, "params": { "x0": 1.2 } },
-    { "id": "l1a6", "pattern": "side_stream", "enemy": "sidewinder", "count": 4, "spacingMs": 450, "delayMs": 22500, "durationMs": 6000, "params": { "x0": 1.4, "x1": -1.4, "arc": 0.4 } },
-    { "id": "l1a7", "pattern": "vform", "enemy": "gecko", "count": 6, "spacingMs": 350, "delayMs": 27000, "durationMs": 6000, "params": { "x0": 0.8, "x1": -0.2 } },
-    { "id": "l1a8", "pattern": "sine_column", "enemy": "krait", "count": 4, "spacingMs": 500, "delayMs": 31500, "durationMs": 6000, "fire": { "rate": 0.5, "aimed": true }, "params": { "amplitude": 0.5, "cycles": 2 } },
-    { "id": "l1a9", "pattern": "pincer", "enemy": "sidewinder", "count": 5, "spacingMs": 400, "delayMs": 36000, "durationMs": 6000, "params": { "x0": -1.2 } },
-    { "id": "l1a10", "pattern": "side_stream", "enemy": "adder", "count": 4, "spacingMs": 500, "delayMs": 40500, "durationMs": 6000, "fire": { "rate": 0.6, "aimed": true } },
-    { "id": "l1aT", "pattern": "side_stream", "enemy": "transporter", "count": 1, "spacingMs": 0, "delayMs": 24000, "durationMs": 12000, "speed": 0.5, "params": { "x0": -1.4, "x1": 1.4, "z0": 1.0, "z1": 0.7, "arc": 0.2 } }
+    {
+      "id": "l1a1",
+      "pattern": "sine_column",
+      "enemy": "sidewinder",
+      "count": 4,
+      "spacingMs": 450,
+      "delayMs": 0,
+      "durationMs": 6000,
+      "params": {
+        "amplitude": 0.6,
+        "cycles": 2
+      }
+    },
+    {
+      "id": "l1a2",
+      "pattern": "vform",
+      "enemy": "gecko",
+      "count": 5,
+      "spacingMs": 450,
+      "delayMs": 6500,
+      "durationMs": 6000,
+      "params": {
+        "x0": -0.8,
+        "x1": 0.2
+      }
+    },
+    {
+      "id": "l1a3",
+      "pattern": "side_stream",
+      "enemy": "krait",
+      "count": 3,
+      "spacingMs": 450,
+      "delayMs": 13000,
+      "durationMs": 6000,
+      "fire": {
+        "rate": 0.5,
+        "aimed": true
+      }
+    },
+    {
+      "id": "l1a4",
+      "pattern": "sine_column",
+      "enemy": "sidewinder",
+      "count": 5,
+      "spacingMs": 450,
+      "delayMs": 19500,
+      "durationMs": 6000,
+      "params": {
+        "amplitude": 0.8,
+        "cycles": 3,
+        "x0": 0.2
+      }
+    },
+    {
+      "id": "l1a5",
+      "pattern": "pincer",
+      "enemy": "gecko",
+      "count": 4,
+      "spacingMs": 450,
+      "delayMs": 26000,
+      "durationMs": 6000,
+      "params": {
+        "x0": -1.2
+      }
+    },
+    {
+      "id": "l1a6",
+      "pattern": "side_stream",
+      "enemy": "sidewinder",
+      "count": 4,
+      "spacingMs": 450,
+      "delayMs": 32500,
+      "durationMs": 6000,
+      "params": {
+        "x0": 1.4,
+        "x1": -1.4,
+        "arc": 0.4
+      }
+    },
+    {
+      "id": "l1a7",
+      "pattern": "pincer",
+      "enemy": "adder",
+      "count": 4,
+      "spacingMs": 450,
+      "delayMs": 39000,
+      "durationMs": 6000,
+      "params": {
+        "x0": 1.2
+      },
+      "fire": {
+        "rate": 0.5,
+        "aimed": true
+      }
+    },
+    {
+      "id": "l1a8",
+      "pattern": "vform",
+      "enemy": "gecko",
+      "count": 6,
+      "spacingMs": 450,
+      "delayMs": 45500,
+      "durationMs": 6000,
+      "params": {
+        "x0": 0.8,
+        "x1": -0.2
+      }
+    },
+    {
+      "id": "l1a9",
+      "pattern": "sine_column",
+      "enemy": "krait",
+      "count": 4,
+      "spacingMs": 450,
+      "delayMs": 52000,
+      "durationMs": 6000,
+      "params": {
+        "amplitude": 0.5,
+        "cycles": 2
+      },
+      "fire": {
+        "rate": 0.5,
+        "aimed": true
+      }
+    },
+    {
+      "id": "l1a10",
+      "pattern": "pincer",
+      "enemy": "sidewinder",
+      "count": 5,
+      "spacingMs": 450,
+      "delayMs": 58500,
+      "durationMs": 6000,
+      "params": {
+        "x0": -1.2
+      }
+    },
+    {
+      "id": "l1a11",
+      "pattern": "vform",
+      "enemy": "adder",
+      "count": 4,
+      "spacingMs": 450,
+      "delayMs": 65000,
+      "durationMs": 6000,
+      "params": {
+        "x0": -0.9,
+        "x1": 0.3
+      },
+      "fire": {
+        "rate": 0.6,
+        "aimed": true
+      }
+    },
+    {
+      "id": "l1a12",
+      "pattern": "side_stream",
+      "enemy": "gecko",
+      "count": 5,
+      "spacingMs": 450,
+      "delayMs": 71500,
+      "durationMs": 6000
+    },
+    {
+      "id": "l1aT",
+      "pattern": "side_stream",
+      "enemy": "transporter",
+      "count": 1,
+      "spacingMs": 0,
+      "delayMs": 42000,
+      "durationMs": 14000,
+      "speed": 0.45,
+      "params": {
+        "x0": -1.4,
+        "x1": 1.4,
+        "z0": 1.0,
+        "z1": 0.7,
+        "arc": 0.2
+      }
+    }
   ],
   "midBoss": "hermit",
   "wavesB": [
-    { "id": "l1b1", "pattern": "vform", "enemy": "gecko", "count": 5, "spacingMs": 400, "delayMs": 0, "durationMs": 6000 },
-    { "id": "l1b2", "pattern": "pincer", "enemy": "adder", "count": 4, "spacingMs": 500, "delayMs": 4500, "durationMs": 6000, "fire": { "rate": 0.6, "aimed": true } },
-    { "id": "l1b3", "pattern": "sine_column", "enemy": "sidewinder", "count": 6, "spacingMs": 400, "delayMs": 9000, "durationMs": 6000, "params": { "amplitude": 0.7, "cycles": 3 } },
-    { "id": "l1b4", "pattern": "side_stream", "enemy": "krait", "count": 4, "spacingMs": 500, "delayMs": 13500, "durationMs": 6000, "fire": { "rate": 0.6, "aimed": true } },
-    { "id": "l1b5", "pattern": "vform", "enemy": "adder", "count": 4, "spacingMs": 450, "delayMs": 18000, "durationMs": 6000, "fire": { "rate": 0.5, "aimed": true }, "params": { "x0": -0.9, "x1": 0.3 } },
-    { "id": "l1b6", "pattern": "sine_column", "enemy": "gecko", "count": 6, "spacingMs": 350, "delayMs": 22500, "durationMs": 6000, "params": { "amplitude": 0.9, "cycles": 4 } },
-    { "id": "l1b7", "pattern": "pincer", "enemy": "krait", "count": 4, "spacingMs": 500, "delayMs": 27000, "durationMs": 6000, "fire": { "rate": 0.6, "aimed": true }, "params": { "x0": 1.2 } },
-    { "id": "l1b8", "pattern": "side_stream", "enemy": "sidewinder", "count": 6, "spacingMs": 350, "delayMs": 31500, "durationMs": 6000, "params": { "x0": -1.4, "x1": 1.4, "arc": 0.5 } },
-    { "id": "l1b9", "pattern": "pincer", "enemy": "adder", "count": 5, "spacingMs": 450, "delayMs": 36000, "durationMs": 6000, "fire": { "rate": 0.7, "aimed": true }, "params": { "x0": -1.2 } },
-    { "id": "l1b10", "pattern": "side_stream", "enemy": "krait", "count": 4, "spacingMs": 500, "delayMs": 40500, "durationMs": 6000, "fire": { "rate": 0.6, "aimed": true } },
-    { "id": "l1bT", "pattern": "side_stream", "enemy": "transporter", "count": 1, "spacingMs": 0, "delayMs": 30000, "durationMs": 12000, "speed": 0.5, "params": { "x0": 1.4, "x1": -1.4, "z0": 0.9, "z1": 0.6, "arc": 0.2 } }
+    {
+      "id": "l1b1",
+      "pattern": "vform",
+      "enemy": "gecko",
+      "count": 5,
+      "spacingMs": 450,
+      "delayMs": 0,
+      "durationMs": 6000
+    },
+    {
+      "id": "l1b2",
+      "pattern": "pincer",
+      "enemy": "adder",
+      "count": 4,
+      "spacingMs": 450,
+      "delayMs": 6500,
+      "durationMs": 6000,
+      "fire": {
+        "rate": 0.6,
+        "aimed": true
+      }
+    },
+    {
+      "id": "l1b3",
+      "pattern": "sine_column",
+      "enemy": "sidewinder",
+      "count": 6,
+      "spacingMs": 450,
+      "delayMs": 13000,
+      "durationMs": 6000,
+      "params": {
+        "amplitude": 0.7,
+        "cycles": 3
+      }
+    },
+    {
+      "id": "l1b4",
+      "pattern": "side_stream",
+      "enemy": "krait",
+      "count": 4,
+      "spacingMs": 450,
+      "delayMs": 19500,
+      "durationMs": 6000,
+      "fire": {
+        "rate": 0.6,
+        "aimed": true
+      }
+    },
+    {
+      "id": "l1b5",
+      "pattern": "pincer",
+      "enemy": "gecko",
+      "count": 5,
+      "spacingMs": 450,
+      "delayMs": 26000,
+      "durationMs": 6000,
+      "params": {
+        "x0": -1.2
+      }
+    },
+    {
+      "id": "l1b6",
+      "pattern": "vform",
+      "enemy": "adder",
+      "count": 4,
+      "spacingMs": 450,
+      "delayMs": 32500,
+      "durationMs": 6000,
+      "params": {
+        "x0": -0.9,
+        "x1": 0.3
+      },
+      "fire": {
+        "rate": 0.6,
+        "aimed": true
+      }
+    },
+    {
+      "id": "l1b7",
+      "pattern": "sine_column",
+      "enemy": "gecko",
+      "count": 6,
+      "spacingMs": 450,
+      "delayMs": 39000,
+      "durationMs": 6000,
+      "params": {
+        "amplitude": 0.9,
+        "cycles": 4
+      }
+    },
+    {
+      "id": "l1b8",
+      "pattern": "side_stream",
+      "enemy": "sidewinder",
+      "count": 6,
+      "spacingMs": 450,
+      "delayMs": 45500,
+      "durationMs": 6000,
+      "params": {
+        "x0": -1.4,
+        "x1": 1.4,
+        "arc": 0.5
+      }
+    },
+    {
+      "id": "l1b9",
+      "pattern": "pincer",
+      "enemy": "krait",
+      "count": 4,
+      "spacingMs": 450,
+      "delayMs": 52000,
+      "durationMs": 6000,
+      "params": {
+        "x0": 1.2
+      },
+      "fire": {
+        "rate": 0.6,
+        "aimed": true
+      }
+    },
+    {
+      "id": "l1b10",
+      "pattern": "sine_column",
+      "enemy": "adder",
+      "count": 5,
+      "spacingMs": 450,
+      "delayMs": 58500,
+      "durationMs": 6000,
+      "params": {
+        "amplitude": 0.6,
+        "cycles": 3
+      },
+      "fire": {
+        "rate": 0.6,
+        "aimed": true
+      }
+    },
+    {
+      "id": "l1b11",
+      "pattern": "pincer",
+      "enemy": "adder",
+      "count": 5,
+      "spacingMs": 450,
+      "delayMs": 65000,
+      "durationMs": 6000,
+      "params": {
+        "x0": -1.2
+      },
+      "fire": {
+        "rate": 0.7,
+        "aimed": true
+      }
+    },
+    {
+      "id": "l1b12",
+      "pattern": "side_stream",
+      "enemy": "krait",
+      "count": 4,
+      "spacingMs": 450,
+      "delayMs": 71500,
+      "durationMs": 6000,
+      "fire": {
+        "rate": 0.6,
+        "aimed": true
+      }
+    },
+    {
+      "id": "l1bT",
+      "pattern": "side_stream",
+      "enemy": "transporter",
+      "count": 1,
+      "spacingMs": 0,
+      "delayMs": 42000,
+      "durationMs": 14000,
+      "speed": 0.45,
+      "params": {
+        "x0": 1.4,
+        "x1": -1.4,
+        "z0": 1.0,
+        "z1": 0.7,
+        "arc": 0.2
+      }
+    }
   ],
   "endBoss": "fer_de_lance",
-  "viper": { "id": "l1v", "pattern": "side_stream", "enemy": "viper", "count": 3, "spacingMs": 400, "durationMs": 6000, "fire": { "rate": 0.6, "aimed": true } }
+  "viper": {
+    "id": "l1v",
+    "pattern": "side_stream",
+    "enemy": "viper",
+    "count": 3,
+    "spacingMs": 400,
+    "durationMs": 6000,
+    "fire": {
+      "rate": 0.6,
+      "aimed": true
+    }
+  }
 }
