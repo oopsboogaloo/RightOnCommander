@@ -71,6 +71,16 @@ describe('pickup collection', () => {
     pickupsSystem(w, DT);
     expect(w.player.missileGrade).toBe(1);
   });
+
+  it('scooped cargo banks by commodity and shows its type', () => {
+    const w = makeWorld(1);
+    player(w).pos = vec3(0, 0, 0);
+    const pk = addPickup(w, 'cargo');
+    pk.pickup!.commodity = 'Gem-Stones';
+    pickupsSystem(w, DT);
+    expect(w.cargo['Gem-Stones']).toBe(1); // [ROC-CARGO-3]
+    expect(w.events.some((e) => e.type === 'floatingText' && String(e.text).startsWith('Gem-Stones'))).toBe(true);
+  });
 });
 
 describe('collectables are inert to weapons fire', () => {
