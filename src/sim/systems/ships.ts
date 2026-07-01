@@ -1,8 +1,7 @@
 // Ships & laser fitting. The player flies one of a fixed ladder of hulls, each with a shield
-// count, hull strength and a hardpoint count that caps how many lasers it can mount — at most
-// one per firing direction. Buying up the ladder carries the equipped lasers forward (every
-// step adds a hardpoint, so nothing is lost). Pure: no DOM/content imports. [tasks T6.1,
-// ROC-SHIP-1..5, ROC-LAS-1,2]
+// count, hull strength and a per-direction hardpoint layout (front/rear/left/right can each hold
+// several lasers). Buying up the ladder carries equipped lasers forward. Pure: no DOM/content
+// imports. [tasks T6.1, ROC-SHIP-1..3,5, ROC-HP-1..5, ROC-LAS-1]
 
 import { PLAYER_ID, type World } from '../world.js';
 
@@ -10,12 +9,15 @@ export const DIRECTIONS = ['front', 'rear', 'left', 'right'] as const;
 export type Direction = (typeof DIRECTIONS)[number];
 export type LaserType = 'pulse' | 'beam' | 'military';
 
+export type Hardpoints = Record<Direction, number>; // capacity per direction [ROC-HP-1,2]
+export type Loadout = Record<Direction, LaserType[]>; // installed lasers per direction
+
 export interface ShipDef {
   name: string;
   meshId: string;
   shield: number;
   hull: number;
-  hardpoints: number;
+  hardpoints: Hardpoints;
   colliderRx: number;
   colliderRz: number;
   price: number;
@@ -35,47 +37,48 @@ export function loadShips(raw: unknown): ShipsContent {
   for (const id of data.ladder) {
     const s = data.ships[id];
     if (!s) throw new Error(`ships content: ladder entry '${id}' has no ship def`);
-    if (s.hardpoints < 1 || s.hardpoints > DIRECTIONS.length) {
-      throw new Error(`ship '${id}': hardpoints ${s.hardpoints} out of range 1..${DIRECTIONS.length}`);
+    for (const d of DIRECTIONS) {
+      const n = s.hardpoints?.[d];
+      if (typeof n !== 'number' || n < 0 || n > 4) throw new Error(`ship '${id}': ${d} hardpoints ${n} out of range 0..4`);
     }
   }
   return data;
 }
 
-export const equippedCount = (lasers: World['player']['lasers']): number =>
-  DIRECTIONS.reduce((n, d) => n + (lasers[d] ? 1 : 0), 0);
+export const equippedCount = (lasers: Record<Direction, readonly unknown[]>): number =>
+  DIRECTIONS.reduce((n, d) => n + lasers[d].length, 0);
 
-// May a laser be fitted to `dir` on the current ship? Capped by hardpoints, one per direction.
+const freeInDirection = (world: World, dir: Direction): number =>
+  (world.player.hardpoints[dir] ?? 0) - world.player.lasers[dir].length;
+
+// May a laser be fitted to `dir`? Only if that direction has a spare hardpoint. [ROC-HP-1,3]
 export function canFitLaser(world: World, dir: Direction): { ok: boolean; reason?: string } {
-  const lasers = world.player.lasers;
-  if (lasers[dir]) return { ok: false, reason: 'direction already armed' }; // [ROC-SHIP-4, ROC-LAS-2]
-  if (equippedCount(lasers) >= world.player.hardpoints) return { ok: false, reason: 'no free hardpoint' };
+  if (freeInDirection(world, dir) <= 0) return { ok: false, reason: 'no free hardpoint in that direction' };
   return { ok: true };
 }
 
-// Fit a laser to a direction if the rules allow (no pricing here — the station charges). [ROC-LAS-1,2]
+// Fit a laser to a direction if a hardpoint is free (no pricing here — the station charges). [ROC-HP-3]
 export function fitLaser(world: World, dir: Direction, type: LaserType): boolean {
   if (!canFitLaser(world, dir).ok) return false;
-  world.player.lasers[dir] = type;
+  world.player.lasers[dir].push(type);
   return true;
 }
 
-// Apply a hull's stats to the player. Lasers are carried forward (clamped to the new hardpoint
-// count, though stepping up the ladder never needs to drop one). `fresh` refills shield+hull,
-// as when buying a new ship. [ROC-SHIP-2,3,5]
+// The empty hardpoint a picked-up weapon should fill: prefer Front → Rear → Left → Right. [ROC-HP-4]
+export function firstFreeDirection(world: World): Direction | undefined {
+  return DIRECTIONS.find((d) => freeInDirection(world, d) > 0);
+}
+
+// Apply a hull's stats to the player. Lasers carry forward, clamped to each direction's new
+// capacity (stepping up the ladder never needs to drop one). `fresh` refills shield+hull. [ROC-SHIP-2,3,5]
 export function applyShip(world: World, ships: ShipsContent, shipId: string, fresh = true): void {
   const def = ships.ships[shipId];
   if (!def) throw new Error(`unknown ship '${shipId}'`);
 
   world.player.shipClass = shipId;
-  world.player.hardpoints = def.hardpoints;
-
-  // Drop any lasers beyond the new hardpoint budget, keeping earlier directions first.
-  let kept = 0;
+  world.player.hardpoints = { ...def.hardpoints };
   for (const d of DIRECTIONS) {
-    if (!world.player.lasers[d]) continue;
-    if (kept < def.hardpoints) kept++;
-    else world.player.lasers[d] = null;
+    world.player.lasers[d] = world.player.lasers[d].slice(0, def.hardpoints[d]); // drop overflow on a smaller hull
   }
 
   const p = world.entities.get(PLAYER_ID);

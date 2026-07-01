@@ -55,13 +55,13 @@ describe('pickup collection', () => {
     expect(p.hull).toBe(14);
   });
 
-  it('a laser pickup fits to an empty mount', () => {
+  it('a laser pickup fills the first free hardpoint (Front preferred)', () => {
     const w = makeWorld(1);
     player(w).pos = vec3(0, 0, 0);
-    expect(w.player.lasers.rear).toBeNull();
+    expect(w.player.lasers.front).toEqual(['pulse']); // Sidewinder front has 2 slots, one used
     addPickup(w, 'laser');
     pickupsSystem(w, DT);
-    expect(w.player.lasers.rear).toBe('pulse'); // front already fitted, fills rear next
+    expect(w.player.lasers.front).toEqual(['pulse', 'pulse']); // fills front's spare slot first [ROC-HP-4]
   });
 
   it('a missile pickup raises the missile grade', () => {

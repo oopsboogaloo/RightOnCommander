@@ -31,6 +31,14 @@ describe('weaponsSystem', () => {
     expect(projectiles(w).length).toBe(DEFAULT_WEAPONS.pulseRate); // 6 shots in 1s at 6/s
   });
 
+  it('fires one pulse per installed laser across all directions', () => {
+    const w = makeWorld(1); // Sidewinder starts with one front laser
+    w.player.lasers.front = ['pulse', 'pulse']; // both front hardpoints
+    w.player.lasers.rear = ['pulse']; // and the rear
+    weaponsSystem(w, frame({ fireTapped: true }), DT);
+    expect(projectiles(w).length).toBe(3); // [ROC-HP-3]
+  });
+
   it('fires exactly one shot on a tap', () => {
     const w = makeWorld(1);
     weaponsSystem(w, frame({ fireTapped: true }), DT);

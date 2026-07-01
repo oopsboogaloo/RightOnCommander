@@ -77,7 +77,7 @@ export function fitLaserAt(world: World, ctx: StationContext, dir: Direction, ty
   const price = ctx.prices.lasers[type];
   const err = charge(world, price);
   if (err) return err;
-  world.player.lasers[dir] = type;
+  world.player.lasers[dir].push(type);
   world.events.push({ type: 'laserFitted', dir, laser: type });
   return { ok: true };
 }

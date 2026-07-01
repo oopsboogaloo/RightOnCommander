@@ -42,7 +42,7 @@ describe('buy ship', () => {
     const r = buyShip(w, ctx);
     expect(r.ok).toBe(true);
     expect(w.player.shipClass).toBe('cobra_mk3');
-    expect(w.player.lasers.front).toBe('pulse'); // carried [ROC-SHIP-5]
+    expect(w.player.lasers.front).toEqual(['pulse']); // carried [ROC-SHIP-5]
     expect(w.econ.wallet).toBe(3000); // 5000 - 2000
     expect(w.entities.get(PLAYER_ID)!.shieldMax).toBe(2);
   });
@@ -60,11 +60,11 @@ describe('fit lasers', () => {
   it('charges the per-type price and respects the fitting rules', () => {
     const w = makeWorld(1);
     w.econ.wallet = 5000;
-    buyShip(w, ctx); // Cobra, 2 hardpoints, wallet 3000
+    buyShip(w, ctx); // Cobra, wallet 3000
     expect(fitLaserAt(w, ctx, 'rear', 'beam').ok).toBe(true);
-    expect(w.player.lasers.rear).toBe('beam');
+    expect(w.player.lasers.rear).toEqual(['beam']);
     expect(w.econ.wallet).toBe(2000); // 3000 - 1000
-    expect(fitLaserAt(w, ctx, 'front', 'pulse').ok).toBe(false); // already armed
+    expect(fitLaserAt(w, ctx, 'rear', 'pulse').ok).toBe(false); // rear now full (1/1)
   });
 
   it('reports the shortfall when too poor', () => {
