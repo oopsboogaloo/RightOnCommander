@@ -51,6 +51,11 @@ if (!canvas) throw new Error('gameCanvas element not found');
 const ctx = canvas.getContext('2d');
 if (!ctx) throw new Error('2D canvas context unavailable');
 
+// Build-version badge (top-right corner) so a deployed build is always identifiable at a glance.
+declare const __BUILD_VERSION__: string;
+const versionEl = document.getElementById('version');
+if (versionEl) versionEl.textContent = __BUILD_VERSION__;
+
 function resize(): void {
   const dpr = Math.min(window.devicePixelRatio || 1, 2); // cap dPR per design §17
   canvas!.width = Math.floor(canvas!.clientWidth * dpr);

@@ -11,11 +11,16 @@
       position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
       color: #8ad; font: 14px/1.6 monospace; text-align: center; padding: 24px; pointer-events: none;
     }
+    #version {
+      position: fixed; top: 4px; right: 6px; color: #567; font: 11px/1 monospace;
+      opacity: 0.7; pointer-events: none; z-index: 10;
+    }
   </style>
 </head>
 <body>
   <canvas id="gameCanvas"></canvas>
   <div id="boot">Loading Right On Commander…</div>
+  <div id="version"></div>
   <script>
     // Classic (non-module) boot watchdog. It runs even when the module bundle fails to load,
     // so a misconfigured deploy shows a message instead of a silent black screen.
