@@ -24,7 +24,8 @@ export type PickupType =
   | 'ecm'
   | 'bomb'
   | 'pod'
-  | 'life';
+  | 'life'
+  | 'cargo'; // a tradeable commodity (see `commodity`) [ROC-CARGO-1]
 
 export interface Entity {
   id: number;
@@ -55,7 +56,7 @@ export interface Entity {
   waveId?: number; // membership for the 50% bonus [ROC-ECO-1a]
   path?: unknown; // spline + t for enemies [ROC-ENM-2]
   ai?: unknown; // fire cadence, pattern, boss phase
-  pickup?: { type: PickupType };
+  pickup?: { type: PickupType; commodity?: string }; // commodity set when type === 'cargo'
   drops?: string; // power-up dropped on destruction (e.g. a guaranteed laser) [ROC-PWR-6]
   contraband?: boolean; // different shape [ROC-ECO-4]
 }

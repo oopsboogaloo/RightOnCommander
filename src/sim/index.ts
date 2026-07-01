@@ -118,7 +118,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     });
     damageSystem(world, hits, SIM_DT);
     gamestateSystem(world, SIM_DT, restartLevel, { ...DEFAULT_GAMESTATE, colliderScale: SHIP_SCALE });
-    dropsSystem(world);
+    dropsSystem(world, rng);
     pickupsSystem(world, SIM_DT);
     economySystem(world);
     particlesSystem(world, rng, SIM_DT, DEFAULT_PARTICLES, fragGeom);

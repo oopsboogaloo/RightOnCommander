@@ -82,6 +82,9 @@ function collect(world: World, pickup: Entity, player: Entity, cfg: PickupsConfi
     case 'life':
       world.player.lives = Math.min(5, world.player.lives + 1);
       break;
+    case 'cargo':
+      bankCargo(world, pickup.pickup!.commodity ?? 'Cargo', 1, pos); // display the type [ROC-CARGO-3]
+      break;
   }
   removePickup(world, pickup);
 }
