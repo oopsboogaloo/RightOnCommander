@@ -24,6 +24,7 @@ KNOWN_COUNTS = {
     "krait": (17, 21, 6),
     "asteroid": (9, 21, 14),
     "splinter": (4, 6, 4),
+    "canister": (10, 15, 7),
 }
 
 

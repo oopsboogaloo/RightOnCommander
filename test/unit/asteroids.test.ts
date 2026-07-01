@@ -90,7 +90,33 @@ describe('asteroid field', () => {
       const speed = Math.hypot(c.vel.x, c.vel.z);
       expect(speed).toBeGreaterThan(0); // still scatters...
       expect(speed).toBeLessThanOrEqual(0.28); // ...but no faster than the fallback reference speed
+      expect(c.ttl).toBeGreaterThan(0); // guaranteed cleanup regardless of drift direction
     }
+  });
+
+  it('culls a splinter on a lifetime timer even if its drift never crosses the bottom edge', () => {
+    // A splinter's outward kick can point any direction, including one that cancels its
+    // inherited drift (unlike a large asteroid, whose velocity.z is always negative and so is
+    // guaranteed to eventually cull). Without its own ttl it could linger forever and
+    // permanently block the ASTEROIDS phase from ever clearing.
+    const w = makeWorld(1);
+    const id = w.nextId++;
+    w.entities.set(id, {
+      id,
+      kind: 'asteroid',
+      meshId: 'splinter',
+      pos: vec3(0, 0, 0),
+      vel: vec3(0.05, 0, 0), // pure sideways drift — z never approaches CULL_Z
+      yaw: 0,
+      bank: 0,
+      hull: 1,
+      hullMax: 1,
+      ttl: 1, // short, for a fast test
+    });
+
+    const rng = createRng(1);
+    for (let i = 0; i < 130; i++) asteroidFieldSystem(w, rng, DT); // > 1s
+    expect(asteroids(w).length).toBe(0);
   });
 
   it('never splits a destroyed splinter (terminal fragment)', () => {

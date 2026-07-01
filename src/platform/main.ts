@@ -45,6 +45,8 @@ import coriolis from '../content/meshes/coriolis.json';
 import transporter from '../content/meshes/transporter.json';
 import asteroid from '../content/meshes/asteroid.json';
 import splinter from '../content/meshes/splinter.json';
+import canister from '../content/meshes/canister.json';
+import gem from '../content/meshes/gem.json';
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
 if (!canvas) throw new Error('gameCanvas element not found');
@@ -78,6 +80,8 @@ const MESHES: Record<string, Mesh> = {
   transporter,
   asteroid,
   splinter,
+  canister,
+  gem,
 } as unknown as Record<string, Mesh>;
 
 const sim = createSim({ seed: 1, content: { enemies, level: level1, meshes: MESHES } });
@@ -135,6 +139,17 @@ function readPlayerPose(): Pose {
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const PULSE_LEN = 0.18;
+const PICKUP_SCALE = 1 / 3;
+
+// Asteroid-mined loot (alloys/gems power-ups and their Metals/Crystals cargo, ROC-L1-3) reads as
+// a gem, not salvage; everything else (equipment power-ups, market cargo from ships) is a drifting
+// cargo canister.
+const GEM_COMMODITIES = new Set(['Metals', 'Crystals']);
+function pickupMeshId(pickup: { type: string; commodity?: string }): string {
+  if (pickup.type === 'alloys' || pickup.type === 'gems') return 'gem';
+  if (pickup.type === 'cargo' && pickup.commodity && GEM_COMMODITIES.has(pickup.commodity)) return 'gem';
+  return 'canister';
+}
 
 // White flash over the whole hull while a hull-damage hit is fresh. [ROC-DMG-6,6a]
 function hullFlash(e: Entity): { fill: string; stroke: string } | undefined {
@@ -202,7 +217,7 @@ startGameLoop({
     }
 
     const particles: Vec3[] = [];
-    const pickups: Vec3[] = [];
+    const now = performance.now() / 1000;
     for (const e of sim.state.entities.values()) {
       switch (e.kind) {
         case 'projectile':
@@ -225,9 +240,16 @@ startGameLoop({
           renderer.drawWorldLine(a, b, { stroke: `rgba(255,255,255,${fade.toFixed(2)})`, lineWidth: 1.5 });
           break;
         }
-        case 'pickup':
-          pickups.push(e.pos);
+        case 'pickup': {
+          // Tumbles in place — cosmetic only (wall-clock driven, like the starfield), doesn't
+          // touch sim state or collision. [ROC-PWR-*]
+          if (!e.pickup) break;
+          const m = MESHES[pickupMeshId(e.pickup)];
+          if (!m) break;
+          const phase = e.id * 0.7; // per-entity offset so pickups don't spin in lockstep
+          renderer.drawMesh(m, modelMatrix(e.pos, now * 1.1 + phase, now * 0.8 + phase * 1.3, PICKUP_SCALE));
           break;
+        }
         case 'enemy':
         case 'boss': {
           const m = e.meshId ? MESHES[e.meshId] : undefined;
@@ -246,7 +268,6 @@ startGameLoop({
       }
     }
     if (particles.length) renderer.drawWorldParticles(particles, { fill: '#fff', size: 2 });
-    if (pickups.length) renderer.drawWorldParticles(pickups, { fill: '#6cf', size: 7 });
 
     // Player ship, interpolated between the last two sim states. Blink while invulnerable
     // (just spawned / after a hit) so the i-frames read on screen. [ROC-LIFE-2]

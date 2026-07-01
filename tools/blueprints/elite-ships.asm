@@ -917,3 +917,47 @@
  FACE    1,    8,   12,   31
  FACE   18,   12,    0,   31
 
+.SHIP_CANISTER_VERTICES
+
+      \    x,    y,    z, face1, face2, face3, face4, visibility
+ VERTEX   24,   16,    0,    0,    1,    5,    5,   31
+ VERTEX   24,    5,   15,    0,    1,    2,    2,   31
+ VERTEX   24,  -13,    9,    0,    2,    3,    3,   31
+ VERTEX   24,  -13,   -9,    0,    3,    4,    4,   31
+ VERTEX   24,    5,  -15,    0,    4,    5,    5,   31
+ VERTEX  -24,   16,    0,    1,    5,    6,    6,   31
+ VERTEX  -24,    5,   15,    1,    2,    6,    6,   31
+ VERTEX  -24,  -13,    9,    2,    3,    6,    6,   31
+ VERTEX  -24,  -13,   -9,    3,    4,    6,    6,   31
+ VERTEX  -24,    5,  -15,    4,    5,    6,    6,   31
+
+.SHIP_CANISTER_EDGES
+
+    \ vertex1, vertex2, face1, face2, visibility
+ EDGE    0,    1,    0,    1,   31
+ EDGE    1,    2,    0,    2,   31
+ EDGE    2,    3,    0,    3,   31
+ EDGE    3,    4,    0,    4,   31
+ EDGE    0,    4,    0,    5,   31
+ EDGE    0,    5,    1,    5,   31
+ EDGE    1,    6,    1,    2,   31
+ EDGE    2,    7,    2,    3,   31
+ EDGE    3,    8,    3,    4,   31
+ EDGE    4,    9,    4,    5,   31
+ EDGE    5,    6,    1,    6,   31
+ EDGE    6,    7,    2,    6,   31
+ EDGE    7,    8,    3,    6,   31
+ EDGE    8,    9,    4,    6,   31
+ EDGE    9,    5,    5,    6,   31
+
+.SHIP_CANISTER_FACES
+
+    \ normal_x, normal_y, normal_z, visibility
+ FACE   96,    0,    0,   31
+ FACE    0,   41,   30,   31
+ FACE    0,  -18,   48,   31
+ FACE    0,  -51,    0,   31
+ FACE    0,  -18,  -48,   31
+ FACE    0,   41,  -30,   31
+ FACE  -96,    0,    0,   31
+

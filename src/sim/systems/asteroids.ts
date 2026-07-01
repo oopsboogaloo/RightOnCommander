@@ -20,6 +20,11 @@ export interface AsteroidFieldDef {
 
 const SPAWN_Z = 1.8; // matches enemy path entry [paths.ts]
 const CULL_Z = -1.9; // past the bottom edge — drifted off-field, quietly removed
+// A splinter's outward kick can point any direction (including one that cancels its inherited
+// drift), so — unlike a large asteroid, whose velocity.z is always negative and so is guaranteed
+// to eventually cross CULL_Z — it isn't guaranteed to ever drift off the bottom edge. Without its
+// own lifetime it could linger forever, permanently blocking the ASTEROIDS phase from clearing.
+const SPLINTER_TTL = 8;
 
 const LARGE = { hull: 4, bounty: 0, meshId: 'asteroid', colliderRx: 0.24, colliderRz: 0.24 };
 const SPLINTER = { hull: 1, bounty: 4, meshId: 'splinter', colliderRx: 0.11, colliderRz: 0.11 };
@@ -86,6 +91,7 @@ function spawnSplinters(world: World, rng: Rng, at: Entity['pos'], baseVel: Enti
       colliderRx: SPLINTER.colliderRx,
       colliderRz: SPLINTER.colliderRz,
       tumble: randTumble(rng, [1.2, 2.6]), // smaller pieces tumble faster
+      ttl: SPLINTER_TTL,
     });
   }
 }
@@ -114,7 +120,9 @@ export function asteroidFieldSystem(world: World, rng: Rng, dt: number): void {
   }
 
   for (const e of [...world.entities.values()]) {
-    if (e.kind === 'asteroid' && e.pos.z < CULL_Z) world.entities.delete(e.id);
+    if (e.kind !== 'asteroid') continue;
+    if (e.ttl !== undefined) e.ttl -= dt;
+    if (e.pos.z < CULL_Z || (e.ttl !== undefined && e.ttl <= 0)) world.entities.delete(e.id);
   }
 }
 

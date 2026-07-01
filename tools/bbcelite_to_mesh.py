@@ -30,9 +30,11 @@ FLOAT_PRECISION = 6
 
 # Per-ship size multiplier. Elite stores a separate scale nibble per ship that we otherwise
 # ignore; the Transporter's raw coordinates are tiny, so scale it up to read as the big freighter
-# it is. (Others keep 1.0.)
+# it is. The cargo canister is a small pickup prop, not a hull, so bump it to read clearly at the
+# pickup render scale. (Others keep 1.0.)
 MESH_SCALE: dict[str, float] = {
     "transporter": 4.0,
+    "canister": 3.0,
 }
 
 # Default manifest: output mesh name -> bbcelite ship label root.
@@ -51,6 +53,7 @@ DEFAULT_SHIPS: dict[str, str] = {
     "transporter": "SHIP_TRANSPORTER",
     "asteroid": "SHIP_ASTEROID",
     "splinter": "SHIP_SPLINTER",
+    "canister": "SHIP_CANISTER",
 }
 
 _VERTICES_LABEL = re.compile(r"^\.(SHIP_[A-Z0-9_]+)_VERTICES\s*$")
