@@ -139,7 +139,7 @@ function readPlayerPose(): Pose {
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const PULSE_LEN = 0.18;
-const PICKUP_SCALE = 1 / 3;
+const PICKUP_SCALE = 1 / 9; // canister/gem read as small props, not ship-sized [was 1/3]
 
 // Asteroid-mined loot (alloys/gems power-ups and their Metals/Crystals cargo, ROC-L1-3) reads as
 // a gem, not salvage; everything else (equipment power-ups, market cargo from ships) is a drifting
