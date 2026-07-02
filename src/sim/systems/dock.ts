@@ -1,7 +1,8 @@
 // Docking-port geometry, shared by the hermit asteroid (direct port hits deal triple damage)
 // and the end-of-level docking station (fly into the port while it is within 30° of horizontal).
-// A port is a rectangle centred on its owner — the centre of the slow y-rotation, so it always
-// faces the play surface — whose long axis rotates with the owner's yaw.
+// A port is a rectangle centred on its owner. The owner rolls (banks) about the axis running
+// through the port centre and the hull centre, so the port stays on that axis and its long axis
+// rotates with the owner's bank — aligned (dockable) whenever the roll is within 30° of level.
 // [requirements §3.24/§3.26, ROC-HERM-1,3,8, ROC-DCKG-1,3]
 
 import type { Entity } from '../components.js';
@@ -27,11 +28,11 @@ export const portDims = (_owner: Entity): PortDims => ({
   halfShort: PORT_HALF_SHORT,
 });
 
-// Rotate a world point into the owner's local play-plane frame (inverse of transformSilhouette's
-// local->world rotation).
+// Rotate a world point into the owner's local port frame. The port turns with the owner's roll,
+// so the play-plane footprint the player docks into rotates by the owner's bank.
 export function toLocal(owner: Entity, x: number, z: number): { x: number; z: number } {
-  const c = Math.cos(owner.yaw);
-  const s = Math.sin(owner.yaw);
+  const c = Math.cos(owner.bank);
+  const s = Math.sin(owner.bank);
   const dx = x - owner.pos.x;
   const dz = z - owner.pos.z;
   return { x: dx * c - dz * s, z: dx * s + dz * c };
@@ -46,9 +47,9 @@ export function pointInPort(owner: Entity, x: number, z: number): boolean {
 }
 
 // Is the port's long axis within the docking tolerance of horizontal? The long axis is local x
-// rotated by yaw, so alignment repeats every half-turn. [ROC-DCKG-3]
+// rolled by the owner's bank, so alignment repeats every half-turn. [ROC-DCKG-3]
 export function portAligned(owner: Entity, tolerance = PORT_ALIGN_TOLERANCE): boolean {
-  const a = ((owner.yaw % Math.PI) + Math.PI) % Math.PI; // yaw folded into [0, π)
+  const a = ((owner.bank % Math.PI) + Math.PI) % Math.PI; // roll folded into [0, π)
   return Math.min(a, Math.PI - a) <= tolerance;
 }
 
@@ -73,8 +74,8 @@ export function portDamageMultiplier(target: Entity, x: number, z: number, vx = 
 // The port rectangle's four corners in world space, for rendering. Order: a closed loop.
 export function portCorners(owner: Entity): { x: number; z: number }[] {
   const d = portDims(owner);
-  const c = Math.cos(owner.yaw);
-  const s = Math.sin(owner.yaw);
+  const c = Math.cos(owner.bank);
+  const s = Math.sin(owner.bank);
   const local: [number, number][] = [
     [-d.halfLong, -d.halfShort],
     [d.halfLong, -d.halfShort],

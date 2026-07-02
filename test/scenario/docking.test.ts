@@ -53,10 +53,10 @@ describe('docking sequence', () => {
     expect(st.port).toBe(true);
     expect(st.pos.z).toBeGreaterThan(2); // enters from beyond the top
 
-    const yaw0 = st.yaw;
+    const bank0 = st.bank;
     for (let i = 0; i < 120 * 8; i++) sim.step(emptyInput());
     expect(st.pos.z).toBe(DOCK_STATION.holdZ); // scrolled in and held [ROC-DCKG-1]
-    expect(st.yaw).toBeGreaterThan(yaw0); // rotating on its y axis
+    expect(st.bank).toBeGreaterThan(bank0); // rolling on its docking axis
     expect(sim.state.scroll).toBe(1); // the starfield keeps scrolling
   });
 
@@ -78,7 +78,7 @@ describe('docking sequence', () => {
     const st = station(sim)!;
     st.pos.z = DOCK_STATION.holdZ;
     st.vel = { x: 0, y: 0, z: 0 };
-    st.yaw = Math.PI / 12; // 15° — inside the tolerance [ROC-DCKG-3]
+    st.bank = Math.PI / 12; // 15° — inside the tolerance [ROC-DCKG-3]
     sim.state.entities.get(PLAYER_ID)!.pos = { ...st.pos };
 
     const events = sim.step(emptyInput());
@@ -94,7 +94,7 @@ describe('docking sequence', () => {
     const st = station(sim)!;
     st.pos.z = DOCK_STATION.holdZ;
     st.vel = { x: 0, y: 0, z: 0 };
-    st.yaw = Math.PI / 4; // 45° — the doors are closed [ROC-DCKG-3]
+    st.bank = Math.PI / 4; // 45° — the doors are closed [ROC-DCKG-3]
     sim.state.entities.get(PLAYER_ID)!.pos = { ...st.pos };
 
     sim.step(emptyInput());
@@ -108,7 +108,7 @@ describe('docking sequence', () => {
     const st = station(sim)!;
     st.pos.z = DOCK_STATION.holdZ;
     st.vel = { x: 0, y: 0, z: 0 };
-    st.yaw = 0; // aligned — but the player hits the hull, not the slot
+    st.bank = 0; // aligned — but the player hits the hull, not the slot
     const p = sim.state.entities.get(PLAYER_ID)!;
     p.pos = { x: st.pos.x + 0.1, y: 0, z: st.pos.z + 0.3 }; // inside the body, off the corridor
 

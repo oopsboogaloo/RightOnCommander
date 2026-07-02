@@ -129,11 +129,11 @@ describe('strafe track', () => {
 });
 
 describe('hermit', () => {
-  it('rotates slowly about y and launches an adder every 5 s, capped at 3 alive', () => {
+  it('rolls slowly about its docking axis and launches an adder every 5 s, capped at 3 alive', () => {
     const w = makeWorld(1);
     const rng = createRng(3);
     const hermit = spawnHermit(w);
-    const yaw0 = hermit.yaw;
+    const bank0 = hermit.bank;
 
     const run = (sec: number): void => {
       for (let i = 0; i < Math.round(sec / DT); i++) bossSystem(w, rng, DT, ctx);
@@ -143,7 +143,7 @@ describe('hermit', () => {
     expect(escorts(w)).toHaveLength(0); // not yet
     run(0.2);
     expect(escorts(w)).toHaveLength(1); // first at 5 s [ROC-HERM-4]
-    expect(hermit.yaw).toBeCloseTo(yaw0 + HERMIT_SPIN * (HERMIT_SPAWN_SEC + 0.1), 1); // [ROC-HERM-3]
+    expect(hermit.bank).toBeCloseTo(bank0 + HERMIT_SPIN * (HERMIT_SPAWN_SEC + 0.1), 1); // [ROC-HERM-3]
 
     run(2 * HERMIT_SPAWN_SEC);
     expect(escorts(w)).toHaveLength(3);

@@ -14,13 +14,14 @@ import {
   portCorners,
 } from '../../src/sim/systems/dock.js';
 
-const owner = (yaw: number, port = true): Entity => ({
+// The port rides the owner's roll (bank), so the rotation the tests exercise is bank, not yaw.
+const owner = (bank: number, port = true): Entity => ({
   id: 1,
   kind: 'boss',
   pos: { x: 0.2, y: 0, z: 0.5 },
   vel: { x: 0, y: 0, z: 0 },
-  yaw,
-  bank: 0,
+  yaw: 0,
+  bank,
   port,
 });
 

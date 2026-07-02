@@ -89,7 +89,7 @@ export const DOCK_STATION = {
   spawnZ: 2.4,
   holdZ: 0.55,
   approachSpeed: 0.4,
-  spin: 0.25, // rad/s — matches the hermit's "rotating slowly on its y axis"
+  spin: 0.25, // rad/s roll about the docking axis — matches the hermit's slow spin
   bodyRadius: 0.38, // deadly-hull radius (a bit inside the drawn rim, for grace)
 };
 
@@ -260,7 +260,7 @@ function stationTick(world: World, dt: number): void {
     if (e.kind !== 'station') continue;
     const ai = e.ai as StationAi;
     e.pos.z += e.vel.z * dt;
-    e.yaw += ai.spin * dt;
+    e.bank += ai.spin * dt; // roll about the docking axis; the centred port rides it [ROC-DCKG-3]
     if (ai.kind === 'dock' && ai.holdZ !== undefined && e.pos.z <= ai.holdZ) {
       e.pos.z = ai.holdZ;
       e.vel = vec3();

@@ -31,7 +31,7 @@ import {
 import { loadShips, type LaserType } from '../sim/systems/ships.js';
 import { SPLINTER_HIT_SCALE } from '../sim/systems/asteroids.js';
 import { hyperCountdown, BOSS_FADE_SEC } from '../sim/systems/levelstate.js';
-import { portCorners, portAligned } from '../sim/systems/dock.js';
+import { portAligned, PORT_HALF_LONG, PORT_HALF_SHORT } from '../sim/systems/dock.js';
 import { stationButtons, buttonAt, drawStation, type StationAction } from '../render/screens/station.js';
 
 import enemies from '../content/enemies.json';
@@ -219,16 +219,29 @@ function drainFloaters(events: ReturnType<typeof sim.step>): void {
   }
 }
 
-// The docking-port rectangle carried by the hermit and the stations, drawn as a rotated white
-// outline; it brightens whenever the port is within docking tolerance. [ROC-HERM-1, ROC-DCKG-3]
+// The docking-port rectangle carried by the hermit and the stations: a small bay standing on the
+// hull's player-facing face, centred on the roll axis so it spins in place as the hull rolls, and
+// brightening whenever the port is within docking tolerance. [ROC-HERM-1, ROC-DCKG-3]
+const PORT_FRONT_FRAC = 0.5; // how far toward the player the bay sits on the near face, as a fraction of hull radius
 function drawPort(e: Entity): void {
-  const cs = portCorners(e);
   const bright = portAligned(e);
   const opts = { stroke: bright ? '#fff' : 'rgba(255,255,255,0.55)', lineWidth: bright ? 2.5 : 1.5 };
-  for (let i = 0; i < cs.length; i++) {
-    const a = cs[i];
-    const b = cs[(i + 1) % cs.length];
-    renderer.drawWorldLine(vec3(a.x, 0, a.z), vec3(b.x, 0, b.z), opts);
+  const radius = (HULL_RADII[e.meshId ?? ''] ?? 0.3) * (e.scale ?? 1);
+  const front = e.pos.z - PORT_FRONT_FRAC * radius; // toward the player — down-screen from the hull centre
+  // Long axis rides the roll (level when aligned); short axis stands up the face. The centre sits
+  // on the roll axis (e.pos.x, y=0), so the bay turns in place rather than orbiting. [ROC-DCKG-3]
+  const c = Math.cos(e.bank);
+  const s = Math.sin(e.bank);
+  const corners = (
+    [
+      [-PORT_HALF_LONG, -PORT_HALF_SHORT],
+      [PORT_HALF_LONG, -PORT_HALF_SHORT],
+      [PORT_HALF_LONG, PORT_HALF_SHORT],
+      [-PORT_HALF_LONG, PORT_HALF_SHORT],
+    ] as [number, number][]
+  ).map(([lx, ly]) => vec3(e.pos.x + lx * c - ly * s, lx * s + ly * c, front));
+  for (let i = 0; i < corners.length; i++) {
+    renderer.drawWorldLine(corners[i], corners[(i + 1) % corners.length], opts);
   }
 }
 
