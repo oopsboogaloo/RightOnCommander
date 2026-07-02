@@ -1,7 +1,7 @@
 # Right on Commander — Tasks
 
-**Version:** 0.2 (draft)
-**Derives from:** requirements.md v1.6, design.md v0.5
+**Version:** 0.3 (draft)
+**Derives from:** requirements.md v1.7, design.md v0.6
 **Stack:** TypeScript + Canvas 2D + Vite + Vitest/fast-check; Python for the ship-data parser only.
 
 ## How to read this
@@ -136,6 +136,54 @@ Dependencies flow top-down unless noted. IDs are stable; insert with letters (T4
   **Refs:** ROC-PWR-1..6, ROC-ECO-3.
 
 🏁 **Milestone M2 — "Level 1 playable":** launch → waves → hermit boss → Fer-de-Lance → dock, with M1 controls, pickups, economy, and the harness + first property/scenario suites green. *This is the first human-playtestable build.*
+
+---
+
+## Phase 5a — Boss fights, docking & hyperspace (requirements §3.23–3.27)
+
+Turns the placeholder bosses into the specified fights and adds the level bookends. Order: T5a.1 → T5a.2 → T5a.3 → {T5a.4, T5a.5 in either order} → T5a.6 → T5a.7 → T5a.8.
+
+- [ ] **T5a.1 — Sim-owned scroll & boss framing.**
+  **Do:** add `world.scroll` (default 1; 0 through `MID_BOSS`/`END_BOSS` and the kill-text fade); starfield drift multiplies by it (renderer reads sim state, drops its wall-clock drift); render the horizontal black-and-white boss health bar top-of-screen from `boss.hull/hullMax`; on boss death emit `bossKilled` → shell fades "RIGHT ON COMMANDER" in white; FSM holds the boss state until the fade elapses, then restores scroll and advances.
+  **Done-when:** **scenario test** — entering a boss state sets `scroll` 0; killing the boss emits `bossKilled`; `scroll` returns to 1 only after the fade timer; bar fraction tracks damage in state.
+  **Refs:** ROC-BOSS-1..4; design §12a.
+
+- [ ] **T5a.2 — Per-entity scale (render + collision).**
+  **Do:** `Entity.scale` multiplier over `SHIP_SCALE`, honoured by the renderer model matrix, silhouette collision (`hullRadius`, dilation) and the ram test; content plumbs it — **Fer-de-Lance 1.5× everywhere incl. the player hull** (ships.json/enemies.json), boss FdL 2.0×, hermit & docking Coriolis 2× the Coriolis' drawn size.
+  **Done-when:** **unit tests** — a scaled entity's collision silhouette matches its drawn size; player FdL and enemy FdL both come out 1.5×; boss override 2.0×.
+  **Refs:** ROC-FDL-1, ROC-HERM-2, ROC-DCKG-1.
+
+- [ ] **T5a.3 — Boss ECM.**
+  **Do:** `systems/ecm.ts` — while an ECM-flagged boss lives, a player missile launch arms a 300 ms fuse; on expiry remove **all player missiles harmlessly** (no damage path), emit `{type:'ecm'}` (shell: screen flash + "ECM" caption bottom-of-screen), 500 ms cooldown; dies with the boss.
+  **Done-when:** **unit tests** — fuse and cooldown timings; detonation damages nothing; missiles fired after the boss dies fly unaffected.
+  **Refs:** ROC-BECM-1..4.
+
+- [ ] **T5a.4 — Hermit-asteroid mid-boss.**
+  **Do:** composite hermit visual (asteroid mesh at 2× Coriolis size + the station's docking-port rectangle) fixed top-centre, slow y-spin with the port on the rotation axis; hits inside the port rect deal **3× damage**; hull 30 / no shields; boss ECM on; adder launcher — every 5 s while <3 alive, either launch-from-rock (spawn yaw = rock's current angle, unwinding in flight) or side entry, winding medium-fast paths that never collide with the rock, until the rock dies; on death: 1,000 cr, guaranteed laser drop, 10 random cargo, survivors flee off-screen; one whole-fight wave record → 50% bonus only if **every** adder (incl. fleers) died.
+  **Done-when:** **scenario tests** — port hits triple; spawn cadence/cap; flee-on-death; bonus paid only on total clearance; rewards land.
+  **Refs:** ROC-HERM-1..12, ROC-PWR-6, ROC-ECO-1a.
+
+- [ ] **T5a.5 — Fer-de-Lance end boss.**
+  **Do:** `strafe` boss ai — fast rounded-rectangle track, direction reverses on an rng timer in [200, 2000] ms, aimed shot every 400 ms; 8 shield rings; boss ECM on; 2.0× scale; on death: 10 cargo items + 1,000 cr + `bossKilled` text.
+  **Done-when:** **unit tests** — track position is continuous, reversal intervals stay in-bounds, fire cadence 400 ms; **scenario test** on rewards and shield count.
+  **Refs:** ROC-FDL-1..5.
+
+- [ ] **T5a.6 — Death checkpoints & respawn-in-place.**
+  **Do:** death resolution branches on `levelState` — boss states: respawn in place, **keep all entities** (boss damage persists); `WAVES_B`: clear combat, restart part 2 only; earlier states: today's restart-level; escape pod unchanged and checked first.
+  **Done-when:** **scenario tests** for all three branches; boss hull is identical before/after a player death mid-fight.
+  **Refs:** ROC-BOSS-5..7, ROC-LIFE-2,3.
+
+- [ ] **T5a.7 — Docking sequence.**
+  **Do:** `DOCKING` state after the end-boss fade — scroll resumes, 2× Coriolis scrolls into view spinning slowly on y; guns + missiles disabled; dock test = player inside the port rect while the port is within 30° of horizontal ⇒ `DOCK` (shop); hull contact ⇒ death (life loss) then, with lives remaining, `DOCK` anyway; zero lives ⇒ game over.
+  **Done-when:** **scenario tests** — aligned entry docks; misaligned/hull contact kills then still reaches the shop; firing inputs are inert throughout.
+  **Refs:** ROC-DCKG-1..4.
+
+- [ ] **T5a.8 — Launch & hyperspace.**
+  **Do:** `LAUNCH` renders the up-pointing Coriolis scrolling away behind the player; `HYPERSPACE` emits "Hyperspace [system] 5…1" countdown events (system name from level content), ramps `world.scroll` up (starfield dots stretch to full-height lines), holds a few seconds, ramps back; `INFO` shows a card of Elite facts for the system, then the level proper begins. Runs on **every** launch, including the first.
+  **Done-when:** **scenario test** drives LAUNCH → HYPERSPACE → INFO → level start headless; countdown events carry the right system name; `world.scroll` follows the ramp profile.
+  **Refs:** ROC-HYP-1..5, ROC-LORE-1,2.
+
+🏁 **Milestone M2a — "Boss fights feel like boss fights":** scroll-stop + health bar + "RIGHT ON COMMANDER" on both L1 bosses, missiles countered by boss ECM, checkpointed deaths, a real docking approach, and the launch/hyperspace bookends.
 
 ---
 
