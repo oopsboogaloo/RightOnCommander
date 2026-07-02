@@ -17,6 +17,10 @@ export interface EnemyDef {
   meshId?: string;
   colliderRx?: number;
   colliderRz?: number;
+  scale?: number; // render + collision size multiplier (FdL 1.5, bosses 2.0) [ROC-FDL-1]
+  ecm?: boolean; // boss ECM: harmlessly detonates player missiles while alive [ROC-BECM-1..4]
+  behavior?: 'hermit' | 'strafe'; // boss movement/escort archetype [ROC-HERM-*, ROC-FDL-3]
+  cargoDrops?: number; // random cargo canisters shed on destruction [ROC-HERM-10, ROC-FDL-5]
 }
 
 // Wave-as-data: pattern, enemy and stats are orthogonal. [ROC-ENM-7,8]
@@ -110,6 +114,7 @@ function spawnMember(world: World, waveId: number, rec: WaveRecord, ctx: WaveCon
     shieldMax: shield,
     bounty: def.bounty,
     meshId: def.meshId,
+    scale: def.scale,
     colliderRx: def.colliderRx,
     colliderRz: def.colliderRz,
     waveId,
@@ -172,12 +177,14 @@ export function waveSystem(world: World, rng: Rng, dt: number, ctx: WaveContext)
     }
   }
 
-  // 4. Resolve finished waves: award the bonus on a full kill-clear, else just clean up.
+  // 4. Resolve finished waves: award the bonus on a full kill-clear, else just clean up. An
+  // `open` record (open-ended boss escorts) never resolves until its owner closes it, so a
+  // momentarily-empty field mid-fight can't award the bonus early. [ROC-HERM-12]
   for (const [waveId, rec] of [...world.waves.active]) {
     const doneSpawning = !rec.spawn || rec.spawn.pending === 0;
-    if (!doneSpawning || rec.members.size > 0) continue;
+    if (rec.open || !doneSpawning || rec.members.size > 0) continue;
 
-    if (!rec.escaped && rec.killed === rec.total) {
+    if (!rec.escaped && rec.total > 0 && rec.killed === rec.total) {
       const bonus = 0.5 * rec.bountySum; // [ROC-ECO-1a]
       world.econ.wallet += bonus;
       world.econ.score += bonus;

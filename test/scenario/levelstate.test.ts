@@ -1,8 +1,10 @@
-// T5.1 scenario: the level FSM runs LAUNCH -> WAVES_A -> MID_BOSS -> WAVES_B -> END_BOSS ->
-// [VIPER_INTERCEPT] -> DOCK headless, with the player clearing every wave and boss. [ROC-LVL-1,2]
+// T5.1/T5a scenario: the level FSM runs LAUNCH -> HYPERSPACE -> INFO -> WAVES_A -> MID_BOSS ->
+// WAVES_B -> END_BOSS -> [VIPER_INTERCEPT] -> DOCKING -> DOCK headless, with the player
+// clearing every wave and boss, then flying into the station's aligned port. [ROC-LVL-1,2,
+// ROC-BOSS-4, ROC-HYP-*, ROC-DCKG-3]
 
 import { describe, it, expect } from 'vitest';
-import { makeWorld } from '../../src/sim/world.js';
+import { makeWorld, PLAYER_ID } from '../../src/sim/world.js';
 import { createRng } from '../../src/sim/rng.js';
 import { waveSystem, type WaveContext } from '../../src/sim/systems/waves.js';
 import { asteroidFieldSystem } from '../../src/sim/systems/asteroids.js';
@@ -38,12 +40,29 @@ const level: LevelDef = {
   viper: { ...wave('v', 'viper'), pattern: 'side_stream' },
 };
 
-// Drive the FSM to DOCK, killing everything the player can. Returns the distinct state order.
-function runToDock(contraband: boolean): string[] {
+// One frame of "the player wins": kill every enemy/boss, and when docking, fly straight into
+// the aligned port.
+function playerWins(w: ReturnType<typeof makeWorld>): void {
+  for (const e of [...w.entities.values()]) {
+    if (e.kind === 'enemy' || e.kind === 'boss' || e.kind === 'asteroid') w.entities.delete(e.id);
+  }
+  if (w.levelState === 'DOCKING') {
+    const st = [...w.entities.values()].find((e) => e.kind === 'station');
+    const p = w.entities.get(PLAYER_ID);
+    if (st && p) {
+      st.yaw = 0; // port horizontal — inside the 30° tolerance [ROC-DCKG-3]
+      p.pos = { ...st.pos };
+    }
+  }
+}
+
+// Drive the FSM to DOCK. Returns the distinct state order.
+function runToDock(contraband: boolean, withField = false): string[] {
   const w = makeWorld(1);
   const rng = createRng(1);
   if (contraband) w.cargo.contraband = 1;
-  startLevel(w, level, ctx);
+  const def: LevelDef = withField ? { ...level, asteroidWaves: [{ count: 2, spacingMs: 0 }] } : level;
+  startLevel(w, def, ctx);
 
   const seq: string[] = [];
   const record = () => {
@@ -51,12 +70,11 @@ function runToDock(contraband: boolean): string[] {
   };
   record();
 
-  for (let i = 0; i < 5000 && w.levelState !== 'DOCK'; i++) {
+  for (let i = 0; i < 30000 && w.levelState !== 'DOCK'; i++) {
     waveSystem(w, rng, DT, ctx);
-    levelStateSystem(w, DT, level, ctx);
-    for (const e of [...w.entities.values()]) {
-      if (e.kind === 'enemy' || e.kind === 'boss') w.entities.delete(e.id); // player kills everything
-    }
+    if (withField) asteroidFieldSystem(w, rng, DT);
+    levelStateSystem(w, DT, def, ctx);
+    playerWins(w);
     record();
   }
   return seq;
@@ -65,44 +83,49 @@ function runToDock(contraband: boolean): string[] {
 describe('level FSM', () => {
   it('runs every state through to DOCK (no contraband)', () => {
     const seq = runToDock(false);
-    expect(seq).toEqual(['LAUNCH', 'WAVES_A', 'MID_BOSS', 'WAVES_B', 'END_BOSS', 'DOCK']);
+    expect(seq).toEqual([
+      'LAUNCH',
+      'HYPERSPACE',
+      'INFO',
+      'WAVES_A',
+      'MID_BOSS',
+      'WAVES_B',
+      'END_BOSS',
+      'DOCKING',
+      'DOCK',
+    ]);
   });
 
   it('inserts the Viper interception when carrying contraband', () => {
     const seq = runToDock(true);
     expect(seq).toEqual([
       'LAUNCH',
+      'HYPERSPACE',
+      'INFO',
       'WAVES_A',
       'MID_BOSS',
       'WAVES_B',
       'END_BOSS',
       'VIPER_INTERCEPT',
+      'DOCKING',
       'DOCK',
     ]);
   });
 
   it('inserts an opening ASTEROIDS phase when the level has an asteroid field', () => {
-    const withField: LevelDef = { ...level, asteroidWaves: [{ count: 2, spacingMs: 0 }] };
-    const w = makeWorld(1);
-    const rng = createRng(1);
-    startLevel(w, withField, ctx);
-
-    const seq: string[] = [];
-    const record = () => {
-      if (seq[seq.length - 1] !== w.levelState) seq.push(w.levelState);
-    };
-    record();
-
-    for (let i = 0; i < 5000 && w.levelState !== 'DOCK'; i++) {
-      waveSystem(w, rng, DT, ctx);
-      asteroidFieldSystem(w, rng, DT);
-      levelStateSystem(w, DT, withField, ctx);
-      for (const e of [...w.entities.values()]) {
-        if (e.kind === 'enemy' || e.kind === 'boss' || e.kind === 'asteroid') w.entities.delete(e.id);
-      }
-      record();
-    }
-    expect(seq).toEqual(['LAUNCH', 'ASTEROIDS', 'WAVES_A', 'MID_BOSS', 'WAVES_B', 'END_BOSS', 'DOCK']);
+    const seq = runToDock(false, true);
+    expect(seq).toEqual([
+      'LAUNCH',
+      'HYPERSPACE',
+      'INFO',
+      'ASTEROIDS',
+      'WAVES_A',
+      'MID_BOSS',
+      'WAVES_B',
+      'END_BOSS',
+      'DOCKING',
+      'DOCK',
+    ]);
   });
 
   it('emits a dock event on arrival', () => {
@@ -110,13 +133,12 @@ describe('level FSM', () => {
     const rng = createRng(1);
     startLevel(w, level, ctx);
     let docked = false;
-    for (let i = 0; i < 5000 && w.levelState !== 'DOCK'; i++) {
+    for (let i = 0; i < 30000 && w.levelState !== 'DOCK'; i++) {
       waveSystem(w, rng, DT, ctx);
       levelStateSystem(w, DT, level, ctx);
       if (w.events.some((e) => e.type === 'dock')) docked = true;
-      for (const e of [...w.entities.values()]) {
-        if (e.kind === 'enemy' || e.kind === 'boss') w.entities.delete(e.id);
-      }
+      playerWins(w);
+      w.events = [];
     }
     expect(w.levelState).toBe('DOCK');
     expect(docked).toBe(true);

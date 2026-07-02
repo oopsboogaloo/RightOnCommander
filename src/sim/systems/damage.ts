@@ -7,6 +7,7 @@ import type { Entity } from '../components.js';
 import type { World } from '../world.js';
 import type { CollisionHit } from './collision.js';
 import { DEFAULT_MISSILES } from './missiles.js';
+import { portDamageMultiplier } from './dock.js';
 
 export interface DamageConfig {
   flashDuration: number; // white hull-damage flash [ROC-DMG-6]
@@ -59,8 +60,10 @@ export function applyDamage(
       vel: { ...e.vel }, // wrecks inherit the ship's motion [ROC-VIS-6]
       yaw: e.yaw,
       meshId: e.meshId, // lets the renderer/particles break the ship into its wireframe [ROC-DMG-6]
+      scale: e.scale, // so a big boss shatters at its drawn size [ROC-FDL-1]
       bounty: isPlayer ? 0 : e.bounty ?? 0,
       drops: isPlayer ? undefined : e.drops,
+      cargoDrops: isPlayer ? undefined : e.cargoDrops, // boss cargo haul [ROC-HERM-10, ROC-FDL-5]
     });
     world.events.push({ type: 'sfx', id: isPlayer ? 'explode_player' : 'explode_small' });
     if (!isPlayer) world.entities.delete(e.id);
@@ -91,7 +94,10 @@ export function damageSystem(
     // An invulnerable (just-spawned) or already-dead player soaks the shot harmlessly. [T6.4]
     const playerImmune =
       target.kind === 'player' && (world.mode === 'GAME_OVER' || world.player.invulnTtl > 0);
-    if (!playerImmune) applyDamage(world, target, proj.damage ?? 1, cfg);
+    // A direct hit on a docking port (the hermit's weak spot) deals triple damage; the shot's
+    // path from its impact point decides "direct". [ROC-HERM-8]
+    const mult = portDamageMultiplier(target, proj.pos.x, proj.pos.z, proj.vel.x, proj.vel.z);
+    if (!playerImmune) applyDamage(world, target, (proj.damage ?? 1) * mult, cfg);
 
     world.entities.delete(proj.id);
     if (proj.kind === 'projectile') world.pool.projectiles.push(proj); // recycle pulses (no leak)

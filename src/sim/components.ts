@@ -36,6 +36,8 @@ export interface Entity {
   yaw: number; // facing (path tangent / heading)
   bank: number; // roll angle, ∝ lateral motion [ROC-MOV-3, ROC-ENM-3]
   meshId?: string;
+  scale?: number; // per-entity size multiplier over the global SHIP_SCALE; honoured by render
+  // AND collision so the hitbox always matches the sprite (FdL 1.5x, bosses 2x) [ROC-FDL-1]
   shield?: number; // remaining ellipses [ROC-DMG-3]
   shieldMax?: number;
   hull?: number;
@@ -64,6 +66,10 @@ export interface Entity {
   ai?: unknown; // fire cadence, pattern, boss phase
   pickup?: { type: PickupType; commodity?: string }; // commodity set when type === 'cargo'
   drops?: string; // power-up dropped on destruction (e.g. a guaranteed laser) [ROC-PWR-6]
+  cargoDrops?: number; // random cargo canisters shed on destruction (boss hauls) [ROC-HERM-10, ROC-FDL-5]
+  ecm?: boolean; // boss ECM: detonates player missiles harmlessly while alive [ROC-BECM-1..4]
+  port?: boolean; // has a centred docking-port rectangle (hermit / stations): rendered, dockable,
+  // and worth triple damage on a direct hit [ROC-HERM-1,8, ROC-DCKG-3]
   contraband?: boolean; // different shape [ROC-ECO-4]
 }
 

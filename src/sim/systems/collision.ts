@@ -154,20 +154,21 @@ export interface CollisionConfig {
 }
 
 const colliderRadius = (e: Entity, fallback: number, scale: number): number =>
-  Math.max(e.colliderRx ?? fallback, e.colliderRz ?? fallback) * scale;
+  Math.max(e.colliderRx ?? fallback, e.colliderRz ?? fallback) * scale * (e.scale ?? 1);
 
 function projectileHitsTarget(a: Pt, b: Pt, t: Entity, cfg: CollisionConfig): boolean {
   const center: Pt = { x: t.pos.x, y: t.pos.z };
   const fallback = cfg.defaultRadius ?? 0.3;
+  const entScale = t.scale ?? 1; // per-entity multiplier: hitbox matches the sprite [ROC-FDL-1]
   const scale = cfg.colliderScale ?? 1;
-  const rx = (t.colliderRx ?? fallback) * scale;
-  const rz = (t.colliderRz ?? fallback) * scale;
+  const rx = (t.colliderRx ?? fallback) * scale * entScale;
+  const rz = (t.colliderRz ?? fallback) * scale * entScale;
 
   // hitMeshId/hitScale let an entity collide against a different mesh (and scale) than the one it
   // spawned with — a splinter is drawn as a small asteroid chunk, so it collides as one too,
   // instead of its own (larger, differently-shaped) mesh. [DEFECTS: render/collide mismatch]
   const meshId = t.hitMeshId ?? t.meshId;
-  const meshScale = t.hitScale ?? scale;
+  const meshScale = t.hitScale ?? scale * entScale;
 
   // No hull silhouette to hug (meshless entity, or content missing the mesh) — fall back to the
   // collider ellipse for both shielded and unshielded hits, as before. [ROC-DMG-1,5]
@@ -183,7 +184,9 @@ function projectileHitsTarget(a: Pt, b: Pt, t: Entity, cfg: CollisionConfig): bo
     // Shielded: the shot lands once it's within the outermost ring's gap of the hull, matching
     // the ring drawn on screen — not a separate ellipse shape. [ROC-DMG-1]
     const radius =
-      t.hitScale === undefined ? (cfg.getHullRadius?.(meshId!) ?? hullRadius(local, meshScale)) : hullRadius(local, meshScale);
+      t.hitScale === undefined
+        ? (cfg.getHullRadius?.(meshId!) ?? hullRadius(local, scale)) * entScale
+        : hullRadius(local, meshScale);
     const gap = shieldGap(radius, t.shield ?? 0);
     return segmentDistToConvexPolygonSq(a, b, world) <= gap * gap;
   }

@@ -21,6 +21,7 @@ export interface ShipDef {
   colliderRx: number;
   colliderRz: number;
   price: number;
+  scale?: number; // render + collision size multiplier (the FdL flies at 1.5x) [ROC-FDL-1]
 }
 
 export interface ShipsContent {
@@ -84,6 +85,7 @@ export function applyShip(world: World, ships: ShipsContent, shipId: string, fre
   const p = world.entities.get(PLAYER_ID);
   if (p) {
     p.meshId = def.meshId;
+    p.scale = def.scale; // the player-flown FdL is 1.5x too [ROC-FDL-1]
     p.shieldMax = def.shield;
     p.hullMax = def.hull;
     p.colliderRx = def.colliderRx;

@@ -30,6 +30,8 @@ import {
 } from '../sim/systems/station.js';
 import { loadShips, type LaserType } from '../sim/systems/ships.js';
 import { SPLINTER_HIT_SCALE } from '../sim/systems/asteroids.js';
+import { hyperCountdown, BOSS_FADE_SEC } from '../sim/systems/levelstate.js';
+import { portCorners, portAligned } from '../sim/systems/dock.js';
 import { stationButtons, buttonAt, drawStation, type StationAction } from '../render/screens/station.js';
 
 import enemies from '../content/enemies.json';
@@ -173,7 +175,8 @@ function hullFlash(e: Entity): { fill: string; stroke: string } | undefined {
 // actual shape (and yaw/bank) rather than an unrelated ellipse. [ROC-DMG-1,2,3 shield-hug rework]
 function drawShield(e: Entity, mesh: Mesh | undefined, model: Mat4): void {
   const rings = e.shield ?? 0;
-  const radius = e.meshId ? HULL_RADII[e.meshId] : undefined;
+  const base = e.meshId ? HULL_RADII[e.meshId] : undefined;
+  const radius = base === undefined ? undefined : base * (e.scale ?? 1); // gap tracks the drawn size [ROC-FDL-1]
   if (rings <= 0 || !mesh || !radius) return;
   const flash = (e.shieldFlashTtl ?? 0) > 0;
   renderer.drawShieldRing(mesh, model, radius, rings, {
@@ -190,6 +193,12 @@ interface Floater { x: number; z: number; text: string; color: string; age: numb
 const floaters: Floater[] = [];
 const FLOATER_TTL = 1.1;
 
+// Boss-ECM presentation: a brief full-screen flash and an "ECM" caption at the bottom. [ROC-BECM-1,3]
+let ecmFlashTtl = 0;
+let ecmTextTtl = 0;
+const ECM_FLASH_SEC = 0.12;
+const ECM_TEXT_SEC = 0.8;
+
 function drainFloaters(events: ReturnType<typeof sim.step>): void {
   for (const ev of events) {
     if (ev.type === 'floatingText' && (ev.category === 'bounty' || ev.category === 'cargo')) {
@@ -197,11 +206,29 @@ function drainFloaters(events: ReturnType<typeof sim.step>): void {
       floaters.push({ x: pos.x, z: pos.z, text: String(ev.text ?? ''), color: ev.category === 'bounty' ? '#ffd76b' : '#7cd0ff', age: 0, ttl: FLOATER_TTL });
     } else if (ev.type === 'waveBonus') {
       floaters.push({ x: 0, z: curr.z + 0.4, text: `BONUS +${ev.amount}`, color: '#ffd76b', age: 0, ttl: FLOATER_TTL * 1.4 });
+    } else if (ev.type === 'ecm') {
+      ecmFlashTtl = ECM_FLASH_SEC;
+      ecmTextTtl = ECM_TEXT_SEC;
     }
   }
+  ecmFlashTtl = Math.max(0, ecmFlashTtl - DT);
+  ecmTextTtl = Math.max(0, ecmTextTtl - DT);
   for (let i = floaters.length - 1; i >= 0; i--) {
     floaters[i].age += DT;
     if (floaters[i].age >= floaters[i].ttl) floaters.splice(i, 1);
+  }
+}
+
+// The docking-port rectangle carried by the hermit and the stations, drawn as a rotated white
+// outline; it brightens whenever the port is within docking tolerance. [ROC-HERM-1, ROC-DCKG-3]
+function drawPort(e: Entity): void {
+  const cs = portCorners(e);
+  const bright = portAligned(e);
+  const opts = { stroke: bright ? '#fff' : 'rgba(255,255,255,0.55)', lineWidth: bright ? 2.5 : 1.5 };
+  for (let i = 0; i < cs.length; i++) {
+    const a = cs[i];
+    const b = cs[(i + 1) % cs.length];
+    renderer.drawWorldLine(vec3(a.x, 0, a.z), vec3(b.x, 0, b.z), opts);
   }
 }
 
@@ -213,7 +240,7 @@ startGameLoop({
     drainFloaters(events);
   },
   render: (alpha) => {
-    renderer.beginFrame();
+    renderer.beginFrame(sim.state.scroll); // sim-owned: 0 halts for bosses, >1 is hyperspace [ROC-BOSS-1, ROC-HYP-3]
 
     // Docked: show the station shop instead of the play field. [ROC-STN-1]
     if (dockActive()) {
@@ -265,13 +292,15 @@ startGameLoop({
           break;
         }
         case 'enemy':
-        case 'boss': {
+        case 'boss':
+        case 'station': {
           const m = e.meshId ? MESHES[e.meshId] : undefined;
           if (m) {
-            const model = modelMatrix(e.pos, e.yaw, e.bank, SHIP_SCALE);
+            const model = modelMatrix(e.pos, e.yaw, e.bank, SHIP_SCALE * (e.scale ?? 1)); // [ROC-FDL-1]
             renderer.drawMesh(m, model, hullFlash(e));
             drawShield(e, m, model);
           }
+          if (e.port) drawPort(e); // hermit / station docking-port rectangle [ROC-HERM-1, ROC-DCKG-1]
           break;
         }
         case 'asteroid': {
@@ -299,7 +328,12 @@ startGameLoop({
     if (sim.state.mode !== 'GAME_OVER' && !blinkOff) {
       const pmesh = (player.meshId && MESHES[player.meshId]) || MESHES.sidewinder;
       const pos = vec3(lerp(prev.x, curr.x, alpha), lerp(prev.y, curr.y, alpha), lerp(prev.z, curr.z, alpha));
-      const model = modelMatrix(pos, lerp(prev.yaw, curr.yaw, alpha), lerp(prev.bank, curr.bank, alpha), SHIP_SCALE);
+      const model = modelMatrix(
+        pos,
+        lerp(prev.yaw, curr.yaw, alpha),
+        lerp(prev.bank, curr.bank, alpha),
+        SHIP_SCALE * (player.scale ?? 1), // the player-flown FdL is 1.5x too [ROC-FDL-1]
+      );
       renderer.drawMesh(pmesh, model, hullFlash(player));
       drawShield(player, pmesh, model);
     }
@@ -312,15 +346,78 @@ startGameLoop({
       renderer.drawWorldText(vec3(f.x, 0, f.z), f.text, { fill: col, font: '13px monospace', align: 'center', dy: -18 - u * 34 });
     }
 
+    // --- full-screen overlays -------------------------------------------------
+    const w = canvas!.clientWidth || canvas!.width;
+    const h = canvas!.clientHeight || canvas!.height;
+
+    // Boss health bar: horizontal, black and white, top of the screen; shields + hull so the
+    // bar moves from the very first hit. [ROC-BOSS-2]
+    const boss = [...sim.state.entities.values()].find((e) => e.kind === 'boss');
+    if (boss) {
+      const total = (boss.shield ?? 0) + (boss.hull ?? 0);
+      const max = (boss.shieldMax ?? 0) + (boss.hullMax ?? 1);
+      const frac = Math.max(0, Math.min(1, total / max));
+      const bw = w * 0.62;
+      const bx = (w - bw) / 2;
+      const by = 18;
+      const bh = 10;
+      ctx!.fillStyle = '#000';
+      ctx!.fillRect(bx, by, bw, bh);
+      ctx!.fillStyle = '#fff';
+      ctx!.fillRect(bx, by, bw * frac, bh);
+      ctx!.strokeStyle = '#fff';
+      ctx!.lineWidth = 1.5;
+      ctx!.strokeRect(bx - 1.5, by - 1.5, bw + 3, bh + 3);
+    }
+
+    // "RIGHT ON COMMANDER" after a boss kill: holds, then fades with the sim's timer, and the
+    // FSM resumes scrolling when it hits zero. [ROC-BOSS-3,4]
+    if (sim.state.bossFadeTtl > 0) {
+      const a = Math.min(1, sim.state.bossFadeTtl / (BOSS_FADE_SEC * 0.55));
+      renderer.drawText('RIGHT ON COMMANDER', { x: w / 2, y: h * 0.42 }, {
+        fill: `rgba(255,255,255,${a.toFixed(2)})`,
+        font: '28px monospace',
+        align: 'center',
+      });
+    }
+
+    // Boss ECM: white screen flash + "ECM" at the bottom. [ROC-BECM-1,3]
+    if (ecmFlashTtl > 0) {
+      ctx!.fillStyle = `rgba(255,255,255,${(0.65 * (ecmFlashTtl / ECM_FLASH_SEC)).toFixed(2)})`;
+      ctx!.fillRect(0, 0, w, h);
+    }
+    if (ecmTextTtl > 0) {
+      renderer.drawText('ECM', { x: w / 2, y: h - 24 }, { fill: '#fff', font: '20px monospace', align: 'center' });
+    }
+
+    // Hyperspace countdown: "Hyperspace Lave 5" ... 1. [ROC-HYP-2]
+    if (sim.state.levelState === 'HYPERSPACE') {
+      const n = hyperCountdown(sim.state.levelTimer);
+      if (n !== null) {
+        renderer.drawText(`Hyperspace ${level1.name} ${n}`, { x: w / 2, y: h * 0.3 }, {
+          fill: '#fff',
+          font: '22px monospace',
+          align: 'center',
+        });
+      }
+    }
+
+    // Post-jump system info card: a few classic-Elite facts. [ROC-HYP-5]
+    if (sim.state.levelState === 'INFO') {
+      renderer.drawText(level1.name.toUpperCase(), { x: w / 2, y: h * 0.3 }, { fill: '#fff', font: '26px monospace', align: 'center' });
+      (level1.facts ?? []).forEach((line, i) => {
+        renderer.drawText(line, { x: w / 2, y: h * 0.3 + 34 + i * 22 }, { fill: 'rgba(255,255,255,0.85)', font: '14px monospace', align: 'center' });
+      });
+    }
+
     if (sim.state.mode === 'GAME_OVER') {
-      const cx = (canvas!.clientWidth || canvas!.width) / 2;
-      const cy = (canvas!.clientHeight || canvas!.height) / 2;
-      renderer.drawText('GAME OVER', { x: cx, y: cy }, { fill: '#f55', font: '32px monospace', align: 'center' });
+      renderer.drawText('GAME OVER', { x: w / 2, y: h / 2 }, { fill: '#f55', font: '32px monospace', align: 'center' });
     }
 
     renderer.endFrame(alpha);
   },
 });
 
-(window as unknown as { __rocBooted?: boolean }).__rocBooted = true;
+(window as unknown as { __rocBooted?: boolean; __rocSim?: unknown }).__rocBooted = true;
+(window as unknown as { __rocSim?: unknown }).__rocSim = sim; // headed-debug handle (state inspection)
 document.getElementById('boot')?.remove();

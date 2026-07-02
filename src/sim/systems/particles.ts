@@ -170,12 +170,18 @@ export function particlesSystem(
     if (ev.type === 'destroyed') {
       const base = (ev.vel as Vel) ?? ZERO;
       burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.explosionCount), cfg, base);
-      const segs = fragGeom && typeof ev.meshId === 'string' ? fragGeom[ev.meshId] : undefined;
+      let segs = fragGeom && typeof ev.meshId === 'string' ? fragGeom[ev.meshId] : undefined;
+      // Scale the wireframe shards to the entity's drawn size (bosses shatter big). [ROC-FDL-1]
+      const s = typeof ev.scale === 'number' ? ev.scale : 1;
+      if (segs && s !== 1) segs = segs.map((g) => ({ ax: g.ax * s, az: g.az * s, bx: g.bx * s, bz: g.bz * s }));
       if (segs && segs.length) spawnFragments(world, rng, segs, ev.pos as XYZ, (ev.yaw as number) ?? 0, cfg, base);
     } else if (ev.type === 'fragments') {
       burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.fragmentCount), cfg, (ev.vel as Vel) ?? ZERO);
     } else if (ev.type === 'exhaust') {
       exhaust(world, rng, ev.pos as XYZ, (ev.vel as Vel) ?? ZERO, cfg);
+    } else if (ev.type === 'ecmDetonate') {
+      // A missile popped harmlessly by the boss ECM: a small puff, no damage. [ROC-BECM-1]
+      burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.fragmentCount), cfg);
     }
   }
 

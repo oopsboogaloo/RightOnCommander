@@ -38,7 +38,8 @@ export interface DrawOpts {
 
 // Read-only projection of sim state. Never mutates the world. [design §1.5, §7]
 export interface Renderer {
-  beginFrame(): void;
+  beginFrame(scroll?: number): void; // starfield scroll factor from sim state (0 = boss halt,
+  // >1 = hyperspace stretch) [ROC-BOSS-1, ROC-HYP-3]
   drawMesh(mesh: Mesh, xform: unknown, opts?: DrawOpts): void; // 3D hull: cull+sort+black fill+white stroke
   drawLine(a: Vec2, b: Vec2, opts?: DrawOpts): void; // lasers, dock wireframe
   drawEllipse(c: Vec2, rx: number, ry: number, opts?: DrawOpts): void; // shields [ROC-DMG-3]

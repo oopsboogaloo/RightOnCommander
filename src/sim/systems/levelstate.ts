@@ -1,28 +1,40 @@
-// Per-level finite state machine. Every level launches from a Coriolis station, drifts through
-// an opening asteroid field, plays wave combat around a mid-boss and an end-boss, optionally
-// fights a Viper interception if the player is carrying contraband, then docks. [tasks T5.1,
-// design §12, ROC-LVL-1,2, ROC-L1-1]
+// Per-level finite state machine. Every level launches from a Coriolis station (which scrolls
+// away behind the player), jumps through hyperspace with a countdown and starfield stretch,
+// shows a system info card, drifts through an opening asteroid field, plays wave combat around
+// a mid-boss and an end-boss (starfield scroll stops for each fight; "RIGHT ON COMMANDER" fades
+// after each kill), optionally fights a Viper interception if the player is carrying contraband,
+// then docks at a rotating Coriolis by flying into its port. [tasks T5.1/T5a.*, design §12/§12a,
+// ROC-LVL-1,2, ROC-L1-1, ROC-BOSS-1..4, ROC-HYP-1..5, ROC-DCKG-1..4]
 //
-//   LAUNCH -> [ASTEROIDS] -> WAVES_A -> MID_BOSS -> WAVES_B -> END_BOSS -> [VIPER_INTERCEPT] -> DOCK
+//   LAUNCH -> HYPERSPACE -> INFO -> [ASTEROIDS] -> WAVES_A -> MID_BOSS -> WAVES_B
+//     -> END_BOSS -> [VIPER_INTERCEPT] -> DOCKING -> DOCK
 
 import { vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
-import type { World } from '../world.js';
+import { PLAYER_ID, type World } from '../world.js';
 import { startWave, type WaveDef, type WaveContext } from './waves.js';
 import { startAsteroidWaves, type AsteroidFieldDef } from './asteroids.js';
+import { bossPlacement } from './boss.js';
+import { pointInPort, portAligned, portDims, toLocal } from './dock.js';
+import { applyDamage } from './damage.js';
 
 export type LevelState =
   | 'LAUNCH'
+  | 'HYPERSPACE'
+  | 'INFO'
   | 'ASTEROIDS'
   | 'WAVES_A'
   | 'MID_BOSS'
   | 'WAVES_B'
   | 'END_BOSS'
   | 'VIPER_INTERCEPT'
+  | 'DOCKING'
   | 'DOCK';
 
 export interface LevelDef {
   id: string;
+  name?: string; // the target system, shown in the hyperspace countdown [ROC-HYP-2]
+  facts?: string[]; // a few classic-Elite facts for the post-jump info card [ROC-HYP-5]
   launchMs?: number;
   asteroidWaves?: AsteroidFieldDef[]; // opening asteroid waves, if the level has any [ROC-L1-1]
   wavesA: WaveDef[];
@@ -31,6 +43,60 @@ export interface LevelDef {
   endBoss: string;
   viper?: WaveDef; // contraband interception wave
 }
+
+// ---- timings & tuning ------------------------------------------------------
+
+export const BOSS_FADE_SEC = 2.5; // "RIGHT ON COMMANDER" display + fade [ROC-BOSS-3]
+export const INFO_SEC = 4; // post-jump system info card [ROC-HYP-5]
+const DEFAULT_LAUNCH_MS = 2500; // long enough for the departure Coriolis to scroll away [ROC-HYP-1]
+
+// Hyperspace: a 5-second countdown, then the starfield accelerates and the dots stretch into
+// full-height lines, hold, and settle back to the normal scroll. [ROC-HYP-2,3,4]
+export const HYPER = {
+  countdownSec: 5,
+  rampSec: 1.0,
+  holdSec: 2.5,
+  settleSec: 1.0,
+  peak: 30, // scroll factor at full stretch; the renderer maps this to full-height lines
+};
+export const HYPER_TOTAL_SEC = HYPER.countdownSec + HYPER.rampSec + HYPER.holdSec + HYPER.settleSec;
+
+const smoothstep = (u: number): number => u * u * (3 - 2 * u);
+
+// The scroll factor at a point through the hyperspace sequence. [ROC-HYP-3,4]
+export function hyperScrollAt(elapsed: number): number {
+  const t = elapsed - HYPER.countdownSec;
+  if (t <= 0) return 1;
+  if (t < HYPER.rampSec) return 1 + (HYPER.peak - 1) * smoothstep(t / HYPER.rampSec);
+  if (t < HYPER.rampSec + HYPER.holdSec) return HYPER.peak;
+  const settle = (t - HYPER.rampSec - HYPER.holdSec) / HYPER.settleSec;
+  if (settle < 1) return 1 + (HYPER.peak - 1) * (1 - smoothstep(settle));
+  return 1;
+}
+
+// Remaining whole seconds of the countdown for display ("Hyperspace Lave 5"), or null once the
+// jump itself has begun. Derived from levelTimer so the shell needs no extra state. [ROC-HYP-2]
+export function hyperCountdown(levelTimer: number): number | null {
+  const elapsed = HYPER_TOTAL_SEC - levelTimer;
+  const remaining = HYPER.countdownSec - elapsed;
+  return remaining > 0 ? Math.ceil(remaining - 1e-9) : null;
+}
+
+// The docking Coriolis: twice the old placeholder size, scrolling in from the top then holding
+// while it slowly rotates. Its centred port docks the player; its hull kills. [ROC-DCKG-1,3,4]
+export const DOCK_STATION = {
+  scale: 2,
+  spawnZ: 2.4,
+  holdZ: 0.55,
+  approachSpeed: 0.4,
+  spin: 0.25, // rad/s — matches the hermit's "rotating slowly on its y axis"
+  bodyRadius: 0.38, // deadly-hull radius (a bit inside the drawn rim, for grace)
+};
+
+// The departure Coriolis the player launches from, pointing up-screen. [ROC-HYP-1]
+const DEPART_STATION = { scale: 2, spawnZ: -0.35, speed: 0.55, cullZ: -2.4 };
+
+// ---- helpers ----------------------------------------------------------------
 
 const hasKind = (world: World, kind: Entity['kind']): boolean => {
   for (const e of world.entities.values()) if (e.kind === kind) return true;
@@ -50,18 +116,45 @@ function startGroup(world: World, waves: WaveDef[], ctx: WaveContext): void {
   for (const w of waves) startWave(world, w, ctx);
 }
 
+interface StationAi {
+  kind: 'dock' | 'depart';
+  spin: number;
+  holdZ?: number;
+}
+
+function spawnStation(world: World, ai: StationAi, pos: { x: number; z: number }, vz: number, yaw: number): Entity {
+  const id = world.nextId++;
+  const e: Entity = {
+    id,
+    kind: 'station',
+    pos: vec3(pos.x, 0, pos.z),
+    vel: vec3(0, 0, vz),
+    yaw,
+    bank: 0,
+    meshId: 'coriolis',
+    scale: DOCK_STATION.scale,
+    port: true,
+    ai,
+  };
+  world.entities.set(id, e);
+  return e;
+}
+
+function deleteStations(world: World): void {
+  for (const e of [...world.entities.values()]) if (e.kind === 'station') world.entities.delete(e.id);
+}
+
 function spawnBoss(world: World, name: string, ctx: WaveContext, drops?: string): void {
   const def = ctx.enemies[name];
   if (!def) throw new Error(`unknown boss '${name}'`);
+  const place = bossPlacement(def.behavior);
   const id = world.nextId++;
   world.entities.set(id, {
     id,
     kind: 'boss',
-    // Up-screen but fully on-screen (z=1.2 put its centre past the top edge on landscape), and
-    // turned to face the player below — the mesh nose is +z, so yaw=π points it down-screen.
-    pos: vec3(0, 0, 0.7),
+    pos: vec3(place.pos.x, place.pos.y, place.pos.z),
     vel: vec3(),
-    yaw: Math.PI,
+    yaw: place.yaw,
     bank: 0,
     hull: def.hull,
     hullMax: def.hull,
@@ -69,19 +162,51 @@ function spawnBoss(world: World, name: string, ctx: WaveContext, drops?: string)
     shieldMax: def.shield ?? 0,
     bounty: def.bounty,
     meshId: def.meshId,
+    scale: def.scale,
     colliderRx: def.colliderRx,
     colliderRz: def.colliderRz,
     drops,
+    cargoDrops: def.cargoDrops,
+    ecm: def.ecm, // boss ECM: player missiles detonate harmlessly [ROC-BECM-*]
+    port: place.port,
+    ai: place.ai,
   });
+
+  // The hermit's escorts across the whole fight form one open wave for the 50% bonus; it stays
+  // open (never resolving) until the hermit dies. [ROC-HERM-12]
+  if (def.behavior === 'hermit') {
+    const recId = world.nextId++;
+    world.waves.active.set(recId, {
+      members: new Set(),
+      total: 0,
+      bountySum: 0,
+      killed: 0,
+      escaped: false,
+      spawn: null,
+      open: true,
+    });
+    world.hermitWaveId = recId;
+  }
 }
 
-// Transition into a state, running its entry effects once.
-function enter(world: World, state: LevelState, level: LevelDef, ctx: WaveContext): void {
+// Transition into a state, running its entry effects once. Exported so death checkpoints can
+// re-enter WAVES_B / DOCK directly. [ROC-BOSS-6, ROC-DCKG-4]
+export function enterLevelState(world: World, state: LevelState, level: LevelDef, ctx: WaveContext): void {
   world.levelState = state;
   world.events.push({ type: 'levelState', state });
   switch (state) {
     case 'LAUNCH':
-      world.levelTimer = (level.launchMs ?? 1000) / 1000;
+      // The departure Coriolis sits just behind the player, pointing up-screen, and scrolls
+      // out of view below. [ROC-HYP-1]
+      world.levelTimer = (level.launchMs ?? DEFAULT_LAUNCH_MS) / 1000;
+      spawnStation(world, { kind: 'depart', spin: 0 }, { x: 0, z: DEPART_STATION.spawnZ }, -DEPART_STATION.speed, Math.PI / 2);
+      break;
+    case 'HYPERSPACE':
+      world.levelTimer = HYPER_TOTAL_SEC;
+      world.events.push({ type: 'hyperCountdown', n: HYPER.countdownSec, system: level.name ?? level.id });
+      break;
+    case 'INFO':
+      world.levelTimer = INFO_SEC;
       break;
     case 'ASTEROIDS':
       if (level.asteroidWaves) startAsteroidWaves(world, level.asteroidWaves);
@@ -90,50 +215,165 @@ function enter(world: World, state: LevelState, level: LevelDef, ctx: WaveContex
       startGroup(world, level.wavesA, ctx);
       break;
     case 'MID_BOSS':
+      world.scroll = 0; // the fight is signalled by the scrolling stopping [ROC-BOSS-1]
       spawnBoss(world, level.midBoss, ctx, 'laser'); // mid-boss always drops a laser [ROC-PWR-6]
       break;
     case 'WAVES_B':
       startGroup(world, level.wavesB, ctx);
       break;
     case 'END_BOSS':
+      world.scroll = 0; // [ROC-BOSS-1]
       spawnBoss(world, level.endBoss, ctx);
       break;
     case 'VIPER_INTERCEPT':
       if (level.viper) startWave(world, level.viper, ctx);
       break;
+    case 'DOCKING':
+      // Scrolling has resumed; the station scrolls into view and holds, rotating. [ROC-DCKG-1]
+      spawnStation(
+        world,
+        { kind: 'dock', spin: DOCK_STATION.spin, holdZ: DOCK_STATION.holdZ },
+        { x: 0, z: DOCK_STATION.spawnZ },
+        -DOCK_STATION.approachSpeed,
+        0,
+      );
+      break;
     case 'DOCK':
+      deleteStations(world);
       world.events.push({ type: 'dock' }); // [ROC-LVL-1]
       break;
   }
 }
 
 export function startLevel(world: World, level: LevelDef, ctx: WaveContext): void {
-  enter(world, 'LAUNCH', level, ctx);
+  world.scroll = 1;
+  world.bossFadeTtl = 0;
+  world.ecm = { fuse: -1, cooldown: 0 };
+  world.hermitWaveId = null;
+  enterLevelState(world, 'LAUNCH', level, ctx);
+}
+
+// Move/spin the station entities (departure scroll-away, docking approach + hold). Runs every
+// step regardless of state so a station never freezes mid-transition.
+function stationTick(world: World, dt: number): void {
+  for (const e of [...world.entities.values()]) {
+    if (e.kind !== 'station') continue;
+    const ai = e.ai as StationAi;
+    e.pos.z += e.vel.z * dt;
+    e.yaw += ai.spin * dt;
+    if (ai.kind === 'dock' && ai.holdZ !== undefined && e.pos.z <= ai.holdZ) {
+      e.pos.z = ai.holdZ;
+      e.vel = vec3();
+    }
+    if (ai.kind === 'depart' && e.pos.z < DEPART_STATION.cullZ) world.entities.delete(e.id);
+  }
+}
+
+// The docking approach. The port is at the centre of rotation; while it is within 30° of
+// horizontal, a corridor along the slot is safe to fly — reaching the centred port rectangle
+// docks. Touching the hull anywhere else (or being caught inside as rotation breaks the
+// alignment) is a fatal collision. [ROC-DCKG-3,4]
+function dockingCheck(world: World, level: LevelDef, ctx: WaveContext): void {
+  const player = world.entities.get(PLAYER_ID);
+  if (!player || (player.hull ?? 0) <= 0) return;
+  let station: Entity | undefined;
+  for (const e of world.entities.values()) {
+    if (e.kind === 'station' && (e.ai as StationAi).kind === 'dock') station = e;
+  }
+  if (!station) return;
+
+  const aligned = portAligned(station);
+  if (pointInPort(station, player.pos.x, player.pos.z) && aligned) {
+    world.events.push({ type: 'docked' });
+    enterLevelState(world, 'DOCK', level, ctx);
+    return;
+  }
+
+  if (world.player.invulnTtl > 0) return;
+  const dx = player.pos.x - station.pos.x;
+  const dz = player.pos.z - station.pos.z;
+  const inBody = dx * dx + dz * dz <= DOCK_STATION.bodyRadius * DOCK_STATION.bodyRadius;
+  if (!inBody) return;
+
+  // Inside the deadly hull — unless riding the aligned slot corridor toward the port.
+  const local = toLocal(station, player.pos.x, player.pos.z);
+  const inCorridor = aligned && Math.abs(local.z) <= portDims(station).halfShort;
+  if (!inCorridor) {
+    // Collision = death, outright: no shield ring soaks a station crash. [ROC-DCKG-4]
+    player.shield = 0;
+    applyDamage(world, player, 9999); // gamestate then spends the life
+  }
 }
 
 export function levelStateSystem(world: World, dt: number, level: LevelDef, ctx: WaveContext): void {
+  stationTick(world, dt);
+
+  // Boss-kill framing: hold the boss state while "RIGHT ON COMMANDER" fades, then resume
+  // scrolling and advance. [ROC-BOSS-3,4]
+  const tickBossFade = (next: () => void): boolean => {
+    if (world.bossFadeTtl > 0) {
+      world.bossFadeTtl -= dt;
+      if (world.bossFadeTtl <= 0) {
+        world.bossFadeTtl = 0;
+        world.scroll = 1;
+        next();
+      }
+      return true;
+    }
+    if (bossCleared(world)) {
+      world.bossFadeTtl = BOSS_FADE_SEC;
+      world.events.push({ type: 'bossKilled' });
+      return true;
+    }
+    return false;
+  };
+
   switch (world.levelState as LevelState) {
     case 'LAUNCH':
       world.levelTimer -= dt;
-      if (world.levelTimer <= 0) enter(world, level.asteroidWaves?.length ? 'ASTEROIDS' : 'WAVES_A', level, ctx);
+      if (world.levelTimer <= 0) enterLevelState(world, 'HYPERSPACE', level, ctx);
+      break;
+    case 'HYPERSPACE': {
+      const prevElapsed = HYPER_TOTAL_SEC - world.levelTimer;
+      world.levelTimer -= dt;
+      const elapsed = HYPER_TOTAL_SEC - world.levelTimer;
+      world.scroll = hyperScrollAt(elapsed);
+      // Emit each countdown second once as it is crossed ("Hyperspace Lave 4 ... 1"). [ROC-HYP-2]
+      const nPrev = Math.ceil(HYPER.countdownSec - prevElapsed - 1e-9);
+      const n = Math.ceil(HYPER.countdownSec - elapsed - 1e-9);
+      if (n !== nPrev && n >= 1) world.events.push({ type: 'hyperCountdown', n, system: level.name ?? level.id });
+      if (world.levelTimer <= 0) {
+        world.scroll = 1;
+        enterLevelState(world, 'INFO', level, ctx);
+      }
+      break;
+    }
+    case 'INFO':
+      world.levelTimer -= dt;
+      if (world.levelTimer <= 0) enterLevelState(world, level.asteroidWaves?.length ? 'ASTEROIDS' : 'WAVES_A', level, ctx);
       break;
     case 'ASTEROIDS':
-      if (asteroidFieldCleared(world)) enter(world, 'WAVES_A', level, ctx);
+      if (asteroidFieldCleared(world)) enterLevelState(world, 'WAVES_A', level, ctx);
       break;
     case 'WAVES_A':
-      if (groupCleared(world)) enter(world, 'MID_BOSS', level, ctx);
+      if (groupCleared(world)) enterLevelState(world, 'MID_BOSS', level, ctx);
       break;
     case 'MID_BOSS':
-      if (bossCleared(world)) enter(world, 'WAVES_B', level, ctx);
+      tickBossFade(() => enterLevelState(world, 'WAVES_B', level, ctx));
       break;
     case 'WAVES_B':
-      if (groupCleared(world)) enter(world, 'END_BOSS', level, ctx);
+      if (groupCleared(world)) enterLevelState(world, 'END_BOSS', level, ctx);
       break;
     case 'END_BOSS':
-      if (bossCleared(world)) enter(world, hasContraband(world) ? 'VIPER_INTERCEPT' : 'DOCK', level, ctx);
+      tickBossFade(() =>
+        enterLevelState(world, hasContraband(world) ? 'VIPER_INTERCEPT' : 'DOCKING', level, ctx),
+      );
       break;
     case 'VIPER_INTERCEPT':
-      if (groupCleared(world)) enter(world, 'DOCK', level, ctx);
+      if (groupCleared(world)) enterLevelState(world, 'DOCKING', level, ctx);
+      break;
+    case 'DOCKING':
+      dockingCheck(world, level, ctx);
       break;
     case 'DOCK':
       break; // terminal — gamestate takes over at the station

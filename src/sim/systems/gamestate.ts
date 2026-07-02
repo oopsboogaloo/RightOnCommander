@@ -38,10 +38,10 @@ const radius = (rx: number | undefined, rz: number | undefined, scale: number): 
 function ramGeom(e: Entity, cfg: GamestateConfig): { poly: Pt[]; gap: number } | null {
   const local = e.meshId ? cfg.getSilhouette?.(e.meshId) : undefined;
   if (!local || local.length < 3) return null;
-  const scale = cfg.colliderScale;
+  const scale = cfg.colliderScale * (e.scale ?? 1); // per-entity size multiplier [ROC-FDL-1]
   const scaled = scale === 1 ? local : local.map((p) => ({ x: p.x * scale, y: p.y * scale }));
   const poly = transformSilhouette(scaled, e.pos.x, e.pos.z, e.yaw);
-  const r = cfg.getHullRadius?.(e.meshId!) ?? hullRadius(local, scale);
+  const r = (cfg.getHullRadius?.(e.meshId!) ?? hullRadius(local, cfg.colliderScale)) * (e.scale ?? 1);
   return { poly, gap: shieldGap(r, e.shield ?? 0) };
 }
 
@@ -55,8 +55,8 @@ function rams(player: Entity, e: Entity, cfg: GamestateConfig): boolean {
     const threshold = pg.gap + eg.gap;
     return convexPolygonsDistanceSq(pg.poly, eg.poly) <= threshold * threshold;
   }
-  const pr = radius(player.colliderRx, player.colliderRz, cfg.colliderScale);
-  const er = radius(e.colliderRx, e.colliderRz, cfg.colliderScale);
+  const pr = radius(player.colliderRx, player.colliderRz, cfg.colliderScale) * (player.scale ?? 1);
+  const er = radius(e.colliderRx, e.colliderRz, cfg.colliderScale) * (e.scale ?? 1);
   const dx = e.pos.x - player.pos.x;
   const dz = e.pos.z - player.pos.z;
   return dx * dx + dz * dz <= (pr + er) * (pr + er);
@@ -76,12 +76,16 @@ function respawnPlayer(world: World, x: number, z: number, invuln: number): void
   world.player.invulnTtl = invuln;
 }
 
-// restartLevel clears the current combat and re-runs the level's opening (waves/bosses). It is
-// supplied by the sim, which holds the level definition + wave context.
+// Where a spent life resumes play, decided by the levelState checkpoint policy the sim supplies:
+// boss fights respawn in place (the fight — and the boss's damage — continues), part 2 restarts
+// at WAVES_B, a docking crash proceeds to the shop, anything earlier restarts the level. The
+// callback resets the world as needed and returns the respawn point. [ROC-BOSS-5,6,7, ROC-DCKG-4]
+export type DeathResume = (deathX: number, deathZ: number) => { x: number; z: number };
+
 export function gamestateSystem(
   world: World,
   dt: number,
-  restartLevel?: () => void,
+  resume?: DeathResume,
   cfg: GamestateConfig = DEFAULT_GAMESTATE,
 ): void {
   if (world.mode === 'GAME_OVER') return;
@@ -128,7 +132,7 @@ export function gamestateSystem(
     }
 
     world.events.push({ type: 'lifeLost', lives: world.player.lives });
-    respawnPlayer(world, 0, 0, cfg.respawnInvuln);
-    restartLevel?.();
+    const at = resume?.(dx, dz) ?? { x: 0, z: 0 };
+    respawnPlayer(world, at.x, at.z, cfg.respawnInvuln);
   }
 }

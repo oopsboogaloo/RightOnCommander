@@ -12,6 +12,10 @@ export interface WorldSnapshot {
   levelIndex: number;
   levelState: string;
   levelTimer: number;
+  scroll: number;
+  bossFadeTtl: number;
+  ecm: { fuse: number; cooldown: number };
+  hermitWaveId: number | null;
   difficulty: number;
   entities: Entity[];
   nextId: number;
@@ -28,6 +32,7 @@ export interface WorldSnapshot {
       killed: number;
       escaped: boolean;
       spawn: WaveSpawnState | null;
+      open?: boolean;
     }[];
   };
   unlocks: { eliteMode: boolean; thargoidShip: boolean };
@@ -42,6 +47,10 @@ export function snapshot(world: World): WorldSnapshot {
     levelIndex: world.levelIndex,
     levelState: world.levelState,
     levelTimer: world.levelTimer,
+    scroll: world.scroll,
+    bossFadeTtl: world.bossFadeTtl,
+    ecm: { ...world.ecm },
+    hermitWaveId: world.hermitWaveId,
     difficulty: world.difficulty,
     entities: Array.from(world.entities.values()).map((e) => structuredClone(e)),
     nextId: world.nextId,
@@ -58,6 +67,7 @@ export function snapshot(world: World): WorldSnapshot {
         killed: rec.killed,
         escaped: rec.escaped,
         spawn: rec.spawn ? { ...rec.spawn, params: { ...rec.spawn.params } } : null,
+        open: rec.open,
       })),
     },
     unlocks: { ...world.unlocks },
@@ -73,6 +83,10 @@ export function restore(world: World, snap: WorldSnapshot): void {
   world.levelIndex = snap.levelIndex;
   world.levelState = snap.levelState;
   world.levelTimer = snap.levelTimer;
+  world.scroll = snap.scroll;
+  world.bossFadeTtl = snap.bossFadeTtl;
+  world.ecm = { ...snap.ecm };
+  world.hermitWaveId = snap.hermitWaveId;
   world.difficulty = snap.difficulty;
 
   world.entities = new Map(structuredClone(snap.entities).map((e) => [e.id, e]));
@@ -93,6 +107,7 @@ export function restore(world: World, snap: WorldSnapshot): void {
           killed: rec.killed,
           escaped: rec.escaped,
           spawn: rec.spawn ? { ...rec.spawn, params: { ...rec.spawn.params } } : null,
+          open: rec.open,
         },
       ]),
     ),
