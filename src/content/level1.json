@@ -1,7 +1,13 @@
 {
   "id": "level1",
   "name": "Lave",
-  "launchMs": 1500,
+  "facts": [
+    "Lave is most famous for its vast rain forests",
+    "and the Laveian tree grub.",
+    "Mainly agricultural. Dictatorship. Tech level 5.",
+    "All pilots start their careers at Lave station."
+  ],
+  "launchMs": 2500,
   "asteroidWaves": [
     {
       "count": 6,
@@ -393,7 +399,7 @@
       }
     }
   ],
-  "endBoss": "fer_de_lance",
+  "endBoss": "fer_de_lance_boss",
   "viper": {
     "id": "l1v",
     "pattern": "side_stream",

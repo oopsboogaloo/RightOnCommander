@@ -4,6 +4,6 @@
     "sidewinder":   { "name": "Sidewinder",   "meshId": "sidewinder",   "shield": 1, "hull": 2, "hardpoints": { "front": 2, "rear": 1, "left": 0, "right": 0 }, "colliderRx": 0.30, "colliderRz": 0.30, "price": 0 },
     "cobra_mk3":    { "name": "Cobra Mk III",  "meshId": "cobra_mk3",    "shield": 2, "hull": 3, "hardpoints": { "front": 2, "rear": 1, "left": 1, "right": 1 }, "colliderRx": 0.45, "colliderRz": 0.30, "price": 2000 },
     "asp_mk2":      { "name": "Asp Mk II",     "meshId": "asp_mk2",      "shield": 3, "hull": 3, "hardpoints": { "front": 3, "rear": 2, "left": 2, "right": 2 }, "colliderRx": 0.50, "colliderRz": 0.35, "price": 8000 },
-    "fer_de_lance": { "name": "Fer-de-Lance",  "meshId": "fer_de_lance", "shield": 4, "hull": 4, "hardpoints": { "front": 3, "rear": 3, "left": 3, "right": 3 }, "colliderRx": 0.45, "colliderRz": 0.35, "price": 20000 }
+    "fer_de_lance": { "name": "Fer-de-Lance",  "meshId": "fer_de_lance", "shield": 4, "hull": 4, "hardpoints": { "front": 3, "rear": 3, "left": 3, "right": 3 }, "colliderRx": 0.45, "colliderRz": 0.35, "price": 20000, "scale": 1.5 }
   }
 }

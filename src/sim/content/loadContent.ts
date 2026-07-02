@@ -17,11 +17,16 @@ const num = (v: unknown, where: string): number => {
   return v;
 };
 
+const BOSS_BEHAVIORS = ['hermit', 'strafe'] as const;
+
 function parseEnemies(raw: unknown): Record<string, EnemyDef> {
   if (!isObj(raw)) throw new Error('content: "enemies" must be an object');
   const out: Record<string, EnemyDef> = {};
   for (const [name, v] of Object.entries(raw)) {
     if (!isObj(v)) throw new Error(`content: enemy '${name}' must be an object`);
+    if (v.behavior !== undefined && !BOSS_BEHAVIORS.includes(v.behavior as (typeof BOSS_BEHAVIORS)[number])) {
+      throw new Error(`content: enemy '${name}' has unknown behavior '${String(v.behavior)}'`);
+    }
     out[name] = {
       hull: num(v.hull, `enemy ${name}.hull`),
       bounty: num(v.bounty, `enemy ${name}.bounty`),
@@ -29,6 +34,10 @@ function parseEnemies(raw: unknown): Record<string, EnemyDef> {
       meshId: typeof v.meshId === 'string' ? v.meshId : undefined,
       colliderRx: v.colliderRx === undefined ? undefined : num(v.colliderRx, `enemy ${name}.colliderRx`),
       colliderRz: v.colliderRz === undefined ? undefined : num(v.colliderRz, `enemy ${name}.colliderRz`),
+      scale: v.scale === undefined ? undefined : num(v.scale, `enemy ${name}.scale`),
+      ecm: v.ecm === undefined ? undefined : !!v.ecm,
+      behavior: v.behavior as EnemyDef['behavior'],
+      cargoDrops: v.cargoDrops === undefined ? undefined : num(v.cargoDrops, `enemy ${name}.cargoDrops`),
     };
   }
   return out;
@@ -90,8 +99,14 @@ function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
   if (asteroidWaves !== undefined && !Array.isArray(asteroidWaves)) {
     throw new Error('content: "level.asteroidWaves" must be an array');
   }
+  const facts = raw.facts;
+  if (facts !== undefined && (!Array.isArray(facts) || facts.some((f) => typeof f !== 'string'))) {
+    throw new Error('content: "level.facts" must be an array of strings');
+  }
   return {
     id: typeof raw.id === 'string' ? raw.id : 'level',
+    name: typeof raw.name === 'string' ? raw.name : undefined,
+    facts: facts as string[] | undefined,
     launchMs: raw.launchMs === undefined ? undefined : num(raw.launchMs, 'level.launchMs'),
     asteroidWaves: asteroidWaves?.map((w, i) => parseAsteroidWave(w, `level.asteroidWaves[${i}]`)),
     wavesA: group('wavesA'),

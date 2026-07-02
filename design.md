@@ -1,6 +1,8 @@
 # Right on Commander — Design
 
-**Version:** 0.5 (draft — all design decisions resolved)
+**Version:** 0.6 (draft — all design decisions resolved)
+
+> **Changelog 0.5 → 0.6:** Designed the **boss encounters, docking and hyperspace** (requirements §3.23–3.27). The sim now owns a **`world.scroll` factor** (1 normal, 0 during boss fights, ramping >1 through hyperspace) that the render starfield consumes — scroll-stop is game state, not a render effect. The **level FSM** gains `HYPERSPACE`/`INFO` up front and a `DOCKING` approach phase before `DOCK`; death resolution branches on `levelState` (boss states respawn **in place** with all entities kept; `WAVES_B` restarts part 2; part 1 keeps the restart-level default). Entities gain an optional **per-entity `scale`** multiplier honoured by both the renderer and collision (FdL 1.5×, boss FdL 2.0×, hermit/dock station 2× Coriolis). New **boss ECM** system (300 ms fuse, harmless missile detonation, 500 ms cooldown, "ECM" caption) and two boss `ai` archetypes: `hermit` (y-rotation, port-aligned triple damage, adder launcher) and `strafe` (rounded-rect track, random direction reversals, timed aimed fire). See §12a.
 
 > **Changelog 0.4 → 0.5:** Shields reworked to **hug the hull silhouette** instead of a separate ellipse — see §8 (Collision & damage model) and the Shields entry under §7 (Rendering). Collision, the drawn rings, and ship-to-ship ramming all now derive from the same `hullRadius`/`shieldGap`/`offsetPolygonPath` primitives, so a shot lands exactly where the outermost ring is drawn.
 
@@ -171,6 +173,7 @@ A lightweight **entity + components** model (struct-of-fields, not a heavy ECS �
  *  @property {number} yaw         // facing (path tangent / heading)
  *  @property {number} bank        // roll angle, ∝ lateral motion [ROC-MOV-3, ROC-ENM-3]
  *  @property {string} [meshId]
+ *  @property {number} [scale]     // per-entity size multiplier over SHIP_SCALE; render + collision [ROC-FDL-1]
  *  @property {number} [shield]    // remaining shield rings [ROC-DMG-3]
  *  @property {number} [shieldMax]
  *  @property {number} [hull]
@@ -343,11 +346,22 @@ A single `difficulty` value scales **enemy count per wave** (primary live lever)
 
 ## 12. State machines
 
-### Level FSM (`levelstate.js`) `[ROC-LVL-1,2]`
-`LAUNCH (Coriolis / witchspace) → WAVES_A → MID_BOSS → WAVES_B → END_BOSS → [VIPER_INTERCEPT if contraband] → DOCK → STATION`. Death branches per §3.16.
+### Level FSM (`levelstate.js`) `[ROC-LVL-1,2, ROC-BOSS, ROC-DCKG, ROC-HYP]`
+`LAUNCH (Coriolis departure / witchspace) → HYPERSPACE → INFO → [ASTEROIDS] → WAVES_A → MID_BOSS → WAVES_B → END_BOSS → [VIPER_INTERCEPT if contraband] → DOCKING → DOCK → STATION`. Death branches per §3.16 as refined by ROC-BOSS-5..7 (see §12a). `MID_BOSS`/`END_BOSS` set `world.scroll = 0` and run the boss-bar/kill-text framing; `DOCKING` is the playable station-approach minigame; `DOCK` remains the shop.
 
 ### Game FSM (`gamestate.js`) `[ROC-PROG-1,2]`
-`TITLE → (fly-in) → LEVEL[1..4] → COMPLETE → (unlock Elite) → ELITE LEVEL[1..4] → (unlock Thargoid) → TITLE`. Death: `lives--`; escape-pod ⇒ respawn at death pos (consume pod); else restart current level; `lives==0` ⇒ GAME_OVER → score submit. `[ROC-LIFE-2,3,5]`
+`TITLE → (fly-in) → LEVEL[1..4] → COMPLETE → (unlock Elite) → ELITE LEVEL[1..4] → (unlock Thargoid) → TITLE`. Death: `lives--`; escape-pod ⇒ respawn at death pos (consume pod); else respawn per the `levelState` checkpoint policy — **boss states**: respawn in place, keep every entity (boss damage persists); **WAVES_B**: restart part 2 only; **anything earlier**: restart the level; `lives==0` ⇒ GAME_OVER → score submit. `[ROC-LIFE-2,3,5; ROC-BOSS-5,6,7]`
+
+### 12a. Boss encounters, docking & hyperspace `[requirements §3.23–3.27]`
+
+- **Scroll is sim state.** `world.scroll` (number, default 1) is the single scroll factor: 0 while a boss is alive (and until the kill text fades), ramping up then back down through `HYPERSPACE`. The renderer's starfield multiplies its drift by it and stretches dots into lines as it grows (full-screen-height lines at peak) — so tests assert scroll-stop on state, never pixels. `[ROC-BOSS-1, ROC-HYP-3,4]`
+- **Boss framing** is shell-rendered from state + events: the health bar reads `boss.hull/hullMax` (horizontal, black-and-white, top of screen); on `bossKilled` the shell plays the explosion, then fades in/out "RIGHT ON COMMANDER" in white; the FSM holds in the boss state until the fade timer elapses, then resumes scroll and advances. `[ROC-BOSS-2,3,4]`
+- **Boss ECM** (`systems/ecm.ts`): world-level `{fuseTtl, cooldownTtl}` armed whenever an ECM-flagged boss is alive and a player missile launches; after the 300 ms fuse, remove every player missile (no damage application), emit `{type:'ecm'}` (screen flash + "ECM" caption at the bottom), enter the 500 ms cooldown. Dies with the boss. `[ROC-BECM-1..4]`
+- **Per-entity `scale`** multiplies `SHIP_SCALE` in the renderer's model matrix *and* in collision (silhouette scaling, `hullRadius`, ram tests) so hitbox always matches sprite. Content sets it: FdL 1.5 (ships.json + enemies.json), boss FdL 2.0, hermit and the docking Coriolis 2× the Coriolis' current drawn size. `[ROC-FDL-1, ROC-HERM-2, ROC-DCKG-1]`
+- **Hermit** (`ai.kind:'hermit'`): fixed at top-centre, slow y-spin with the docking port on the rotation axis facing the play plane; the port is a rectangle rendered over the hull — a "direct port hit" is judged by the **shot's path** (impact point traced forward along its velocity crossing the port rectangle), since collision stops a projectile at the hull's rim while the port sits on the face at the centre; such hits apply 3× damage. An adder launcher (5 s cadence, ≤3 alive, launch-from-rock spawns inherit the rock's current yaw and unwind in flight, else edge entry) runs until death; on death survivors switch to flee paths, and one whole-fight wave record backs the 50% bonus. `[ROC-HERM-*]`
+- **Strafe boss** (`ai.kind:'strafe'`): position parameterised along a rounded-rectangle track (arc-length t, signed direction); direction flips when an rng timer in [200, 2000] ms expires; aimed shot every 400 ms. `[ROC-FDL-3,4]`
+- **Docking** (`DOCKING`): weapons/missiles disabled; the 2× Coriolis scrolls down into the top of the field spinning slowly on y. Dock test: player silhouette fully inside the port rectangle **while** the port's long axis is within 30° of horizontal ⇒ enter `DOCK`; player-vs-station hull contact ⇒ death (normal life loss), and with lives remaining the FSM proceeds to `DOCK` anyway (no retry). `[ROC-DCKG-1..4]`
+- **Launch & hyperspace**: `LAUNCH` renders the departure Coriolis (pointing up-screen) scrolling away below the player; `HYPERSPACE` emits per-second countdown events (`Hyperspace <system> 5…1`, system name from level content), drives the `world.scroll` ramp, and hands over to `INFO` — a fading card of Elite-flavour facts for the level's system (extends blurbs content) — before the level proper. Plays on every launch, including the first. `[ROC-HYP-1..5]`
 
 ---
 

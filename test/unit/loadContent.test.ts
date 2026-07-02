@@ -9,8 +9,16 @@ describe('loadContent', () => {
   it('loads the bundled Level 1 content', () => {
     const { enemies, level } = loadContent({ enemies: enemiesJson, level: level1Json });
     expect(enemies.fer_de_lance.bounty).toBe(250);
+    expect(enemies.fer_de_lance.scale).toBe(1.5); // FdL rescaled everywhere [ROC-FDL-1]
+    expect(enemies.fer_de_lance_boss.scale).toBe(2); // boss FdL is 2.0x [ROC-FDL-1]
+    expect(enemies.fer_de_lance_boss.shield).toBe(8); // [ROC-FDL-2]
+    expect(enemies.fer_de_lance_boss.ecm).toBe(true);
+    expect(enemies.hermit.behavior).toBe('hermit');
+    expect(enemies.hermit.meshId).toBe('asteroid'); // asteroid, not the station placeholder [ROC-HERM-1]
     expect(level?.midBoss).toBe('hermit');
-    expect(level?.endBoss).toBe('fer_de_lance');
+    expect(level?.endBoss).toBe('fer_de_lance_boss');
+    expect(level?.name).toBe('Lave'); // hyperspace destination [ROC-HYP-2]
+    expect(level?.facts?.length).toBeGreaterThan(0); // info-card facts [ROC-HYP-5]
     expect(level?.wavesA.length).toBe(13);
     expect(level?.wavesB.length).toBe(13);
     expect(enemies.transporter.hull).toBe(12); // tanky, unarmed freighter [ROC-TR-3]

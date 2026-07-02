@@ -11,7 +11,7 @@ A vertically scrolling space shooter for web and mobile, themed on the classic 8
   vector renderer. Tests with **Vitest + fast-check**. **Python** is used for offline tooling only
   (the bbcelite ship-data → mesh parser).
 
-> Authoritative specs live in `requirements.md` (v1.6), `design.md` (v0.5) and `tasks.md`.
+> Authoritative specs live in `requirements.md` (v1.7), `design.md` (v0.6) and `tasks.md`.
 > If anything here disagrees with those, the design/tasks docs win — update this file to match.
 
 ## Architecture (one-line version)

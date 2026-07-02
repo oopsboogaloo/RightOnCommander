@@ -47,6 +47,15 @@ export function dropsSystem(world: World, rng?: Rng): void {
     if (ev.type !== 'destroyed') continue;
     const at = (ev.pos as Vec3) ?? vec3();
 
+    // A boss cargo haul: n random commodities scattered around the wreck. Runs alongside any
+    // explicit power-up drop (the hermit sheds its laser AND 10 canisters). [ROC-HERM-10, ROC-FDL-5]
+    if (typeof ev.cargoDrops === 'number' && ev.cargoDrops > 0 && rng) {
+      for (let i = 0; i < ev.cargoDrops; i++) {
+        const off = { x: at.x + rng.range(-0.45, 0.45), y: at.y, z: at.z + rng.range(-0.45, 0.45) };
+        spawnPickup(world, off, 'cargo', COMMODITIES[rng.int(COMMODITIES.length)]);
+      }
+    }
+
     // Explicit power-up drop (guaranteed, e.g. the mid-boss laser).
     if (typeof ev.drops === 'string') {
       spawnPickup(world, at, ev.drops as PickupType);

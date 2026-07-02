@@ -27,22 +27,32 @@ class Starfield {
     }
   }
 
-  update(dt: number): void {
+  // `scroll` is the sim-owned factor: 0 halts the field for boss fights, 1 is the normal
+  // drift, and hyperspace ramps it far past 1. [ROC-BOSS-1, ROC-HYP-3]
+  update(dt: number, scroll = 1): void {
     for (const s of this.stars) {
-      s.y += dt * 0.05 * s.z; // slow downward scroll, nearer stars faster [ROC-VIS-7]
+      s.y += dt * 0.05 * s.z * scroll;
       if (s.y >= 1) {
-        s.y -= 1;
+        s.y -= s.y | 0; // hyperspace can advance more than a full wrap per frame
         s.x = Math.random();
       }
     }
   }
 
-  draw(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+  draw(ctx: CanvasRenderingContext2D, w: number, h: number, scroll = 1, hyperPeak = 30): void {
+    // Past normal speed the dots stretch into vertical lines, reaching full screen height at
+    // the hyperspace peak, then shrink back as the jump settles. [ROC-HYP-3,4]
+    const stretch = Math.max(0, Math.min(1, (scroll - 1) / (hyperPeak - 1)));
     for (const s of this.stars) {
       const shade = Math.round(120 + s.z * 135);
       ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
       const size = s.z * 1.6;
-      ctx.fillRect(s.x * w, s.y * h, size, size);
+      if (stretch <= 0) {
+        ctx.fillRect(s.x * w, s.y * h, size, size);
+      } else {
+        const len = Math.max(size, stretch * h * (0.5 + 0.5 * s.z));
+        ctx.fillRect(s.x * w, s.y * h - len, size, len);
+      }
     }
   }
 }
@@ -79,13 +89,13 @@ export class Renderer2D implements Renderer {
     return { x: this.cx + p.x * this.scale, y: this.cy - p.y * this.scale };
   }
 
-  beginFrame(): void {
+  beginFrame(scroll = 1): void {
     this.refreshViewport();
     const { ctx } = this;
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, this.w, this.h);
-    this.starfield.update(1 / 60);
-    this.starfield.draw(ctx, this.w, this.h);
+    this.starfield.update(1 / 60, scroll);
+    this.starfield.draw(ctx, this.w, this.h, scroll);
   }
 
   drawMesh(mesh: Mesh, xform: unknown, opts: DrawOpts = {}): void {

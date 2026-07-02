@@ -45,6 +45,8 @@ export interface WaveRecord {
   killed: number; // members destroyed by the player
   escaped: boolean; // any member flew off-field (forfeits the bonus) [ROC-ECO-1a]
   spawn: WaveSpawnState | null;
+  open?: boolean; // still accepting members (open-ended boss escorts); never resolves while
+  // open, so an empty moment mid-fight doesn't award the bonus early [ROC-HERM-12]
 }
 
 // Pending-spawn schedule for one wave of the level-opening asteroid field (drifting rocks that
@@ -64,7 +66,13 @@ export interface World {
   mode: string; // gamestate FSM tag
   levelIndex: number;
   levelState: string; // levelstate FSM tag
-  levelTimer: number; // seconds remaining for timed level phases (launch/dock)
+  levelTimer: number; // seconds remaining for timed level phases (launch/hyperspace/info)
+  scroll: number; // starfield scroll factor: 1 normal, 0 during boss fights, >1 through
+  // hyperspace — sim-owned so scroll-stop is game state, not a render effect [ROC-BOSS-1, ROC-HYP-3]
+  bossFadeTtl: number; // "RIGHT ON COMMANDER" fade after a boss kill; the FSM holds the boss
+  // state (and scroll stays 0) until it expires [ROC-BOSS-3,4]
+  ecm: { fuse: number; cooldown: number }; // boss ECM: fuse < 0 idle, else seconds to detonation [ROC-BECM-1,2]
+  hermitWaveId: number | null; // the open whole-fight escort wave, for the 50% bonus [ROC-HERM-12]
   difficulty: number; // global difficulty (1 = normal); scales count + enemy stats [ROC-DIF-1,2]
   entities: Map<number, Entity>;
   nextId: number;
@@ -107,6 +115,10 @@ export function makeWorld(seed: number): World {
     levelIndex: 0,
     levelState: 'LAUNCH',
     levelTimer: 0,
+    scroll: 1,
+    bossFadeTtl: 0,
+    ecm: { fuse: -1, cooldown: 0 },
+    hermitWaveId: null,
     difficulty: 1,
     entities,
     nextId: PLAYER_ID + 1,

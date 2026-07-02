@@ -25,16 +25,18 @@ import { aiSystem } from './systems/ai.js';
 import { missilesSystem } from './systems/missiles.js';
 import { dropsSystem } from './systems/drops.js';
 import { pickupsSystem } from './systems/pickups.js';
-import { startLevel, levelStateSystem, type LevelDef } from './systems/levelstate.js';
+import { startLevel, enterLevelState, levelStateSystem, type LevelDef } from './systems/levelstate.js';
 import { gamestateSystem, DEFAULT_GAMESTATE } from './systems/gamestate.js';
+import { bossSystem } from './systems/boss.js';
+import { ecmSystem } from './systems/ecm.js';
 import { loadContent } from './content/loadContent.js';
 
 // Fixed sim tick, in seconds. Must match the shell loop's DT (platform/loop.ts). [design §3]
 export const SIM_DT = 1 / 120;
 
-// Collision broadphase cell size (world units). Hull silhouettes are wired in once content
-// loading + enemies land (Phase 4); until then unshielded targets fall back to a circle.
-const COLLISION_CELL = 0.6;
+// Collision broadphase cell size (world units). Must stay >= the largest target collider
+// radius — the 2x-scale hermit/boss hulls reach ~0.67. [design §8]
+const COLLISION_CELL = 0.8;
 
 // The single source of truth for on-screen ship size: hull meshes (~1 world unit wide) are
 // drawn — and collided — at this fraction so the hitbox matches the sprite. The renderer
@@ -91,9 +93,8 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     hullRadii[id] = hullRadius(silhouettes[id], SHIP_SCALE);
   }
 
-  // Wipe the current combat and re-run the level's opening after a death that costs a life.
-  function restartLevel(): void {
-    if (!level) return;
+  // Wipe the current combat (used before any level/phase restart).
+  function clearCombat(): void {
     for (const e of [...world.entities.values()]) {
       if (
         e.kind === 'enemy' ||
@@ -101,13 +102,49 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
         e.kind === 'asteroid' ||
         e.kind === 'projectile' ||
         e.kind === 'missile' ||
-        e.kind === 'pickup'
+        e.kind === 'pickup' ||
+        e.kind === 'station'
       ) {
         world.entities.delete(e.id);
       }
     }
     world.waves.active.clear();
+    world.hermitWaveId = null;
+    world.ecm = { fuse: -1, cooldown: 0 };
+  }
+
+  // Re-run the level's opening after a death that costs a life.
+  function restartLevel(): void {
+    if (!level) return;
+    clearCombat();
     startLevel(world, level, waveCtx);
+  }
+
+  // Death checkpoint policy: where a spent life resumes. Boss fights respawn the player in
+  // place and continue (the boss keeps its damage); a part-2 death resumes at the start of
+  // part 2; a docking crash proceeds straight to the shop; anything earlier restarts the
+  // level. Returns the respawn point. [ROC-BOSS-5,6,7, ROC-DCKG-4]
+  function resumeAfterDeath(deathX: number, deathZ: number): { x: number; z: number } {
+    if (!level) return { x: 0, z: 0 };
+    switch (world.levelState) {
+      case 'MID_BOSS':
+      case 'END_BOSS':
+      case 'VIPER_INTERCEPT':
+        return { x: deathX, z: deathZ }; // fight on — nothing is reset [ROC-BOSS-5]
+      case 'WAVES_B':
+        clearCombat();
+        world.scroll = 1;
+        world.bossFadeTtl = 0;
+        enterLevelState(world, 'WAVES_B', level, waveCtx); // part-2 checkpoint [ROC-BOSS-6]
+        return { x: 0, z: 0 };
+      case 'DOCKING':
+        clearCombat();
+        enterLevelState(world, 'DOCK', level, waveCtx); // crash still reaches the shop [ROC-DCKG-4]
+        return { x: 0, z: 0 };
+      default:
+        restartLevel();
+        return { x: 0, z: 0 };
+    }
   }
 
   function step(input: InputFrame): SimEvent[] {
@@ -117,9 +154,11 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     movementSystem(world, input, SIM_DT);
     weaponsSystem(world, input, SIM_DT);
     missilesSystem(world, SIM_DT);
+    ecmSystem(world, SIM_DT); // boss ECM pops player missiles after its fuse [ROC-BECM-*]
     waveSystem(world, rng, SIM_DT, waveCtx);
     asteroidFieldSystem(world, rng, SIM_DT);
     aiSystem(world, SIM_DT);
+    bossSystem(world, rng, SIM_DT, waveCtx); // hermit spin/escorts + FdL strafe track [ROC-HERM-*, ROC-FDL-*]
     if (level) levelStateSystem(world, SIM_DT, level, waveCtx);
     const hits = collisionSystem(world, {
       dt: SIM_DT,
@@ -129,7 +168,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
       colliderScale: SHIP_SCALE,
     });
     damageSystem(world, hits, SIM_DT);
-    gamestateSystem(world, SIM_DT, restartLevel, {
+    gamestateSystem(world, SIM_DT, resumeAfterDeath, {
       ...DEFAULT_GAMESTATE,
       colliderScale: SHIP_SCALE,
       getSilhouette: (id) => silhouettes[id],

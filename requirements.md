@@ -1,9 +1,11 @@
 # Right on Commander — Requirements Specification
 
-**Version:** 1.6 (draft — all design decisions resolved)
+**Version:** 1.7 (draft — all design decisions resolved)
 **Author:** Chloe
 **Notation:** EARS (Easy Approach to Requirements Syntax)
 **Status:** Spec under construction — review
+
+> **Changelog 1.6 → 1.7:** Specified the **mid- and end-of-level boss fights**. Added **§3.23 Boss encounters** (scroll stops for the fight, horizontal black-and-white boss health bar at the top of the screen, "RIGHT ON COMMANDER" kill text that fades, scroll resumes; **boss ECM** that harmlessly detonates player missiles 300 ms after launch on a 500 ms cooldown with an "ECM" caption; death at a boss respawns **in place** with the boss keeping its damage, death in part 2 resumes at the **start of part 2** — refining ROC-LIFE-2). Added **§3.24 L1 mid-boss: pirate hermit asteroid** (asteroid mesh replacing the Coriolis placeholder, Coriolis-style docking-port rectangle on the rotation axis, 2× Coriolis size at top-centre, slow y-rotation, adder launches every 5 s capped at 3 alive, no shields / 30-hit hull with **triple damage on the docking port**, 1,000 cr + guaranteed laser + 10 random cargo, survivors flee, whole-fight adder wave bonus). Added **§3.25 L1 end boss: Fer-de-Lance** (**all FdL rescaled 1.5×, including the player's; the boss renders 2.0×**, 8 shield rings, boss ECM, fast rounded-rectangle strafing track with direction reversals every 200–2000 ms, aimed laser every 400 ms, 1,000 cr + 10 cargo). Added **§3.26 Docking sequence** (2× rotating Coriolis scrolls in, guns/missiles disabled, dock through the port when within 30° of horizontal; collision = death, then the shop if lives remain) and **§3.27 Launch & hyperspace** (Coriolis departure on **every** launch, "Hyperspace [destination] 5" countdown, starfield stretches to full-height lines then settles, system info card with Elite facts).
 
 > **Changelog 1.5 → 1.6:** **Shields now hug the hull** instead of a separate ellipse (ROC-DMG-1,2,3,5 revised) — the collision shape and the rendered rings are both the hull's own silhouette, offset outward by a small gap (proportional to hull size), one increment per remaining ring; ship-to-ship ramming uses the same silhouette shape (dilated by each side's shield gap) instead of a bounding circle.
 
@@ -173,8 +175,8 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
 - **ROC-L1-1** The system shall fill the level with **drifting asteroids that fragment into boulders** when shot.
 - **ROC-L1-2** The system shall spawn **occasional lone Sidewinder / Krait / Gecko / Adder** pirates.
 - **ROC-L1-3** The system shall make asteroids **sometimes yield Alloys, Metals, Gems or Crystals**.
-- **ROC-L1-4** The system shall provide a **mid-level boss: a well-defended hermit asteroid**.
-- **ROC-L1-5** The system shall provide an **end boss: a Fer-de-Lance**.
+- **ROC-L1-4** The system shall provide a **mid-level boss: a well-defended hermit asteroid** (fight detailed in §3.24).
+- **ROC-L1-5** The system shall provide an **end boss: a Fer-de-Lance** (fight detailed in §3.25).
 
 **Level 2 — Deep space**
 - **ROC-L2-1** The system shall spawn **more dangerous pirates** in **more elaborate multi-ship attack waves**.
@@ -389,6 +391,62 @@ Shown on docking (§3.9), between levels.
 - **ROC-TR-3** The system shall make a transporter **take more hits to destroy** than the player might expect (high hull).
 - **ROC-TR-4** When a transporter is destroyed, the system shall **always drop a significant pickup**.
 
+### 3.23 Boss encounters (v1.7)
+
+Framing shared by **every mid-level and end-of-level boss** (§3.9). Level 1's two fights are detailed in §3.24–3.25; later levels' bosses adopt the same framing with their own content.
+
+- **ROC-BOSS-1** When a boss fight begins, the system shall **stop the starfield scrolling** for the duration of the fight (the play field holds position).
+- **ROC-BOSS-2** While a boss is alive, the system shall display a **horizontal black-and-white boss health bar at the top of the screen** that **reduces as the boss is damaged**.
+- **ROC-BOSS-3** When a boss is destroyed, after its explosion the system shall display the text **"RIGHT ON COMMANDER"** in white, then **fade it out**. *(This deliberately reuses the Elite-rating cry of ROC-RTG-3; both usages are retained.)*
+- **ROC-BOSS-4** When the boss-kill text has faded, the system shall **resume scrolling**: after a **mid-level** boss, the second half of the level (WAVES_B) plays; after an **end-of-level** boss, a space station scrolls into view for the docking sequence (§3.26).
+- **ROC-BOSS-5** *(respawn in place)* When the player dies during a boss fight, the system shall **respawn the player in place to continue the fight** — the boss (and any escorts) **retain their current damage and state**; a life is still deducted per §3.16.
+- **ROC-BOSS-6** *(part-2 checkpoint)* When the player dies during **part 2 of a level** (after the mid-boss, before the end boss), the system shall **resume at the start of part 2**, not the start of the level.
+- **ROC-BOSS-7** The system shall treat ROC-BOSS-5/6 as refinements of ROC-LIFE-2: the "restart the current level from its beginning" default now applies only to deaths in **part 1** (before the mid-boss is destroyed). Escape-pod behaviour (ROC-LIFE-3) is unchanged and takes precedence where a pod is held.
+
+**Boss ECM** (carried by both Level 1 bosses; reusable by later bosses):
+
+- **ROC-BECM-1** While a boss with ECM is alive, when the player launches missiles, the system shall — after **300 ms** — **flash the screen** and **harmlessly detonate all player missiles in flight** (no damage to any object).
+- **ROC-BECM-2** The system shall give the boss ECM a **500 ms cooldown** between firings.
+- **ROC-BECM-3** When the boss ECM fires, the system shall **briefly display "ECM" at the bottom of the screen**.
+- **ROC-BECM-4** When the ECM-carrying boss is destroyed, the system shall **end all ECM effects immediately** — missiles fired thereafter are unaffected. *(Design intent: the player cannot lean on missiles against these bosses and must win on aim and movement.)*
+
+### 3.24 Level 1 mid-boss — pirate hermit asteroid (v1.7, refines ROC-L1-4)
+
+- **ROC-HERM-1** The system shall render the hermit as an **asteroid mesh** — replacing the placeholder Coriolis station graphic — with a **rectangle identical to the space station's docking-port rectangle** on its surface representing the docking port.
+- **ROC-HERM-2** The system shall size the hermit asteroid at **twice the size of the current Coriolis station** and position it at the **middle top of the screen**.
+- **ROC-HERM-3** The system shall rotate the asteroid **slowly about its y axis**, with the **docking port aligned on the centre of rotation** so the port is **always on the gameplay surface**.
+- **ROC-HERM-4** Every **5 seconds**, while fewer than **3 adders are on screen**, the system shall spawn an **Adder** that either **launches from the asteroid** or **enters from the left or right screen edge**; spawning continues until the asteroid is destroyed.
+- **ROC-HERM-5** When an adder launches from the asteroid, the system shall spawn it with a **y-axis rotation appropriate to the asteroid's current angle**, then **rotate it back to normal flight attitude** as it flies out.
+- **ROC-HERM-6** The system shall fly the adders on **winding paths around the screen** at **medium-fast** speed, **never colliding with the asteroid**.
+- **ROC-HERM-7** The system shall give the asteroid **no shields** and a hull of **30 hits** (one pulse-laser hit = 1 hit; heavier lasers deal their normal damage multiples).
+- **ROC-HERM-8** When a shot lands **directly on the docking port**, the system shall apply **triple damage**.
+- **ROC-HERM-9** The system shall equip the hermit with the **boss ECM** (ROC-BECM-1..4).
+- **ROC-HERM-10** When the asteroid is destroyed, the system shall award **1,000 cr**, drop the **guaranteed (pulse) laser power-up as normal** (ROC-PWR-6) and **10 random cargo canisters** (per §3.20 rules).
+- **ROC-HERM-11** When the asteroid is destroyed, the system shall make all surviving adders **attempt to fly off screen**.
+- **ROC-HERM-12** The system shall treat **every adder spawned during the fight as one wave** for the bonus: destroying them **all** — including the fleeing survivors, before any exits — awards the standard 50% wave bounty (ROC-ECO-1a); any escape forfeits it.
+
+### 3.25 Level 1 end boss — Fer-de-Lance (v1.7, refines ROC-L1-5)
+
+- **ROC-FDL-1** The system shall rescale the **Fer-de-Lance to 1.5× everywhere it appears — including the player-flown hull** (§3.2) — correcting its under-sized rendering; the **boss FdL shall render at 2.0×** instead.
+- **ROC-FDL-2** The system shall give the boss FdL **8 shield rings** and the **boss ECM** (ROC-BECM-1..4).
+- **ROC-FDL-3** The system shall strafe the boss FdL **fast** around a **rectangular track with rounded corners**, alternating **clockwise and anticlockwise**, **reversing direction at random intervals of 200–2000 ms** — it should be hard to hit.
+- **ROC-FDL-4** While the fight is on, the system shall have the boss **fire its laser at the player every 400 ms**.
+- **ROC-FDL-5** When the boss FdL is destroyed, the system shall reward the player with **10 cargo items** and **1,000 cr**, and display the "RIGHT ON COMMANDER" boss-kill text (ROC-BOSS-3).
+
+### 3.26 End-of-level docking sequence (v1.7, refines the ROC-LVL-1 dock bookend)
+
+- **ROC-DCKG-1** When the end boss's kill text has faded, the system shall **resume scrolling** and scroll a **Coriolis station into view** at **twice the size of the current one** (the old hermit placeholder), **rotating slowly on its y axis**.
+- **ROC-DCKG-2** While the docking sequence is active, the system shall **disable the player's guns and missiles**.
+- **ROC-DCKG-3** When the player moves the ship **into the docking port while the port is oriented within 30° of horizontal**, the system shall dock successfully and present the station shop screen (§3.15).
+- **ROC-DCKG-4** When the ship instead **collides with the station**, the system shall kill the player (**losing a life**, §3.16); if lives remain, the system shall then proceed to the **shop screen** (the dock is not retried); at zero lives the run ends as normal.
+
+### 3.27 Launch & hyperspace sequence (v1.7)
+
+- **ROC-HYP-1** When the player launches — **every level, including the first** — the system shall show the ship **leaving a Coriolis station pointing up-screen**, which then **scrolls out of view behind the player**.
+- **ROC-HYP-2** A few seconds after launch, the system shall show a **text countdown "Hyperspace [destination] 5"**, counting down in seconds, where *destination* is the **target system name for the level** (ROC-LORE-2).
+- **ROC-HYP-3** When the countdown ends, the system shall **rapidly accelerate the starfield**, **stretching the dots into lines until the lines span the full screen height**.
+- **ROC-HYP-4** After a few seconds at full stretch, the system shall **shrink and slow the lines** back into the normal scrolling starfield.
+- **ROC-HYP-5** When hyperspace completes, the system shall resume the level with an **info display showing a few facts about the classic Elite location** (extending the ROC-LORE-1 blurb).
 
 ---
 

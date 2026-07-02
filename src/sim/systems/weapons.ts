@@ -75,9 +75,12 @@ export function weaponsSystem(
   if (player) {
     world.player.fireCooldown = Math.max(0, world.player.fireCooldown - dt);
 
+    // Guns are disabled through the docking approach. [ROC-DCKG-2]
+    const disabled = world.levelState === 'DOCKING';
+
     // Held autofires; a tap fires one shot. Both honour the cooldown. Every installed laser
     // fires along its mount; multiple lasers in one direction fan out slightly. [ROC-LAS-3, ROC-HP-3]
-    if ((input.firing || input.fireTapped) && world.player.fireCooldown <= 0) {
+    if (!disabled && (input.firing || input.fireTapped) && world.player.fireCooldown <= 0) {
       const lasers = world.player.lasers;
       let fired = false;
       for (const { mount, dir } of MOUNT_DIRS) {
