@@ -1,8 +1,10 @@
 name: Deploy to GitHub Pages
 
-# Builds the Vite app and force-publishes dist/ to the gh-pages branch. Point GitHub Pages at
-# "Deploy from a branch -> gh-pages -> / (root)" so it serves the BUILT app, never the raw
-# source index.html. Runs on master.
+# Builds the Vite app and publishes dist/ through the modern GitHub Actions Pages pipeline
+# (actions/deploy-pages). configure-pages flips the site's Pages source to "GitHub Actions"
+# automatically, so no manual Settings change is needed. This replaces the old force-push-to-
+# gh-pages flow, whose internal "pages build and deployment" runs could hang silently; this
+# path deploys directly and fails loudly on timeout instead.
 
 on:
   push:
@@ -10,14 +12,16 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages-deploy
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,17 +33,24 @@ jobs:
 
       - run: npm ci
       - run: npm run build
-      - run: touch dist/.nojekyll # serve files as-is; no Jekyll processing
 
-      - name: Publish dist/ to gh-pages
-        run: |
-          cd dist
-          git init -q
-          git checkout -q -b gh-pages
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -q -m "Deploy ${GITHUB_SHA}"
-          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Configure Pages (sets the site's source to GitHub Actions)
+        uses: actions/configure-pages@v5
+
+      - name: Upload dist/ as the Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          timeout: 300000 # fail loudly after 5 min rather than hanging
