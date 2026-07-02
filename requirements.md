@@ -1,9 +1,11 @@
 # Right on Commander — Requirements Specification
 
-**Version:** 1.5 (draft — all design decisions resolved)
+**Version:** 1.6 (draft — all design decisions resolved)
 **Author:** Chloe
 **Notation:** EARS (Easy Approach to Requirements Syntax)
 **Status:** Spec under construction — review
+
+> **Changelog 1.5 → 1.6:** **Shields now hug the hull** instead of a separate ellipse (ROC-DMG-1,2,3,5 revised) — the collision shape and the rendered rings are both the hull's own silhouette, offset outward by a small gap (proportional to hull size), one increment per remaining ring; ship-to-ship ramming uses the same silhouette shape (dilated by each side's shield gap) instead of a bounding circle.
 
 > **Changelog 1.4 → 1.5:** **Collectables are now inert to weapons fire** — bullets and missiles pass through pickups/cargo; only the player scoop collects them (ROC-PWR-2, ROC-PWR-3, ROC-CARGO-2, revising the earlier "shot fuel explodes / gems shatter"). Added **§3.20 Cargo drops** (enemies sometimes drop cargo from the full commodity list; Alien Items only from Thargoids; collected type shown), **§3.21 Kill-credit display** (floating credit/bonus text rising from the explosion), a **§3.4a directional-hardpoint model** (per-ship hardpoint counts per direction, multiple per direction), a **§3.5a missile-behaviour revision** (smaller, slower, ≤4 alive with oldest-removed, one-at-a-time alternating wings, fire only with an on-screen target, 30 s hard lifetime, per-ship capacity), and **§3.22 Transporters** (slow, unarmed, high-hull enemy that always drops a significant pickup). Playtest tuning: wave fighters weakened and **Level 1 wave count ~5×**.
 
@@ -71,14 +73,14 @@ The player launches from a **Coriolis station**, flies up a scrolling field acro
 - **ROC-SHIP-1a** The system shall **tune ship prices and bounty income so that a player who keeps pace can afford the next ship roughly once per level**; a player who under-earns continues in their current ship into harder levels (risk/reward). *(Exact prices are a tuning parameter — see §5.)*
 - **ROC-SHIP-2** When the player flies a ship, the system shall render it as a faithful 3D wireframe and apply its stats:
 
-  | Order | Ship | Movement | Shield (hp / ellipses) | Hull (hp) | Hardpoints |
-  |------|------|----------|------------------------|-----------|------------|
+  | Order | Ship | Movement | Shield (hp / rings) | Hull (hp) | Hardpoints |
+  |------|------|----------|----------------------|-----------|------------|
   | 1 | Sidewinder | very quick, low mass | 1 | 2 | 1 |
   | 2 | Cobra Mk III | fast, mid mass | 2 | 3 | 2 |
   | 3 | Asp Mk II | mid speed, mid mass, larger than Cobra | 3 | 3 | 3 |
   | 4 | Fer-de-Lance | heavy, sluggish | 4 | 4 | 4 |
 
-- **ROC-SHIP-3** The system shall treat **shield hp as the number of concentric shield ellipses** (§3.3) for the player ship.
+- **ROC-SHIP-3** The system shall treat **shield hp as the number of concentric shield rings** (§3.3) for the player ship.
 - **ROC-SHIP-4** The system shall cap the player's equipped lasers at the ship's hardpoint count, with **at most one laser per firing direction** (front, rear, left, right) — see §3.4.
 - **ROC-SHIP-5** When the player buys a new ship, the system shall **carry equipped weapons forward** and re-fit them up to the new hull's hardpoint count (since each step up the ladder adds a hardpoint, no laser is lost).
 - **ROC-SHIP-6** Where the player has unlocked it (ROC-PROG-2), the system shall offer the **Thargoid ship as a playable bonus craft** beyond the four-ship ladder.
@@ -87,11 +89,11 @@ The player launches from a **Coriolis station**, flies up a scrolling field acro
 
 Applies to enemies and (assumed) the player — see §5.
 
-- **ROC-DMG-1** While shielded, the system shall use an **elliptical collision shape** around the hull.
-- **ROC-DMG-2** While shielded, when hit, the system shall briefly **flash the shield ellipse** and shall **not** flash the hull (the shield absorbed it).
-- **ROC-DMG-3** The system shall render shield strength as **concentric ellipses**, the **count indicating remaining strength**.
+- **ROC-DMG-1** While shielded, the system shall use a collision shape that **hugs the hull's own silhouette**, offset outward by a small gap proportional to the hull's size (one gap increment per remaining shield ring), rather than an unrelated ellipse.
+- **ROC-DMG-2** While shielded, when hit, the system shall briefly **flash the shield ring** and shall **not** flash the hull (the shield absorbed it).
+- **ROC-DMG-3** The system shall render shield strength as **concentric rings that hug the hull's silhouette** (rounded outward offset, larger gap per ring outward), the **count indicating remaining strength**; rings render white at ~50% opacity, briefly brightening on absorb, and track the ship's own yaw and bank.
 - **ROC-DMG-4** The system shall allow **different ship types to have different maximum shield strengths**.
-- **ROC-DMG-5** When shields deplete, the system shall switch the collision shape to the **hull** outline.
+- **ROC-DMG-5** When shields deplete, the system shall switch the collision shape to the **hull** outline (undilated).
 - **ROC-DMG-6** While unshielded, when the hull is hit, the system shall **briefly flash the whole object white** and emit **lines-and-dots fragments** blown off the ship's own wireframe.
 - **ROC-DMG-6a** The system shall apply the white-damage-flash rule to **any object that takes hull damage** (player, enemies, bosses, destructible hazards), reserving the shield flash (ROC-DMG-2) for hits a shield absorbs.
 - **ROC-DMG-7** While the hull is significantly damaged, the system shall display persistent **white smoke and fire** particles on that ship.
@@ -207,7 +209,7 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
 
 - **ROC-HUD-1** The system shall run in **portrait aspect ratio**.
 - **ROC-HUD-2** The system shall display **no persistent HUD except score, credits and lives**, as simple white text.
-- **ROC-HUD-3** The system shall keep the screen otherwise clear and convey player shield/hull state **entirely diegetically** — via the player ship's own shield ellipses and hull-damage particles (§3.3) — with no gauges or bars.
+- **ROC-HUD-3** The system shall keep the screen otherwise clear and convey player shield/hull state **entirely diegetically** — via the player ship's own shield rings and hull-damage particles (§3.3) — with no gauges or bars.
 
 ### 3.12 Controls
 
@@ -417,7 +419,7 @@ The game shall be architected so that **almost all of it can be tested headless*
 
 All design open-questions are resolved:
 
-1. **Player self-status** — no HUD; status is fully diegetic via shield ellipses + hull-damage visuals (ROC-HUD-3). ✔
+1. **Player self-status** — no HUD; status is fully diegetic via shield rings + hull-damage visuals (ROC-HUD-3). ✔
 2. **Gems when shot** — shatter (ROC-PWR-3). ✔
 3. **Missile levels** — upgradable at the station, still timed (ROC-ECO-9, ROC-STN-5b). ✔
 4. **Pricing & balance** — ship / pod / life / missile costs are tuning parameters, set against per-level bounty income via the **TS balance-simulation auto-player** (Vitest, design.md §15) once playable (ROC-SHIP-1a). ✔ (approach agreed; exact numbers are a build-time tuning task)

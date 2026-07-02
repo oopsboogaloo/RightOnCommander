@@ -1,7 +1,7 @@
 # Right on Commander — Tasks
 
 **Version:** 0.2 (draft)
-**Derives from:** requirements.md v1.4, design.md v0.4
+**Derives from:** requirements.md v1.6, design.md v0.5
 **Stack:** TypeScript + Canvas 2D + Vite + Vitest/fast-check; Python for the ship-data parser only.
 
 ## How to read this
@@ -72,9 +72,9 @@ Dependencies flow top-down unless noted. IDs are stable; insert with letters (T4
 
 ## Phase 3 — Combat core
 
-- [ ] **T3.1 — Collision.**
-  **Do:** `systems/collision.ts` — spatial-hash broadphase; **shield-ellipse** test; **hull convex-polygon** test (silhouette precomputed per mesh).
-  **Done-when:** **unit tests** for point/segment-in-ellipse and segment-in-polygon on known shapes; broadphase returns same pairs as brute force.
+- [x] **T3.1 — Collision.**
+  **Do:** `systems/collision.ts` — spatial-hash broadphase; **hull convex-polygon** test (silhouette precomputed per mesh), dilated by a small shield-ring gap while shielded (`hullRadius`/`shieldGap`), undilated once unshielded; an ellipse only as the meshless fallback. Ramming (`gamestate.ts`) uses the same silhouettes instead of a bounding circle.
+  **Done-when:** **unit tests** for point/segment-in-ellipse, segment-in-dilated-polygon and polygon-vs-polygon distance on known shapes; broadphase returns same pairs as brute force.
   **Refs:** ROC-DMG-1,5; design §8.
 
 - [ ] **T3.2 — Damage & shields.**

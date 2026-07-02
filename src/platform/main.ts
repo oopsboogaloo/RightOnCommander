@@ -237,7 +237,7 @@ startGameLoop({
           const len = e.kind === 'missile' ? 0.09 : isEnemyBolt ? PULSE_LEN * 0.5 : PULSE_LEN;
           const tail = sub(e.pos, scale(normalize(e.vel), len));
           renderer.drawWorldLine(e.pos, tail, {
-            stroke: e.kind === 'missile' ? '#ffb060' : '#fff',
+            stroke: '#fff',
             lineWidth: isEnemyBolt ? 1 : 2,
           });
           break;

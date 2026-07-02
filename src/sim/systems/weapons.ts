@@ -22,7 +22,7 @@ export const DEFAULT_WEAPONS: WeaponsConfig = {
   pulseSpeed: 6,
   pulseTtl: 1.2,
   muzzleOffset: 0.25,
-  muzzleSpread: 0.08,
+  muzzleSpread: 0.04, // half the previous gap: multi-laser mounts read as one fatter weapon, not two separate guns
   pulseDamage: 1,
 };
 

@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { makeWorld } from '../../src/sim/world.js';
 import { vec3 } from '../../src/sim/math/vec3.js';
 import { damageSystem, tickFlashes, DEFAULT_DAMAGE } from '../../src/sim/systems/damage.js';
+import { DEFAULT_MISSILES } from '../../src/sim/systems/missiles.js';
 import type { Entity } from '../../src/sim/components.js';
 
 const DT = 1 / 120;
@@ -50,5 +51,19 @@ describe('damageSystem', () => {
     tickFlashes(w, DT);
     expect(e.flashTtl!).toBeLessThan(DEFAULT_DAMAGE.flashDuration);
     expect(e.flashTtl!).toBeGreaterThan(0);
+  });
+
+  it('a missile that lands a hit pauses the next launch, same as one that expires', () => {
+    const w = makeWorld(1);
+    const enemy = addEnemy(w, { shield: 0, hull: 3, hullMax: 3 });
+    const missile: Entity = { id: w.nextId++, kind: 'missile', team: 'player', pos: vec3(), vel: vec3(), yaw: 0, bank: 0, damage: 2 };
+    w.entities.set(missile.id, missile);
+    w.player.missileCooldown = 0;
+
+    damageSystem(w, [{ projectile: missile.id, target: enemy.id }], DT);
+
+    expect(w.entities.has(missile.id)).toBe(false); // consumed
+    expect(w.pool.missiles).toContain(missile); // recycled, no leak
+    expect(w.player.missileCooldown).toBeCloseTo(DEFAULT_MISSILES.deathCooldown, 5);
   });
 });

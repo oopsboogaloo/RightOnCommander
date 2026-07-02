@@ -20,6 +20,8 @@ export interface MissilesConfig {
   damage: number;
   wingOffset: number; // lateral launch offset (alternating wings) [ROC-MIS-8]
   muzzleOffset: number; // forward launch offset
+  deathCooldown: number; // pause before the next launch once a missile dies (hits or expires) — a
+  // freed cap slot doesn't refill instantly, so missiles read as a volley, not a conveyor belt
 }
 
 export const DEFAULT_MISSILES: MissilesConfig = {
@@ -35,6 +37,7 @@ export const DEFAULT_MISSILES: MissilesConfig = {
   damage: 2,
   wingOffset: 0.16,
   muzzleOffset: 0.1,
+  deathCooldown: 0.3,
 };
 
 // Per-ship missile capacity — how many of the player's missiles may be airborne at once. [ROC-MIS-12]
@@ -180,6 +183,7 @@ export function missilesSystem(world: World, dt: number, cfg: MissilesConfig = D
     if (m.ttl <= 0) {
       world.entities.delete(m.id);
       world.pool.missiles.push(m);
+      p.missileCooldown = Math.max(p.missileCooldown, cfg.deathCooldown); // [ROC-MIS-8 tuning]
     }
   }
 }

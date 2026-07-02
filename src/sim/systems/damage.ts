@@ -6,6 +6,7 @@
 import type { Entity } from '../components.js';
 import type { World } from '../world.js';
 import type { CollisionHit } from './collision.js';
+import { DEFAULT_MISSILES } from './missiles.js';
 
 export interface DamageConfig {
   flashDuration: number; // white hull-damage flash [ROC-DMG-6]
@@ -94,7 +95,12 @@ export function damageSystem(
 
     world.entities.delete(proj.id);
     if (proj.kind === 'projectile') world.pool.projectiles.push(proj); // recycle pulses (no leak)
-    else if (proj.kind === 'missile') world.pool.missiles.push(proj);
+    else if (proj.kind === 'missile') {
+      world.pool.missiles.push(proj);
+      // A missile that lands is a dead missile too — same brief pause before the next launch as
+      // one that times out, so a freed cap slot doesn't refill instantly. [ROC-MIS-8 tuning]
+      world.player.missileCooldown = Math.max(world.player.missileCooldown, DEFAULT_MISSILES.deathCooldown);
+    }
     spent.add(proj.id);
   }
 }

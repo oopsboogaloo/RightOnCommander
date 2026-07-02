@@ -39,6 +39,16 @@ describe('weaponsSystem', () => {
     expect(projectiles(w).length).toBe(3); // [ROC-HP-3]
   });
 
+  it('fans a double mount out by exactly muzzleSpread, side by side', () => {
+    const w = makeWorld(1);
+    w.player.lasers.front = ['pulse', 'pulse'];
+    w.player.lasers.rear = [];
+    weaponsSystem(w, frame({ fireTapped: true }), DT);
+    const xs = projectiles(w).map((p) => p.pos.x).sort((a, b) => a - b);
+    expect(xs.length).toBe(2);
+    expect(xs[1] - xs[0]).toBeCloseTo(DEFAULT_WEAPONS.muzzleSpread, 9); // gap between the pair
+  });
+
   it('fires exactly one shot on a tap', () => {
     const w = makeWorld(1);
     weaponsSystem(w, frame({ fireTapped: true }), DT);

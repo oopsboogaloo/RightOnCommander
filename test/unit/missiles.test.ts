@@ -59,4 +59,41 @@ describe('missile homing', () => {
     for (let i = 0; i < 40; i++) missilesSystem(w, 1 / 120);
     expect(mag(m.vel)).toBeGreaterThan(s0); // sped up
   });
+
+  it('pauses the next launch once a missile dies of old age (isolated from the launch-gate cycle)', () => {
+    const w = makeWorld(1);
+    const m = add(w, { kind: 'missile', team: 'player', pos: vec3(0, 0, 0), vel: vec3(0, 0, DEFAULT_MISSILES.speed), yaw: 0, bank: 0, ttl: 1 / 240, hull: 1, hullMax: 1 });
+    w.player.missileGrade = 0; // launch-gating inactive: isolates the death-cooldown effect
+    w.player.missileCooldown = 0;
+
+    missilesSystem(w, 1 / 120); // this step: the missile's ttl runs out
+    expect(w.entities.has(m.id)).toBe(false);
+    expect(w.player.missileCooldown).toBeCloseTo(DEFAULT_MISSILES.deathCooldown, 5);
+  });
+
+  it('a freed cap slot does not refill until the death cooldown elapses', () => {
+    const w = makeWorld(1);
+    add(w, { kind: 'enemy', pos: vec3(0, 0, 1), vel: vec3(), yaw: 0, bank: 0, hull: 3, hullMax: 3, shield: 0 }); // on screen
+    collectMissile(w); // grade 1; Sidewinder's cap is 1
+    w.player.missileCooldown = 0;
+    missilesSystem(w, 1 / 120); // launches the one missile this ship can carry
+    const m = [...w.entities.values()].find((e) => e.kind === 'missile')!;
+    expect(m).toBeDefined();
+
+    // A hair above 0 so the launch-gate's own reset-to-launchDelay doesn't also fire this step —
+    // isolates the death-cooldown's effect from the pre-existing per-launch cadence.
+    w.player.missileCooldown = 0.01;
+    m.ttl = 1 / 240;
+    missilesSystem(w, 1 / 120); // ttl expires this step
+    expect([...w.entities.values()].some((e) => e.kind === 'missile')).toBe(false);
+    expect(w.player.missileCooldown).toBeGreaterThan(0.25); // bumped up near deathCooldown (0.3)
+
+    // Well inside the cooldown window: the free cap slot stays empty.
+    for (let i = 0; i < 12; i++) missilesSystem(w, 1 / 120); // ~0.1s elapsed
+    expect([...w.entities.values()].some((e) => e.kind === 'missile')).toBe(false);
+
+    // Past the cooldown: relaunches.
+    for (let i = 0; i < 30; i++) missilesSystem(w, 1 / 120); // ~0.35s elapsed since expiry
+    expect([...w.entities.values()].some((e) => e.kind === 'missile')).toBe(true);
+  });
 });

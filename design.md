@@ -1,11 +1,13 @@
 # Right on Commander — Design
 
-**Version:** 0.4 (draft — all design decisions resolved)
+**Version:** 0.5 (draft — all design decisions resolved)
+
+> **Changelog 0.4 → 0.5:** Shields reworked to **hug the hull silhouette** instead of a separate ellipse — see §8 (Collision & damage model) and the Shields entry under §7 (Rendering). Collision, the drawn rings, and ship-to-ship ramming all now derive from the same `hullRadius`/`shieldGap`/`offsetPolygonPath` primitives, so a shot lands exactly where the outermost ring is drawn.
 
 > **Changelog 0.3 → 0.4:** Project renamed **EliteShooter → Right on Commander**; requirement-ID prefix `ES-` → `ROC-`.
 
 > **Changelog 0.2 → 0.3:** All §19 design decisions confirmed — TS, Vitest+fast-check (TS, not Python), Vite, convex-polygon hull collision, 1/120 s sim tick, 25° perspective camera. Ready to build.
-**Derives from:** requirements.md v1.4
+**Derives from:** requirements.md v1.6
 **Stack:** **TypeScript** (ES modules, bundled by Vite) + HTML5 Canvas 2D; Python for offline tooling only.
 
 > **Changelog 0.1 → 0.2:** Language locked to **TypeScript** (was JS+JSDoc). The interface typedefs in §4 become real TS `interface`s, and the sim/render/audio/input seam is enforced by the TS compiler. Vitest + fast-check run the TS sim directly.
