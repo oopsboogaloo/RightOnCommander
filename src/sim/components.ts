@@ -51,8 +51,12 @@ export interface Entity {
   speed?: number; // current scalar speed (missiles accelerate toward their max) [ROC-MIS-3]
   team?: 'player' | 'enemy'; // who fired a projectile
   damage?: number; // damage dealt by a projectile
-  colliderRx?: number; // shield ellipse radii (play plane) [ROC-DMG-1]
+  colliderRx?: number; // fallback collider radii (play plane), used when no hull silhouette is available
   colliderRz?: number;
+  hitMeshId?: string; // collide against this mesh's silhouette instead of meshId (e.g. a splinter
+  // collides as the smaller asteroid chunk it's drawn as, not its own mesh) [DEFECTS: render/collide mismatch]
+  hitScale?: number; // absolute scale for hitMeshId's silhouette, replacing colliderScale (matches
+  // the scale the renderer actually draws that substituted mesh at)
   heavyDamage?: boolean; // persistent smoke/fire while badly hurt [ROC-DMG-7]
   bounty?: number;
   waveId?: number; // membership for the 50% bonus [ROC-ECO-1a]

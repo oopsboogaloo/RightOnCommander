@@ -82,6 +82,50 @@ export function segmentIntersectsConvexPolygon(a: Pt, b: Pt, poly: Pt[]): boolea
   return false;
 }
 
+// Squared distance between two segments. For segments that intersect this is 0; otherwise the
+// closest points always include an endpoint of one segment, so the four endpoint-to-segment
+// distances suffice. [ROC-DMG-1 shield-hug rework]
+export function segSegDistanceSq(a1: Pt, a2: Pt, b1: Pt, b2: Pt): number {
+  if (segmentsIntersect(a1, a2, b1, b2)) return 0;
+  return Math.min(
+    distPointToSegmentSq(a1, b1, b2),
+    distPointToSegmentSq(a2, b1, b2),
+    distPointToSegmentSq(b1, a1, a2),
+    distPointToSegmentSq(b2, a1, a2),
+  );
+}
+
+// Squared distance from a segment to a convex polygon's boundary/interior (0 if the segment
+// enters it). Used for shielded hits: the ring sits `gap` outside the hull, so a shot lands once
+// it's within `gap` of the silhouette, not just once it crosses it.
+export function segmentDistToConvexPolygonSq(a: Pt, b: Pt, poly: Pt[]): number {
+  if (poly.length === 0) return Infinity;
+  if (pointInConvexPolygon(a, poly) || pointInConvexPolygon(b, poly)) return 0;
+  let min = Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    min = Math.min(min, segSegDistanceSq(a, b, poly[i], poly[(i + 1) % poly.length]));
+  }
+  return min;
+}
+
+// Squared distance between two convex polygons (0 if they overlap, including one fully inside
+// the other). Used for ramming: two silhouettes collide once they're within the sum of their
+// shield gaps (0 + 0 for two unshielded hulls, i.e. the hulls touching).
+export function convexPolygonsDistanceSq(a: Pt[], b: Pt[]): number {
+  if (a.length === 0 || b.length === 0) return Infinity;
+  for (const p of a) if (pointInConvexPolygon(p, b)) return 0;
+  for (const p of b) if (pointInConvexPolygon(p, a)) return 0;
+  let min = Infinity;
+  for (let i = 0; i < a.length; i++) {
+    const a1 = a[i];
+    const a2 = a[(i + 1) % a.length];
+    for (let j = 0; j < b.length; j++) {
+      min = Math.min(min, segSegDistanceSq(a1, a2, b[j], b[(j + 1) % b.length]));
+    }
+  }
+  return min;
+}
+
 // Convex hull (Andrew's monotone chain), returned counter-clockwise. Used to precompute a
 // hull's 2D silhouette. [design §8]
 export function convexHull(points: Pt[]): Pt[] {

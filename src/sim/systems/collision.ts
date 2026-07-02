@@ -10,6 +10,7 @@ import {
   type Pt,
   segmentIntersectsEllipse,
   segmentIntersectsConvexPolygon,
+  segmentDistToConvexPolygonSq,
   convexHull,
 } from '../math/geom2.js';
 
@@ -120,6 +121,24 @@ export function transformSilhouette(local: Pt[], cx: number, cz: number, yaw: nu
   return local.map((p) => ({ x: cx + p.x * c + p.y * s, y: cz - p.x * s + p.y * c }));
 }
 
+// Shield rings hug the hull silhouette with a small outward gap, proportional to the hull's own
+// size so small and large ships both read as "just outside the hull" rather than one fixed
+// offset. Ramming and the shielded-hit test both use this, so a shot lands exactly where the
+// outermost ring is drawn. [ROC-DMG-1, ROC-DMG-3 shield-hug rework]
+export const SHIELD_GAP_FRAC = 0.08;
+
+// Farthest silhouette point from the hull's centre, in world units (after colliderScale) — the
+// base unit the shield gap scales from.
+export function hullRadius(localSilhouette: Pt[], scale: number): number {
+  let max = 0;
+  for (const p of localSilhouette) max = Math.max(max, Math.hypot(p.x, p.y));
+  return max * scale;
+}
+
+// Outward distance from the hull to the outermost active shield ring.
+export const shieldGap = (radius: number, rings: number): number =>
+  radius * SHIELD_GAP_FRAC * Math.max(0, rings);
+
 export interface CollisionHit {
   projectile: number;
   target: number;
@@ -129,6 +148,7 @@ export interface CollisionConfig {
   dt: number; // step duration, for the projectile's swept segment
   cellSize: number; // >= largest target collider radius
   getSilhouette: (meshId: string) => Pt[] | undefined; // local-space hull silhouettes
+  getHullRadius?: (meshId: string) => number | undefined; // precomputed hullRadius() per mesh
   defaultRadius?: number; // fallback collider size
   colliderScale?: number; // scales every collider/silhouette to match the rendered hull size
 }
@@ -143,18 +163,33 @@ function projectileHitsTarget(a: Pt, b: Pt, t: Entity, cfg: CollisionConfig): bo
   const rx = (t.colliderRx ?? fallback) * scale;
   const rz = (t.colliderRz ?? fallback) * scale;
 
-  if ((t.shield ?? 0) > 0) {
-    // Shielded: elliptical shape. [ROC-DMG-1]
-    return segmentIntersectsEllipse(a, b, center, rx, rz);
-  }
+  // hitMeshId/hitScale let an entity collide against a different mesh (and scale) than the one it
+  // spawned with — a splinter is drawn as a small asteroid chunk, so it collides as one too,
+  // instead of its own (larger, differently-shaped) mesh. [DEFECTS: render/collide mismatch]
+  const meshId = t.hitMeshId ?? t.meshId;
+  const meshScale = t.hitScale ?? scale;
 
-  // Unshielded: hull silhouette if available, else fall back to the collider ellipse. [ROC-DMG-5]
-  const local = t.meshId ? cfg.getSilhouette(t.meshId) : undefined;
+  // No hull silhouette to hug (meshless entity, or content missing the mesh) — fall back to the
+  // collider ellipse for both shielded and unshielded hits, as before. [ROC-DMG-1,5]
+  const local = meshId ? cfg.getSilhouette(meshId) : undefined;
   if (!local || local.length < 3) {
     return segmentIntersectsEllipse(a, b, center, rx, rz);
   }
-  const scaled = scale === 1 ? local : local.map((p) => ({ x: p.x * scale, y: p.y * scale }));
-  return segmentIntersectsConvexPolygon(a, b, transformSilhouette(scaled, t.pos.x, t.pos.z, t.yaw));
+
+  const scaled = meshScale === 1 ? local : local.map((p) => ({ x: p.x * meshScale, y: p.y * meshScale }));
+  const world = transformSilhouette(scaled, t.pos.x, t.pos.z, t.yaw);
+
+  if ((t.shield ?? 0) > 0) {
+    // Shielded: the shot lands once it's within the outermost ring's gap of the hull, matching
+    // the ring drawn on screen — not a separate ellipse shape. [ROC-DMG-1]
+    const radius =
+      t.hitScale === undefined ? (cfg.getHullRadius?.(meshId!) ?? hullRadius(local, meshScale)) : hullRadius(local, meshScale);
+    const gap = shieldGap(radius, t.shield ?? 0);
+    return segmentDistToConvexPolygonSq(a, b, world) <= gap * gap;
+  }
+
+  // Unshielded: hull silhouette. [ROC-DMG-5]
+  return segmentIntersectsConvexPolygon(a, b, world);
 }
 
 // Swept segment of a projectile in the play plane (previous -> current position).

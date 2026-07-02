@@ -3,12 +3,17 @@
 // lives stay within 0..5. [ROC-LIFE-1..5, ROC-DMG-6a]
 
 import { describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { makeWorld, PLAYER_ID } from '../../src/sim/world.js';
 import { vec3 } from '../../src/sim/math/vec3.js';
 import type { Entity } from '../../src/sim/components.js';
 import { gamestateSystem, DEFAULT_GAMESTATE, MAX_LIVES } from '../../src/sim/systems/gamestate.js';
-import { collisionSystem } from '../../src/sim/systems/collision.js';
+import { collisionSystem, meshSilhouette } from '../../src/sim/systems/collision.js';
 import { damageSystem } from '../../src/sim/systems/damage.js';
+import { SHIP_SCALE } from '../../src/sim/index.js';
+import type { Mesh } from '../../src/interfaces.js';
+import type { Pt } from '../../src/sim/math/geom2.js';
 
 const DT = 1 / 120;
 const collCfg = { dt: DT, cellSize: 1, getSilhouette: () => undefined, colliderScale: 1 };
@@ -147,5 +152,67 @@ describe('death, lives & respawn', () => {
     gamestateSystem(w, DT, undefined, { ...DEFAULT_GAMESTATE, colliderScale: 1 });
     expect(w.player.lives).toBe(0);
     expect(w.mode).toBe('GAME_OVER');
+  });
+});
+
+// Shield-hug rework: ramming uses hull silhouette vs hull silhouette (each dilated by its own
+// shield gap) instead of bounding circles, so a ram lands exactly where the drawn hulls (and
+// shield rings) touch. [ROC-DMG-6a, DEFECTS: collision-detection review]
+describe('ramming hugs the hull silhouette (not a bounding circle)', () => {
+  function loadMesh(id: string): Mesh {
+    const p = fileURLToPath(new URL(`../../src/content/meshes/${id}.json`, import.meta.url));
+    return JSON.parse(readFileSync(p, 'utf8'));
+  }
+  const cobra = loadMesh('cobra_mk3');
+  const sidewinder = loadMesh('sidewinder');
+  const silhouettes: Record<string, Pt[]> = { cobra_mk3: meshSilhouette(cobra), sidewinder: meshSilhouette(sidewinder) };
+  const realCfg = {
+    ...DEFAULT_GAMESTATE,
+    colliderScale: SHIP_SCALE,
+    getSilhouette: (id: string) => silhouettes[id],
+  };
+
+  function ramWorld(enemyPos: ReturnType<typeof vec3>, playerShield = 0): { w: ReturnType<typeof makeWorld>; player: Entity } {
+    const w = makeWorld(1);
+    const player = w.entities.get(PLAYER_ID)!;
+    player.meshId = 'cobra_mk3';
+    player.shield = playerShield;
+    player.shieldMax = playerShield;
+    player.hull = 3;
+    const enemy: Entity = { id: w.nextId++, kind: 'enemy', pos: enemyPos, vel: vec3(), yaw: 0, bank: 0, meshId: 'sidewinder', hull: 99, hullMax: 99 };
+    w.entities.set(enemy.id, enemy);
+    return { w, player };
+  }
+
+  it('does NOT ram head-on at the old (too-early) trigger distance — hulls must actually touch', () => {
+    // z=0.2 is the exact separation that the old bounding-circle ram test falsely triggered at,
+    // ~14px before the drawn hulls actually met (both unshielded here). [DEFECTS review]
+    const { w, player } = ramWorld(vec3(0, 0, 0.2));
+    gamestateSystem(w, DT, undefined, realCfg);
+    expect(player.hull).toBe(3); // no contact damage: hulls are still clear of each other
+  });
+
+  it('DOES ram head-on once the hulls actually touch', () => {
+    const { w, player } = ramWorld(vec3(0, 0, 0.14));
+    gamestateSystem(w, DT, undefined, realCfg);
+    expect(player.hull).toBe(2); // contact damage applied
+  });
+
+  it('DOES ram a wingtip overlap that the old bounding-circle test used to miss', () => {
+    // x=0.24: the old circle-vs-circle test (radius sum 0.21) missed this despite the drawn
+    // wingtips visibly overlapping. [DEFECTS review]
+    const { w, player } = ramWorld(vec3(0.24, 0, 0));
+    gamestateSystem(w, DT, undefined, realCfg);
+    expect(player.hull).toBe(2);
+  });
+
+  it('a shield extends the ram range by its own gap, but still not out to the old false-positive distance', () => {
+    const { w, player } = ramWorld(vec3(0, 0, 0.18), 2); // within a 2-ring shield's gap of the hull
+    gamestateSystem(w, DT, undefined, realCfg);
+    expect(player.shield).toBe(1); // rammed (shield ring absorbs it)
+
+    const { w: w2, player: player2 } = ramWorld(vec3(0, 0, 0.2), 2); // still the old defect's distance
+    gamestateSystem(w2, DT, undefined, realCfg);
+    expect(player2.shield).toBe(2); // untouched: even shielded, this is still outside the gap
   });
 });

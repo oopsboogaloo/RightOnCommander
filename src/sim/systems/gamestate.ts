@@ -4,8 +4,11 @@
 // game is over. Bullet damage to the player is applied in damageSystem; this resolves the
 // consequences. [tasks T6.4, ROC-LIFE-1..5]
 
+import type { Entity } from '../components.js';
 import { PLAYER_ID, type World } from '../world.js';
 import { applyDamage } from './damage.js';
+import { convexPolygonsDistanceSq, type Pt } from '../math/geom2.js';
+import { transformSilhouette, hullRadius, shieldGap } from './collision.js';
 
 export const MAX_LIVES = 5; // [ROC-LIFE-5]
 
@@ -15,6 +18,8 @@ export interface GamestateConfig {
   contactInvuln: number; // brief i-frames after a contact so a touch costs one ring, not the lot
   respawnInvuln: number; // i-frames granted on respawn / level restart
   colliderScale: number; // matches the rendered hull size (SHIP_SCALE)
+  getSilhouette?: (meshId: string) => Pt[] | undefined; // local-space hull silhouettes
+  getHullRadius?: (meshId: string) => number | undefined; // precomputed hullRadius() per mesh
 }
 
 export const DEFAULT_GAMESTATE: GamestateConfig = {
@@ -27,6 +32,35 @@ export const DEFAULT_GAMESTATE: GamestateConfig = {
 
 const radius = (rx: number | undefined, rz: number | undefined, scale: number): number =>
   Math.max(rx ?? 0.3, rz ?? 0.3) * scale;
+
+// A ship's world-space silhouette plus its current shield gap, for the ram test. Null when no
+// hull mesh is available (falls back to the old bounding-circle test for that side).
+function ramGeom(e: Entity, cfg: GamestateConfig): { poly: Pt[]; gap: number } | null {
+  const local = e.meshId ? cfg.getSilhouette?.(e.meshId) : undefined;
+  if (!local || local.length < 3) return null;
+  const scale = cfg.colliderScale;
+  const scaled = scale === 1 ? local : local.map((p) => ({ x: p.x * scale, y: p.y * scale }));
+  const poly = transformSilhouette(scaled, e.pos.x, e.pos.z, e.yaw);
+  const r = cfg.getHullRadius?.(e.meshId!) ?? hullRadius(local, scale);
+  return { poly, gap: shieldGap(r, e.shield ?? 0) };
+}
+
+// True once the player and a would-be rammer are within contact distance: hull silhouette vs
+// hull silhouette (each dilated by its own shield gap) when meshes are available, so a ram lands
+// exactly where the drawn hulls (and shield rings) touch — not a fat bounding circle. [ROC-DMG-6a]
+function rams(player: Entity, e: Entity, cfg: GamestateConfig): boolean {
+  const pg = ramGeom(player, cfg);
+  const eg = ramGeom(e, cfg);
+  if (pg && eg) {
+    const threshold = pg.gap + eg.gap;
+    return convexPolygonsDistanceSq(pg.poly, eg.poly) <= threshold * threshold;
+  }
+  const pr = radius(player.colliderRx, player.colliderRz, cfg.colliderScale);
+  const er = radius(e.colliderRx, e.colliderRz, cfg.colliderScale);
+  const dx = e.pos.x - player.pos.x;
+  const dz = e.pos.z - player.pos.z;
+  return dx * dx + dz * dz <= (pr + er) * (pr + er);
+}
 
 // Restore the player to full and grant a window of invulnerability at `x,z`.
 function respawnPlayer(world: World, x: number, z: number, invuln: number): void {
@@ -62,13 +96,9 @@ export function gamestateSystem(
   // are solid obstacles too — flying into one costs a hit just like ramming a ship. [ROC-DMG-6a,
   // ROC-L1-1]
   if (world.player.invulnTtl <= 0 && (player.hull ?? 0) > 0) {
-    const pr = radius(player.colliderRx, player.colliderRz, cfg.colliderScale);
     for (const e of world.entities.values()) {
       if (e.kind !== 'enemy' && e.kind !== 'boss' && e.kind !== 'asteroid') continue;
-      const er = radius(e.colliderRx, e.colliderRz, cfg.colliderScale);
-      const dx = e.pos.x - player.pos.x;
-      const dz = e.pos.z - player.pos.z;
-      if (dx * dx + dz * dz <= (pr + er) * (pr + er)) {
+      if (rams(player, e, cfg)) {
         applyDamage(world, e, cfg.ramDamage); // the ram wrecks a fighter, dents a boss
         applyDamage(world, player, cfg.contactDamage);
         world.player.invulnTtl = cfg.contactInvuln;

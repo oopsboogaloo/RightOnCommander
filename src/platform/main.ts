@@ -7,11 +7,13 @@ import { PLAYER_ID } from '../sim/world.js';
 import { vec3, sub, scale, normalize, type Vec3 } from '../sim/math/vec3.js';
 import { Renderer2D } from '../render/renderer2d.js';
 import { modelMatrix } from '../render/project.js';
+import type { Mat4 } from '../sim/math/mat4.js';
 import { startGameLoop, DT } from './loop.js';
 import { DomInput } from '../input/domInput.js';
 import { createLocalStorage } from './storage.js';
 import type { Mesh } from '../interfaces.js';
 import type { Entity } from '../sim/components.js';
+import { meshSilhouette, hullRadius } from '../sim/systems/collision.js';
 
 import {
   sellCargo,
@@ -27,6 +29,7 @@ import {
   type StationContext,
 } from '../sim/systems/station.js';
 import { loadShips, type LaserType } from '../sim/systems/ships.js';
+import { SPLINTER_HIT_SCALE } from '../sim/systems/asteroids.js';
 import { stationButtons, buttonAt, drawStation, type StationAction } from '../render/screens/station.js';
 
 import enemies from '../content/enemies.json';
@@ -84,6 +87,14 @@ const MESHES: Record<string, Mesh> = {
   gem,
 } as unknown as Record<string, Mesh>;
 
+// Per-mesh hullRadius(), matching what the sim precomputes internally from this same content —
+// the base unit shield-ring gaps scale from, so a ring never disagrees with what the sim collides
+// against. [ROC-DMG-1 shield-hug rework]
+const HULL_RADII: Record<string, number> = {};
+for (const [id, m] of Object.entries(MESHES)) {
+  HULL_RADII[id] = hullRadius(meshSilhouette(m), SHIP_SCALE);
+}
+
 const sim = createSim({ seed: 1, content: { enemies, level: level1, meshes: MESHES } });
 const renderer = new Renderer2D(ctx);
 const input = new DomInput({ canvas, storage: createLocalStorage() });
@@ -140,7 +151,7 @@ function readPlayerPose(): Pose {
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const PULSE_LEN = 0.18;
 const PICKUP_SCALE = 1 / 9; // canister/gem read as small props, not ship-sized [was 1/3]
-const MINI_ASTEROID_SCALE = 0.15; // a splinter renders as a small asteroid chunk, not the bbcelite shard shape
+const MINI_ASTEROID_SCALE = SPLINTER_HIT_SCALE; // matches the sim's splinter collision scale exactly
 
 // Asteroid-mined loot (alloys/gems power-ups and their Metals/Crystals cargo, ROC-L1-3) reads as
 // a gem, not salvage; everything else (equipment power-ups, market cargo from ships) is a drifting
@@ -157,21 +168,18 @@ function hullFlash(e: Entity): { fill: string; stroke: string } | undefined {
   return (e.flashTtl ?? 0) > 0 ? { fill: '#fff', stroke: '#fff' } : undefined;
 }
 
-// Concentric shield ellipses = remaining strength; brighten briefly when a hit is absorbed.
-// Drawn a little outside the hull for clarity, foreshortened by the camera. [ROC-DMG-2,3]
-function drawShield(e: Entity, center: Vec3 = e.pos): void {
+// Concentric rings hugging the hull silhouette = remaining shield strength; brighten briefly
+// when a hit is absorbed. Each ring sits its own gap outside the hull, so it tracks the ship's
+// actual shape (and yaw/bank) rather than an unrelated ellipse. [ROC-DMG-1,2,3 shield-hug rework]
+function drawShield(e: Entity, mesh: Mesh | undefined, model: Mat4): void {
   const rings = e.shield ?? 0;
-  if (rings <= 0) return;
+  const radius = e.meshId ? HULL_RADII[e.meshId] : undefined;
+  if (rings <= 0 || !mesh || !radius) return;
   const flash = (e.shieldFlashTtl ?? 0) > 0;
-  const rx = (e.colliderRx ?? 0.3) * SHIP_SCALE;
-  const rz = (e.colliderRz ?? 0.3) * SHIP_SCALE;
-  for (let i = 0; i < rings; i++) {
-    const f = 1.25 + i * 0.28; // each remaining ring sits a little further out
-    renderer.drawWorldEllipse(center, rx * f, rz * f, {
-      stroke: flash ? '#cffcff' : '#39d',
-      lineWidth: flash ? 2.5 : 1.2,
-    });
-  }
+  renderer.drawShieldRing(mesh, model, radius, rings, {
+    stroke: flash ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.5)',
+    lineWidth: flash ? 2.5 : 1.2,
+  });
 }
 
 let prev = readPlayerPose();
@@ -259,8 +267,11 @@ startGameLoop({
         case 'enemy':
         case 'boss': {
           const m = e.meshId ? MESHES[e.meshId] : undefined;
-          if (m) renderer.drawMesh(m, modelMatrix(e.pos, e.yaw, e.bank, SHIP_SCALE), hullFlash(e));
-          drawShield(e);
+          if (m) {
+            const model = modelMatrix(e.pos, e.yaw, e.bank, SHIP_SCALE);
+            renderer.drawMesh(m, model, hullFlash(e));
+            drawShield(e, m, model);
+          }
           break;
         }
         case 'asteroid': {
@@ -288,8 +299,9 @@ startGameLoop({
     if (sim.state.mode !== 'GAME_OVER' && !blinkOff) {
       const pmesh = (player.meshId && MESHES[player.meshId]) || MESHES.sidewinder;
       const pos = vec3(lerp(prev.x, curr.x, alpha), lerp(prev.y, curr.y, alpha), lerp(prev.z, curr.z, alpha));
-      renderer.drawMesh(pmesh, modelMatrix(pos, lerp(prev.yaw, curr.yaw, alpha), lerp(prev.bank, curr.bank, alpha), SHIP_SCALE), hullFlash(player));
-      drawShield(player, pos);
+      const model = modelMatrix(pos, lerp(prev.yaw, curr.yaw, alpha), lerp(prev.bank, curr.bank, alpha), SHIP_SCALE);
+      renderer.drawMesh(pmesh, model, hullFlash(player));
+      drawShield(player, pmesh, model);
     }
 
     // Floating credit/bonus numbers, rising and fading from the explosion. [ROC-KC-1,2,3]

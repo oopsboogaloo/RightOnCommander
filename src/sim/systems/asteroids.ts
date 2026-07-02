@@ -29,6 +29,12 @@ const SPLINTER_TTL = 8;
 const LARGE = { hull: 4, bounty: 0, meshId: 'asteroid', colliderRx: 0.24, colliderRz: 0.24 };
 const SPLINTER = { hull: 1, bounty: 4, meshId: 'splinter', colliderRx: 0.11, colliderRz: 0.11 };
 
+// A splinter reads better on screen as a small asteroid chunk than the authentic-but-oddly-
+// angular bbcelite splinter shape, so it's drawn (and collided) as the asteroid mesh at this
+// fraction of its normal size. Single source of truth for both the renderer and collision, so
+// the hitbox can never drift from the sprite. [DEFECTS: render/collide mismatch]
+export const SPLINTER_HIT_SCALE = 0.15;
+
 const randSign = (rng: Rng): number => (rng.int(2) === 0 ? -1 : 1);
 const randTumble = (rng: Rng, [lo, hi]: [number, number]): { yawRate: number; bankRate: number } => ({
   yawRate: rng.range(lo, hi) * randSign(rng),
@@ -90,6 +96,8 @@ function spawnSplinters(world: World, rng: Rng, at: Entity['pos'], baseVel: Enti
       meshId: SPLINTER.meshId,
       colliderRx: SPLINTER.colliderRx,
       colliderRz: SPLINTER.colliderRz,
+      hitMeshId: LARGE.meshId, // collides as the drawn asteroid-chunk mesh, not its own
+      hitScale: SPLINTER_HIT_SCALE,
       tumble: randTumble(rng, [1.2, 2.6]), // smaller pieces tumble faster
       ttl: SPLINTER_TTL,
     });

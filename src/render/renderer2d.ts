@@ -4,9 +4,12 @@
 
 import type { Renderer, Mesh, Vec2, DrawOpts } from '../interfaces.js';
 import type { Mat4 } from '../sim/math/mat4.js';
-import { type Vec3, vec3 } from '../sim/math/vec3.js';
+import type { Vec3 } from '../sim/math/vec3.js';
+import { convexHull } from '../sim/math/geom2.js';
+import { shieldGap } from '../sim/systems/collision.js';
 import { type Camera, createCamera } from './camera.js';
 import { prepareMesh, projectPoint, type Projected } from './project.js';
+import { offsetPolygonPath } from './shieldRing.js';
 
 interface Star {
   x: number; // normalised [0,1) across the canvas
@@ -129,15 +132,40 @@ export class Renderer2D implements Renderer {
     this.drawLine(pa, pb, opts);
   }
 
-  // Project a play-plane ellipse (a shield ring) to screen and stroke it. The x and z radii are
-  // projected independently so the ring foreshortens with the camera tilt. [ROC-DMG-3]
-  drawWorldEllipse(center: Vec3, rx: number, rz: number, opts: DrawOpts = {}): void {
-    const c = this.toPixel(projectPoint(this.camera, center));
-    const ex = this.toPixel(projectPoint(this.camera, vec3(center.x + rx, center.y, center.z)));
-    const ez = this.toPixel(projectPoint(this.camera, vec3(center.x, center.y, center.z + rz)));
-    const prx = Math.hypot(ex.x - c.x, ex.y - c.y);
-    const pry = Math.hypot(ez.x - c.x, ez.y - c.y);
-    this.drawEllipse(c, prx, pry, opts);
+  // Shield rings: N concentric outlines that hug the hull's own silhouette with a small,
+  // rounded outward gap (larger for each further-out ring) rather than an unrelated ellipse, so
+  // the ring reads as "this hull's own energy field" and tracks yaw + bank exactly as the hull
+  // is drawn. [ROC-DMG-1,3 shield-hug rework]
+  drawShieldRing(mesh: Mesh, model: Mat4, hullRadiusWorld: number, rings: number, opts: DrawOpts = {}): void {
+    if (rings <= 0 || hullRadiusWorld <= 0) return;
+    const prep = prepareMesh(mesh, model, this.camera);
+    if (prep.cameraSpace.length < 3) return;
+
+    // Perspective is mild and the hull is small relative to the camera distance, so one
+    // world-unit -> pixel factor at the hull's average depth is an acceptable stand-in for
+    // projecting each offset point individually. [ROC-VIS-3]
+    const avgDepth = prep.cameraSpace.reduce((s, v) => s + v.z, 0) / prep.cameraSpace.length;
+    if (avgDepth <= 0) return; // behind the camera
+    const pxPerUnit = (this.camera.focal / avgDepth) * this.scale;
+
+    const hullPx = convexHull(prep.projected.map((p) => this.toPixel(p)));
+    if (hullPx.length < 3) return;
+
+    const { ctx } = this;
+    ctx.strokeStyle = (opts.stroke as string) ?? 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = (opts.lineWidth as number) ?? 1.2;
+    for (let ring = 1; ring <= rings; ring++) {
+      const path = offsetPolygonPath(hullPx, shieldGap(hullRadiusWorld, ring) * pxPerUnit);
+      if (!path) continue;
+      ctx.beginPath();
+      ctx.moveTo(path.start.x, path.start.y);
+      for (const cmd of path.cmds) {
+        if (cmd.kind === 'line') ctx.lineTo(cmd.to.x, cmd.to.y);
+        else ctx.arc(cmd.center.x, cmd.center.y, cmd.radius, cmd.from, cmd.to, cmd.anticlockwise);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
   }
 
   // Project world-space points and draw them as small dots (explosion particles). [ROC-VIS-6]
