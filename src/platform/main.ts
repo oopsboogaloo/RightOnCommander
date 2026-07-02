@@ -31,7 +31,6 @@ import {
 import { loadShips, type LaserType } from '../sim/systems/ships.js';
 import { SPLINTER_HIT_SCALE } from '../sim/systems/asteroids.js';
 import { hyperCountdown, BOSS_FADE_SEC } from '../sim/systems/levelstate.js';
-import { portAligned, PORT_HALF_LONG, PORT_HALF_SHORT } from '../sim/systems/dock.js';
 import { stationButtons, buttonAt, drawStation, type StationAction } from '../render/screens/station.js';
 
 import enemies from '../content/enemies.json';
@@ -49,6 +48,7 @@ import fer_de_lance from '../content/meshes/fer_de_lance.json';
 import coriolis from '../content/meshes/coriolis.json';
 import transporter from '../content/meshes/transporter.json';
 import asteroid from '../content/meshes/asteroid.json';
+import rock_hermit from '../content/meshes/rock_hermit.json';
 import splinter from '../content/meshes/splinter.json';
 import canister from '../content/meshes/canister.json';
 import gem from '../content/meshes/gem.json';
@@ -84,6 +84,7 @@ const MESHES: Record<string, Mesh> = {
   coriolis,
   transporter,
   asteroid,
+  rock_hermit,
   splinter,
   canister,
   gem,
@@ -219,32 +220,6 @@ function drainFloaters(events: ReturnType<typeof sim.step>): void {
   }
 }
 
-// The docking-port rectangle carried by the hermit and the stations: a small bay standing on the
-// hull's player-facing face, centred on the roll axis so it spins in place as the hull rolls, and
-// brightening whenever the port is within docking tolerance. [ROC-HERM-1, ROC-DCKG-3]
-const PORT_FRONT_FRAC = 0.5; // how far toward the player the bay sits on the near face, as a fraction of hull radius
-function drawPort(e: Entity): void {
-  const bright = portAligned(e);
-  const opts = { stroke: bright ? '#fff' : 'rgba(255,255,255,0.55)', lineWidth: bright ? 2.5 : 1.5 };
-  const radius = (HULL_RADII[e.meshId ?? ''] ?? 0.3) * (e.scale ?? 1);
-  const front = e.pos.z - PORT_FRONT_FRAC * radius; // toward the player — down-screen from the hull centre
-  // Long axis rides the roll (level when aligned); short axis stands up the face. The centre sits
-  // on the roll axis (e.pos.x, y=0), so the bay turns in place rather than orbiting. [ROC-DCKG-3]
-  const c = Math.cos(e.bank);
-  const s = Math.sin(e.bank);
-  const corners = (
-    [
-      [-PORT_HALF_LONG, -PORT_HALF_SHORT],
-      [PORT_HALF_LONG, -PORT_HALF_SHORT],
-      [PORT_HALF_LONG, PORT_HALF_SHORT],
-      [-PORT_HALF_LONG, PORT_HALF_SHORT],
-    ] as [number, number][]
-  ).map(([lx, ly]) => vec3(e.pos.x + lx * c - ly * s, lx * s + ly * c, front));
-  for (let i = 0; i < corners.length; i++) {
-    renderer.drawWorldLine(corners[i], corners[(i + 1) % corners.length], opts);
-  }
-}
-
 startGameLoop({
   step: () => {
     prev = curr;
@@ -313,7 +288,8 @@ startGameLoop({
             renderer.drawMesh(m, model, hullFlash(e));
             drawShield(e, m, model);
           }
-          if (e.port) drawPort(e); // hermit / station docking-port rectangle [ROC-HERM-1, ROC-DCKG-1]
+          // The docking bay is modelled into the hull mesh now (hermit + station), so it just
+          // rolls with the hull; the invisible dock/damage footprint lives in the sim. [ROC-DCKG-1]
           break;
         }
         case 'asteroid': {

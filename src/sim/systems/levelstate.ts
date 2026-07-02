@@ -229,13 +229,15 @@ export function enterLevelState(world: World, state: LevelState, level: LevelDef
       if (level.viper) startWave(world, level.viper, ctx);
       break;
     case 'DOCKING':
-      // Scrolling has resumed; the station scrolls into view and holds, rotating. [ROC-DCKG-1]
+      // Scrolling has resumed; the station scrolls into view and holds, rolling. Spawned facing
+      // away (yaw π) so the Coriolis's own docking slot — modelled on its +z face — points at the
+      // player, then rolls about that axis so the slot spins in place. [ROC-DCKG-1,3]
       spawnStation(
         world,
         { kind: 'dock', spin: DOCK_STATION.spin, holdZ: DOCK_STATION.holdZ },
         { x: 0, z: DOCK_STATION.spawnZ },
         -DOCK_STATION.approachSpeed,
-        0,
+        Math.PI,
       );
       break;
     case 'DOCK':

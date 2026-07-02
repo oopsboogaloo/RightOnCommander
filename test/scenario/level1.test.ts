@@ -58,7 +58,7 @@ describe('Level 1', () => {
       states.add(w.levelState);
       if ([...w.entities.values()].some((e) => e.kind === 'pickup' && e.pickup?.type === 'laser')) laserDropped = true;
       for (const ev of w.events) {
-        if (ev.type === 'destroyed' && ev.meshId === 'asteroid' && ev.kind === 'boss') hermitBounty = ev.bounty as number;
+        if (ev.type === 'destroyed' && ev.meshId === 'rock_hermit' && ev.kind === 'boss') hermitBounty = ev.bounty as number;
         if (ev.type === 'dock') docked = true;
       }
     }
