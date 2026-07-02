@@ -94,6 +94,52 @@ def normalise(verts: list[Vec], target: float) -> list[Vec]:
     return [tuple((v[i] - mid[i]) * k for i in range(3)) for v in verts]
 
 
+def recess_direction(verts: list[Vec], frac: float = 0.72) -> Vec:
+    """Unit direction of the docking bay: the mean direction of the recessed (pulled-in) vertices.
+
+    A modelled bay is a pocket, so its rim/floor vertices sit well inside the hull radius; their
+    average direction from the centre is where the bay opening points.
+    """
+    rad = [math.sqrt(sum(c * c for c in v)) for v in verts]
+    rmax = max(rad) or 1.0
+    inward = [verts[i] for i in range(len(verts)) if rad[i] < rmax * frac]
+    if not inward:
+        raise SystemExit("obj_to_mesh: --align-recess found no recess (no pulled-in vertices)")
+    d = [sum(v[i] for v in inward) / len(inward) for i in range(3)]
+    mag = math.sqrt(sum(c * c for c in d)) or 1.0
+    return (d[0] / mag, d[1] / mag, d[2] / mag)
+
+
+def align_to(verts: list[Vec], src: Vec, dst: Vec) -> list[Vec]:
+    """Rotate every vertex by the rotation that maps unit `src` onto unit `dst` (Rodrigues)."""
+    dot = sum(src[i] * dst[i] for i in range(3))
+    if dot > 0.999999:
+        return verts
+    axis = (
+        src[1] * dst[2] - src[2] * dst[1],
+        src[2] * dst[0] - src[0] * dst[2],
+        src[0] * dst[1] - src[1] * dst[0],
+    )
+    amag = math.sqrt(sum(c * c for c in axis))
+    if amag < 1e-9:  # antiparallel: pick any perpendicular axis for the 180° turn
+        axis = (1.0, 0.0, 0.0) if abs(src[0]) < 0.9 else (0.0, 1.0, 0.0)
+        axis = (
+            src[1] * axis[2] - src[2] * axis[1],
+            src[2] * axis[0] - src[0] * axis[2],
+            src[0] * axis[1] - src[1] * axis[0],
+        )
+        amag = math.sqrt(sum(c * c for c in axis))
+    kx, ky, kz = (c / amag for c in axis)
+    ang = math.acos(max(-1.0, min(1.0, dot)))
+    c, s = math.cos(ang), math.sin(ang)
+    out: list[Vec] = []
+    for v in verts:  # v*c + (k×v)*s + k*(k·v)*(1-c)
+        kv = kx * v[0] + ky * v[1] + kz * v[2]
+        cross = (ky * v[2] - kz * v[1], kz * v[0] - kx * v[2], kx * v[1] - ky * v[0])
+        out.append(tuple(v[i] * c + cross[i] * s + (kx, ky, kz)[i] * kv * (1 - c) for i in range(3)))
+    return out
+
+
 def face_normal(loop: list[int], verts: list[Vec], flip: bool) -> Vec:
     """Unit normal from the loop winding (Newell's method — robust for non-planar n-gons)."""
     nx = ny = nz = 0.0
@@ -150,6 +196,10 @@ def build_mesh(args: argparse.Namespace) -> dict:
     rx, ry, rz = (math.radians(a) for a in (args.rotx, args.roty, args.rotz))
     verts = [rotate(v, rx, ry, rz) for v in verts]
     verts = normalise(verts, args.target_extent)
+    if args.align_recess:
+        # Aim the docking bay at the player (world -z) and centre it on the roll axis, so it stays
+        # put and faces forward as the hull rolls (bank). [ROC-DCKG-3]
+        verts = align_to(verts, recess_direction(verts), (0.0, 0.0, -1.0))
 
     edges = unique_edges(faces)
     mesh_faces = [
@@ -183,6 +233,8 @@ def main() -> None:
     ap.add_argument("--roty", type=float, default=0.0, help="degrees about Y")
     ap.add_argument("--rotz", type=float, default=0.0, help="degrees about Z, applied last")
     ap.add_argument("--flip-normals", action="store_true", help="flip if the hull renders inside-out")
+    ap.add_argument("--align-recess", action="store_true",
+                    help="rotate so the modelled docking bay (a recess) faces the player (-z) on the roll axis")
     args = ap.parse_args()
 
     mesh = build_mesh(args)
