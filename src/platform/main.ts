@@ -284,6 +284,17 @@ startGameLoop({
           renderer.drawMesh(m, modelMatrix(e.pos, now * 1.1 + phase, now * 0.8 + phase * 1.3, PICKUP_SCALE));
           break;
         }
+        case 'cargo': {
+          // Jettisoned cargo canisters spilling from the player's wreck — tumbling, fading. [ROC-CARGO-6]
+          const m = MESHES.canister;
+          if (!m) break;
+          const phase = e.id * 0.7;
+          const fade = e.ttlMax ? Math.max(0, Math.min(1, (e.ttl ?? 0) / e.ttlMax)) : 1;
+          renderer.drawMesh(m, modelMatrix(e.pos, now * 1.4 + phase, now * 1.1 + phase * 1.3, PICKUP_SCALE), {
+            stroke: `rgba(255,255,255,${fade.toFixed(2)})`,
+          });
+          break;
+        }
         case 'enemy':
         case 'boss':
         case 'station': {

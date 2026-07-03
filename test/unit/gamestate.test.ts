@@ -125,6 +125,43 @@ describe('death, lives & respawn', () => {
     expect(p.hull).toBe(p.hullMax);
   });
 
+  const cargoWreck = (w: ReturnType<typeof makeWorld>): Entity[] =>
+    [...w.entities.values()].filter((e) => e.kind === 'cargo');
+
+  it('jettisons the hold as canister wreckage on death — one per tonne, and the cargo is lost', () => {
+    const w = makeWorld(1);
+    const p = w.entities.get(PLAYER_ID)!;
+    p.shield = 0;
+    p.hull = 0;
+    p.pos = vec3(0.2, 0, 0.5);
+    w.cargo = { gold: 2, furs: 3 }; // 5 tonnes
+    gamestateSystem(w, DT, vi.fn(), { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+
+    const wreck = cargoWreck(w);
+    expect(wreck).toHaveLength(5); // one canister per tonne [ROC-CARGO-6]
+    expect(w.cargo).toEqual({}); // and the hold is gone
+    expect(wreck.every((e) => e.meshId === 'canister' && (e.ttl ?? 0) > 0)).toBe(true);
+  });
+
+  it('caps the jettisoned canisters at 10 for a big hold', () => {
+    const w = makeWorld(1);
+    const p = w.entities.get(PLAYER_ID)!;
+    p.shield = 0;
+    p.hull = 0;
+    w.cargo = { gold: 25 };
+    gamestateSystem(w, DT, vi.fn(), { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    expect(cargoWreck(w)).toHaveLength(10); // never more than 10 [ROC-CARGO-6]
+  });
+
+  it('scatters nothing when the hold was empty', () => {
+    const w = makeWorld(1);
+    const p = w.entities.get(PLAYER_ID)!;
+    p.shield = 0;
+    p.hull = 0;
+    gamestateSystem(w, DT, vi.fn(), { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    expect(cargoWreck(w)).toHaveLength(0);
+  });
+
   it('runs out of lives into GAME_OVER and then stops resolving', () => {
     const w = makeWorld(1);
     w.player.lives = 1;

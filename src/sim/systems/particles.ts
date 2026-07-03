@@ -204,6 +204,12 @@ export function particlesSystem(
       }
       e.ttl = (e.ttl ?? 0) - dt;
       if (e.ttl <= 0) world.entities.delete(e.id);
+    } else if (e.kind === 'cargo') {
+      // Jettisoned cargo canisters drift out of the wreck and fade over their lifetime. [ROC-CARGO-6]
+      e.pos.x += e.vel.x * dt;
+      e.pos.z += e.vel.z * dt;
+      e.ttl = (e.ttl ?? 0) - dt;
+      if (e.ttl <= 0) world.entities.delete(e.id);
     }
   }
 }

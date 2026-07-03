@@ -1,8 +1,8 @@
 // Player survival FSM: contact (ramming) damage, post-hit/respawn invulnerability, and what
-// happens when the player's hull is gone — an escape pod respawns at the death point (consuming
-// the pod and the cargo), otherwise a life is spent and the level restarts; at zero lives the
-// game is over. Bullet damage to the player is applied in damageSystem; this resolves the
-// consequences. [tasks T6.4, ROC-LIFE-1..5]
+// happens when the player's hull is gone — an escape pod respawns at the death point, otherwise a
+// life is spent and the level restarts; at zero lives the game is over. Either way the hold is
+// lost: the cargo is jettisoned as tumbling canister wreckage. Bullet damage to the player is
+// applied in damageSystem; this resolves the consequences. [tasks T6.4, ROC-LIFE-1..5, ROC-CARGO-6]
 
 import type { Entity } from '../components.js';
 import { PLAYER_ID, type World } from '../world.js';
@@ -32,6 +32,34 @@ export const DEFAULT_GAMESTATE: GamestateConfig = {
 
 const radius = (rx: number | undefined, rz: number | undefined, scale: number): number =>
   Math.max(rx ?? 0.3, rz ?? 0.3) * scale;
+
+// Losing the ship jettisons the hold: up to this many cargo canisters burst from the wreck, but
+// never more than the ship was carrying. [ROC-CARGO-6]
+export const CARGO_WRECK_MAX = 10;
+const CARGO_WRECK_SPEED = 0.3;
+const CARGO_WRECK_TTL = 1.8;
+
+// Scatter `count` cargo canisters around (x,z) as cosmetic wreckage, inheriting the wreck's drift.
+// They are a distinct 'cargo' kind: not collectible and not a collision target (nothing else looks
+// at that kind), and — like the hull fragments — they survive a level restart, so the loss always
+// reads on screen. Deterministic (even scatter, no rng needed here). [ROC-CARGO-6]
+function spawnCargoWreck(world: World, x: number, z: number, count: number, baseVx: number, baseVz: number): void {
+  for (let i = 0; i < count; i++) {
+    const angle = (i / Math.max(1, count)) * Math.PI * 2 + i * 0.6;
+    const id = world.nextId++;
+    world.entities.set(id, {
+      id,
+      kind: 'cargo',
+      pos: { x, y: 0, z },
+      vel: { x: Math.cos(angle) * CARGO_WRECK_SPEED + baseVx, y: 0, z: Math.sin(angle) * CARGO_WRECK_SPEED + baseVz },
+      yaw: 0,
+      bank: 0,
+      meshId: 'canister',
+      ttl: CARGO_WRECK_TTL,
+      ttlMax: CARGO_WRECK_TTL,
+    });
+  }
+}
 
 // A ship's world-space silhouette plus its current shield gap, for the ram test. Null when no
 // hull mesh is available (falls back to the old bounding-circle test for that side).
@@ -116,9 +144,14 @@ export function gamestateSystem(
     const dx = player.pos.x;
     const dz = player.pos.z;
 
+    // Jettison the hold as canister wreckage (up to 10, never more than it carried), then the
+    // cargo is gone — however the ship dies. [ROC-CARGO-6]
+    const tons = Object.values(world.cargo).reduce((n, t) => n + t, 0);
+    spawnCargoWreck(world, dx, dz, Math.min(CARGO_WRECK_MAX, tons), player.vel.x, player.vel.z);
+    world.cargo = {};
+
     if (world.player.escapePod) {
       world.player.escapePod = false; // consumed
-      world.cargo = {}; // pod jettisons the hold [ROC-LIFE-2]
       respawnPlayer(world, dx, dz, cfg.respawnInvuln);
       world.events.push({ type: 'escapePod' });
       return;
