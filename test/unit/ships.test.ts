@@ -19,7 +19,7 @@ describe('ships content', () => {
   it('is a four-hull ladder with per-direction hardpoints', () => {
     expect(ships.ladder).toEqual(['sidewinder', 'cobra_mk3', 'asp_mk2', 'fer_de_lance']);
     expect(ships.ships.sidewinder.hardpoints).toEqual({ front: 2, rear: 1, left: 0, right: 0 });
-    expect(ships.ships.fer_de_lance.hardpoints).toEqual({ front: 3, rear: 3, left: 3, right: 3 });
+    expect(ships.ships.fer_de_lance.hardpoints).toEqual({ front: 4, rear: 3, left: 3, right: 3 });
   });
 });
 

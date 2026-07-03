@@ -58,15 +58,19 @@ export function stationButtons(world: World, ctx: StationContext, w: number, h: 
     { label: `Laser type: ${cap(selected)}  (${laserPrice}cr)`, enabled: true, action: 'laserType' },
     ...DIRECTIONS.map((dir) => {
       const cap_ = world.player.hardpoints[dir];
-      const used = world.player.lasers[dir].length;
-      // A full direction can still take an upgrade laser by replacing a pulse, refunding it. [ROC-LAS-6]
-      const replace = freeIn(world, dir) <= 0 && cap_ > 0 && selected !== 'pulse' && world.player.lasers[dir].includes('pulse');
-      const price = replace ? laserPrice - prices.lasers.pulse : laserPrice;
+      const lasers = world.player.lasers[dir];
+      const used = lasers.length;
+      // A full direction can still take a different laser type by bumping whichever one is
+      // already there, refunding its price (e.g. military can replace a beam). [ROC-LAS-5,6]
+      const full = freeIn(world, dir) <= 0 && cap_ > 0;
+      const replaceIdx = full ? lasers.findIndex((t) => t !== selected) : -1;
+      const replace = replaceIdx >= 0 ? (lasers[replaceIdx] as LaserType) : null;
+      const price = replace ? laserPrice - prices.lasers[replace] : laserPrice;
       return {
         label: replace
-          ? `Fit ${cap(dir)} (${used}/${cap_}) replace pulse  ${price}cr`
+          ? `Fit ${cap(dir)} (${used}/${cap_}) replace ${replace}  ${price}cr`
           : `Fit ${cap(dir)} (${used}/${cap_})  ${price}cr`,
-        enabled: (freeIn(world, dir) > 0 || replace) && affordable(world, price),
+        enabled: (freeIn(world, dir) > 0 || replace !== null) && affordable(world, price),
         action: fitAction[dir] as StationAction,
       };
     }),

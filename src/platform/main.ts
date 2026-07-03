@@ -326,13 +326,13 @@ startGameLoop({
     }
     if (particles.length) renderer.drawWorldParticles(particles, { fill: '#fff', size: 2 });
 
-    // Beam lasers: instant, continuous shots from the ship to whatever they hit — a soft wide
-    // underlay plus a bright core. [ROC-LAS-6]
+    // Beam lasers: instant, continuous shots from the ship to whatever they hit — a soft grey
+    // glow underlay plus a bright white core. [ROC-LAS-6]
     for (const b of sim.state.beams) {
       const a = vec3(b.ax, 0, b.az);
       const c = vec3(b.bx, 0, b.bz);
-      renderer.drawWorldLine(a, c, { stroke: 'rgba(120,200,255,0.35)', lineWidth: 6 });
-      renderer.drawWorldLine(a, c, { stroke: '#dff', lineWidth: 2 });
+      renderer.drawWorldLine(a, c, { stroke: 'rgba(200,200,200,0.35)', lineWidth: 6 });
+      renderer.drawWorldLine(a, c, { stroke: '#fff', lineWidth: 2 });
     }
 
     // Player ship, interpolated between the last two sim states. Blink while invulnerable

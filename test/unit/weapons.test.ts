@@ -68,6 +68,33 @@ describe('weaponsSystem', () => {
     expect(p.pos.z).toBeGreaterThan(0);
   });
 
+  it('starts shots right at the hull (+ a small gap), using each mount’s own reach', () => {
+    const w = makeWorld(1);
+    const p = w.entities.get(1)!;
+    p.meshId = 'testship';
+    const extent = { front: 0.4, rear: 0.2, left: 0.1, right: 0.15 };
+    const cfg = { ...DEFAULT_WEAPONS, getHullExtent: (id: string) => (id === 'testship' ? extent : undefined) };
+    w.player.lasers = { front: ['pulse'], rear: ['pulse'], left: ['pulse'], right: ['pulse'] };
+    weaponsSystem(w, frame({ fireTapped: true }), DT, cfg);
+    const ps = projectiles(w);
+    // +1 DT of travel: the spawn and the same-step integration both happen inside this call.
+    const at = (mountReach: number) => mountReach + cfg.muzzleGap + cfg.pulseSpeed * DT;
+    const front = ps.find((e) => e.vel.z > 0)!;
+    const rear = ps.find((e) => e.vel.z < 0)!;
+    const right = ps.find((e) => e.vel.x > 0)!;
+    const left = ps.find((e) => e.vel.x < 0)!;
+    expect(front.pos.z).toBeCloseTo(at(extent.front), 6);
+    expect(rear.pos.z).toBeCloseTo(-at(extent.rear), 6);
+    expect(right.pos.x).toBeCloseTo(at(extent.right), 6);
+    expect(left.pos.x).toBeCloseTo(-at(extent.left), 6);
+  });
+
+  it('falls back to the fixed muzzle offset when no hull extent is known for the mesh', () => {
+    const w = makeWorld(1);
+    weaponsSystem(w, frame({ fireTapped: true }), DT); // no getHullExtent configured
+    expect(projectiles(w)[0].pos.z).toBeCloseTo(DEFAULT_WEAPONS.muzzleOffset + DEFAULT_WEAPONS.pulseSpeed * DT, 6);
+  });
+
   it('military lasers fire twice as fast as pulses', () => {
     const w = makeWorld(1);
     w.player.lasers.front = ['military'];
@@ -98,6 +125,18 @@ describe('weaponsSystem', () => {
 
     for (let i = 0; i < Math.round(0.3 / DT); i++) weaponsSystem(w, frame({ firing: true }), DT);
     expect(enemy.hull).toBe(1); // a second window = a second point of damage
+  });
+
+  it('emits a beamHit event at the impact point while it holds contact, for sparks', () => {
+    const w = makeWorld(1);
+    w.player.lasers.front = ['beam'];
+    const enemy: Entity = { id: w.nextId++, kind: 'enemy', pos: vec3(0, 0, 1), vel: vec3(), yaw: 0, bank: 0, hull: 3, hullMax: 3, shield: 0, colliderRx: 0.2, colliderRz: 0.2 };
+    w.entities.set(enemy.id, enemy);
+    weaponsSystem(w, frame({ firing: true }), DT);
+    const hit = w.events.find((e) => e.type === 'beamHit');
+    expect(hit).toBeTruthy(); // particlesSystem spawns the sparks from this [ROC-LAS-6]
+    const pos = hit!.pos as { x: number; z: number };
+    expect(pos.z).toBeCloseTo(enemy.pos.z - (enemy.colliderRx ?? 0), 1); // at the hull, not past it
   });
 
   it('stops firing (and clears the beam) when the trigger is released', () => {

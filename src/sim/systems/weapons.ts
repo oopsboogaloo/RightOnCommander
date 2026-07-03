@@ -27,9 +27,22 @@ export interface WeaponsConfig {
   beamRange: number; // how far a beam reaches when it hits nothing, world units [ROC-LAS-6]
   beamPeriod: number; // seconds of contact per 1 damage (300 ms)
   beamDamage: number; // damage applied each time `beamPeriod` of contact accrues
-  muzzleOffset: number; // spawn distance from the ship centre
+  muzzleOffset: number; // fallback spawn distance from the ship centre, when no hull extent is known
+  muzzleGap: number; // small clearance beyond the hull surface, when a hull extent is known
   muzzleSpread: number; // lateral gap between multiple lasers in one direction
   colliderScale: number; // matches the rendered hull size (SHIP_SCALE); scales beam hit radii
+  getHullExtent?: (meshId: string) => HullExtent | undefined; // per-mount reach to the hull edge
+}
+
+// How far a ship's silhouette reaches from its centre along each firing axis — the nose, tail and
+// each wingtip are all different distances, so a single "hull radius" would overshoot the shorter
+// ones (e.g. a wide, short-nosed fighter). The player never yaws (only banks), so these map
+// straight onto the mesh's own local axes. [ROC-LAS-*]
+export interface HullExtent {
+  front: number;
+  rear: number;
+  left: number;
+  right: number;
 }
 
 export const DEFAULT_WEAPONS: WeaponsConfig = {
@@ -45,6 +58,7 @@ export const DEFAULT_WEAPONS: WeaponsConfig = {
   beamPeriod: 0.3,
   beamDamage: 1,
   muzzleOffset: 0.25,
+  muzzleGap: 0.03, // just clear of the hull silhouette, not floating off the nose
   muzzleSpread: 0.04, // half the previous gap: multi-laser mounts read as one fatter weapon, not two separate guns
   colliderScale: 1,
 };
@@ -75,6 +89,16 @@ export function acquireProjectile(world: World): Entity {
 function recycleProjectile(world: World, e: Entity): void {
   world.entities.delete(e.id);
   world.pool.projectiles.push(e); // keep the object for reuse — no leak
+}
+
+// Distance from the ship centre to the muzzle, along this mount's own axis: the hull's actual
+// reach in that direction (matching the drawn/collided size) plus a small clearance, so shots
+// start right at the hull rather than floating in open space; or the fallback offset when no hull
+// extent is known for this mesh (e.g. in tests without content). [ROC-LAS-*]
+function muzzleDist(ship: Entity, mount: 'front' | 'rear' | 'left' | 'right', cfg: WeaponsConfig): number {
+  const ext = ship.meshId ? cfg.getHullExtent?.(ship.meshId) : undefined;
+  const reach = ext?.[mount];
+  return reach != null ? reach * (ship.scale ?? 1) + cfg.muzzleGap : cfg.muzzleOffset;
 }
 
 function spawnBolt(world: World, origin: Vec3, dir: Vec3, speed: number, ttl: number, damage: number, mil: boolean): void {
@@ -117,8 +141,14 @@ function beamHit(world: World, origin: Vec3, dir: Vec3, range: number, colliderS
 function fireBeam(world: World, origin: Vec3, dir: Vec3, dt: number, cfg: WeaponsConfig): void {
   const hit = beamHit(world, origin, dir, cfg.beamRange, cfg.colliderScale);
   const reach = hit ? hit.t : cfg.beamRange;
-  world.beams.push({ ax: origin.x, az: origin.z, bx: origin.x + dir.x * reach, bz: origin.z + dir.z * reach });
+  const bx = origin.x + dir.x * reach;
+  const bz = origin.z + dir.z * reach;
+  world.beams.push({ ax: origin.x, az: origin.z, bx, bz });
   if (!hit) return;
+
+  // Sparks at the impact point every step the beam holds contact — particlesSystem spawns them
+  // (it owns the rng); the beam itself is otherwise instantaneous, non-physical. [ROC-LAS-6]
+  world.events.push({ type: 'beamHit', pos: { x: bx, y: 0, z: bz } });
 
   const target = hit.e;
   target.beamExposure = (target.beamExposure ?? 0) + dt;
@@ -152,10 +182,11 @@ export function weaponsSystem(
     for (const { mount, dir } of MOUNT_DIRS) {
       const lasers = world.player.lasers[mount];
       const n = lasers.length;
+      const dist = muzzleDist(player, mount, cfg);
       const perp = vec3(dir.z, 0, -dir.x); // in-plane perpendicular, for side-by-side muzzles
       for (let i = 0; i < n; i++) {
         const offset = (i - (n - 1) / 2) * cfg.muzzleSpread;
-        const origin = add(add(player.pos, scale(dir, cfg.muzzleOffset)), scale(perp, offset));
+        const origin = add(add(player.pos, scale(dir, dist)), scale(perp, offset));
         const type = lasers[i];
         if (type === 'beam') {
           if (firing) fireBeam(world, origin, dir, dt, cfg);

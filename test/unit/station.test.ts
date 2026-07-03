@@ -57,14 +57,20 @@ describe('buy ship', () => {
 });
 
 describe('fit lasers', () => {
-  it('charges the per-type price and respects the fitting rules', () => {
+  it('charges the per-type price, and a full direction still swaps to any different type', () => {
     const w = makeWorld(1);
     w.econ.wallet = 5000;
     buyShip(w, ctx); // Cobra, wallet 3000
     expect(fitLaserAt(w, ctx, 'rear', 'beam').ok).toBe(true);
     expect(w.player.lasers.rear).toEqual(['beam']);
     expect(w.econ.wallet).toBe(2000); // 3000 - 1000
-    expect(fitLaserAt(w, ctx, 'rear', 'pulse').ok).toBe(false); // rear now full (1/1)
+    // Rear is full (1/1) with a beam, but fitting a pulse still succeeds — it swaps out the beam
+    // and refunds it, never a dead end regardless of which direction the swap goes. [ROC-LAS-6]
+    const r = fitLaserAt(w, ctx, 'rear', 'pulse');
+    expect(r.ok).toBe(true);
+    expect(r.replaced).toBe('beam');
+    expect(w.player.lasers.rear).toEqual(['pulse']);
+    expect(w.econ.wallet).toBe(2900); // 2000 + (1000 beam refund - 100 pulse price)
   });
 
   it('adds a second laser alongside the first when a hardpoint is free (both operate)', () => {
@@ -85,6 +91,18 @@ describe('fit lasers', () => {
     expect(r.replaced).toBe('pulse');
     expect(w.player.lasers.rear).toEqual(['beam']); // swapped, not stacked
     expect(w.econ.wallet).toBe(4000); // 4900 - (1000 beam - 100 pulse refund) [ROC-LAS-6]
+  });
+
+  it('fits a military laser over a slot occupied by a beam, refunding the beam', () => {
+    const w = makeWorld(1); // Sidewinder rear cap 1
+    w.econ.wallet = 20000;
+    expect(fitLaserAt(w, ctx, 'rear', 'beam').ok).toBe(true); // rear ['beam'], -1000
+    expect(w.econ.wallet).toBe(19000);
+    const r = fitLaserAt(w, ctx, 'rear', 'military'); // rear full -> military replaces the beam
+    expect(r.ok).toBe(true);
+    expect(r.replaced).toBe('beam');
+    expect(w.player.lasers.rear).toEqual(['military']);
+    expect(w.econ.wallet).toBe(10000); // 19000 - (10000 military - 1000 beam refund)
   });
 
   it('reports the shortfall when too poor', () => {

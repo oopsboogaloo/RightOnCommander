@@ -71,8 +71,9 @@ export function buyShip(world: World, ctx: StationContext): StationResult {
 }
 
 // Fit a laser of `type` to `dir`. A free hardpoint takes another laser (they all fire together);
-// when the direction is full, an upgrade laser (beam/military) replaces a pulse and refunds the
-// pulse's price. [ROC-STN-4, ROC-LAS-5,6]
+// when the direction is full, `type` replaces whichever different-type laser is already there,
+// refunding its price — any type can bump any other (e.g. military can replace a beam, refunding
+// it), so upgrading (or downgrading) is always possible, never just a dead end. [ROC-STN-4, ROC-LAS-5,6]
 export function fitLaserAt(world: World, ctx: StationContext, dir: Direction, type: LaserType): StationResult {
   const price = ctx.prices.lasers[type];
 
@@ -84,15 +85,16 @@ export function fitLaserAt(world: World, ctx: StationContext, dir: Direction, ty
     return { ok: true };
   }
 
-  // Full: swap out a pulse for the upgrade and hand its price back. [ROC-LAS-6]
-  const idx = type !== 'pulse' ? world.player.lasers[dir].indexOf('pulse') : -1;
+  const lasers = world.player.lasers[dir];
+  const idx = lasers.findIndex((t) => t !== type);
   if (idx >= 0) {
-    const refund = ctx.prices.lasers.pulse;
-    const err = charge(world, price - refund); // net cost: pay the new laser, credited the pulse
+    const replaced = lasers[idx] as LaserType;
+    const refund = ctx.prices.lasers[replaced];
+    const err = charge(world, price - refund); // net cost: pay the new laser, credited the old one
     if (err) return err;
-    world.player.lasers[dir][idx] = type;
-    world.events.push({ type: 'laserFitted', dir, laser: type, replaced: 'pulse', refund });
-    return { ok: true, replaced: 'pulse', refund };
+    lasers[idx] = type;
+    world.events.push({ type: 'laserFitted', dir, laser: type, replaced, refund });
+    return { ok: true, replaced, refund };
   }
 
   return fail('no free hardpoint in that direction');

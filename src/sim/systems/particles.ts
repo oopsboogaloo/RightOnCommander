@@ -15,6 +15,9 @@ export interface ParticlesConfig {
   fragSpin: [number, number]; // wireframe-shard tumble, radians/sec (signed via rng)
   fragTtl: [number, number]; // wireframe-shard lifetime
   exhaustTtl: [number, number]; // missile thrust-puff lifetime
+  sparkCount: [number, number]; // particles per beam-impact tick [ROC-LAS-6]
+  sparkSpeed: [number, number]; // short-ranged: barely leaves the impact point
+  sparkTtl: [number, number]; // very brief — a fizz, not a firework
 }
 
 interface Vel {
@@ -35,6 +38,9 @@ export const DEFAULT_PARTICLES: ParticlesConfig = {
   fragSpin: [0.8, 2.6],
   fragTtl: [0.7, 1.3],
   exhaustTtl: [0.18, 0.34],
+  sparkCount: [1, 2],
+  sparkSpeed: [0.05, 0.2],
+  sparkTtl: [0.05, 0.12],
 };
 
 // One edge of a ship mesh, projected to the play plane and pre-scaled to the rendered hull size.
@@ -73,18 +79,37 @@ function recycleParticle(world: World, e: Entity): void {
   world.pool.particles.push(e);
 }
 
-function burst(world: World, rng: Rng, at: XYZ, count: number, cfg: ParticlesConfig, base: Vel = ZERO): void {
+function burstRanged(
+  world: World,
+  rng: Rng,
+  at: XYZ,
+  count: number,
+  speedRange: [number, number],
+  ttlRange: [number, number],
+  base: Vel = ZERO,
+): void {
   for (let i = 0; i < count; i++) {
     const e = acquireParticle(world);
     e.kind = 'particle';
     const angle = rng.range(0, Math.PI * 2);
-    const speed = randRange(rng, cfg.speed);
+    const speed = randRange(rng, speedRange);
     e.pos = { x: at.x, y: at.y, z: at.z };
     e.vel = { x: Math.cos(angle) * speed + base.x, y: 0, z: Math.sin(angle) * speed + base.z }; // drift with the wreck
     e.yaw = 0;
     e.bank = 0;
-    e.ttl = randRange(rng, cfg.ttl);
+    e.ttl = randRange(rng, ttlRange);
   }
+}
+
+function burst(world: World, rng: Rng, at: XYZ, count: number, cfg: ParticlesConfig, base: Vel = ZERO): void {
+  burstRanged(world, rng, at, count, cfg.speed, cfg.ttl, base);
+}
+
+// Short-ranged sparks where a beam laser is currently touching its target: barely leave the
+// impact point and fade almost immediately, so continuous beam contact reads as a steady fizz
+// rather than a firework. [ROC-LAS-6]
+export function spawnBeamSparks(world: World, rng: Rng, at: XYZ, cfg: ParticlesConfig = DEFAULT_PARTICLES): void {
+  burstRanged(world, rng, at, randInt(rng, cfg.sparkCount), cfg.sparkSpeed, cfg.sparkTtl);
 }
 
 // A single thrust puff left behind a missile: drifts opposite its heading and fades fast.
@@ -182,6 +207,8 @@ export function particlesSystem(
     } else if (ev.type === 'ecmDetonate') {
       // A missile popped harmlessly by the boss ECM: a small puff, no damage. [ROC-BECM-1]
       burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.fragmentCount), cfg);
+    } else if (ev.type === 'beamHit') {
+      spawnBeamSparks(world, rng, ev.pos as XYZ, cfg);
     }
   }
 

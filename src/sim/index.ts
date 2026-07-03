@@ -12,7 +12,7 @@ import { snapshot, restore, type WorldSnapshot } from './snapshot.js';
 import { makeWorld, PLAYER_ID, type World } from './world.js';
 import { vec3 } from './math/vec3.js';
 import { movementSystem } from './systems/movement.js';
-import { weaponsSystem, DEFAULT_WEAPONS } from './systems/weapons.js';
+import { weaponsSystem, DEFAULT_WEAPONS, type HullExtent } from './systems/weapons.js';
 import { collisionSystem, meshSilhouette, hullRadius } from './systems/collision.js';
 import type { Pt } from './math/geom2.js';
 import { damageSystem } from './systems/damage.js';
@@ -42,9 +42,6 @@ const COLLISION_CELL = 0.8;
 // drawn — and collided — at this fraction so the hitbox matches the sprite. The renderer
 // imports this for its model matrix; collision scales every collider by it. [DEFECTS D2/D4]
 export const SHIP_SCALE = 1 / 3;
-
-// Beam-laser hit radii must match the rendered/collided hull size. [ROC-LAS-6]
-const WEAPONS = { ...DEFAULT_WEAPONS, colliderScale: SHIP_SCALE };
 
 export interface SimConfig {
   [key: string]: unknown;
@@ -84,6 +81,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
   const fragGeom: FragGeom = {};
   const silhouettes: Record<string, Pt[]> = {}; // per-mesh convex hull outline, for tight collisions
   const hullRadii: Record<string, number> = {}; // per-mesh hullRadius(), for shield-ring gap sizing
+  const hullExtents: Record<string, HullExtent> = {}; // per-mesh reach along each firing axis, for muzzle placement
   for (const [id, m] of Object.entries(meshes)) {
     if (!m?.edges || !m?.vertices) continue;
     fragGeom[id] = m.edges.map(([i, j]) => ({
@@ -94,7 +92,27 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     }));
     silhouettes[id] = meshSilhouette(m);
     hullRadii[id] = hullRadius(silhouettes[id], SHIP_SCALE);
+    // The silhouette is (x, z) in local mesh space; the player never yaws, so front/rear/left/
+    // right map straight onto it — each mount reaches exactly as far as the hull does along its
+    // own axis (nose, tail and wingtips are rarely the same distance). [ROC-LAS-*]
+    let maxX = 0, minX = 0, maxZ = 0, minZ = 0;
+    for (const p of silhouettes[id]) {
+      maxX = Math.max(maxX, p.x);
+      minX = Math.min(minX, p.x);
+      maxZ = Math.max(maxZ, p.y);
+      minZ = Math.min(minZ, p.y);
+    }
+    hullExtents[id] = {
+      front: maxZ * SHIP_SCALE,
+      rear: -minZ * SHIP_SCALE,
+      right: maxX * SHIP_SCALE,
+      left: -minX * SHIP_SCALE,
+    };
   }
+
+  // Muzzles start at the hull surface (+ a small gap), matching the rendered/collided size, and
+  // beam hit radii use the same scale. [ROC-LAS-6]
+  const weaponsCfg = { ...DEFAULT_WEAPONS, colliderScale: SHIP_SCALE, getHullExtent: (id: string) => hullExtents[id] };
 
   // Wipe the current combat (used before any level/phase restart).
   function clearCombat(): void {
@@ -155,7 +173,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     world.events = [];
 
     movementSystem(world, input, SIM_DT);
-    weaponsSystem(world, input, SIM_DT, WEAPONS);
+    weaponsSystem(world, input, SIM_DT, weaponsCfg);
     missilesSystem(world, SIM_DT);
     ecmSystem(world, SIM_DT); // boss ECM pops player missiles after its fuse [ROC-BECM-*]
     waveSystem(world, rng, SIM_DT, waveCtx);
