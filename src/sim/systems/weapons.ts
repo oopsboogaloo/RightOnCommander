@@ -1,29 +1,52 @@
-// Player weapons: pulse lasers. Autofire while held and single-shot on tap, gated by a
-// per-trigger cooldown so the cadence is identical either way. All non-null laser mounts fire
-// on the same trigger; pulses are short moving segment-projectiles drawn from an object pool to
-// avoid per-frame allocation. [tasks T2.3, ROC-CTL-1, ROC-LAS-3,4; design §9]
+// Player weapons: three laser types, all fired on the same trigger. [ROC-LAS-3,4,5,6; design §9]
+//
+// - pulse:    short moving segment-projectiles at a steady cadence (the default). [ROC-LAS-3]
+// - military: like the pulse but twice as fast, twice the damage and twice the fire rate; its
+//             bolts render shorter and thicker. [ROC-LAS-5]
+// - beam:     an instant, continuous hitscan beam from the muzzle to the first thing it meets,
+//             dealing 1 damage per 300 ms of contact. Rendered from world.beams. [ROC-LAS-6]
+//
+// Every installed laser fires along its mount; multiple lasers in one direction fan out slightly.
+// A ship can mix types (e.g. a beam and a pulse both firing). Projectiles come from an object pool.
 
 import type { InputFrame } from '../../interfaces.js';
 import type { Entity } from '../components.js';
 import { type Vec3, vec3, add, scale } from '../math/vec3.js';
 import { PLAYER_ID, type World } from '../world.js';
+import { applyDamage } from './damage.js';
 
 export interface WeaponsConfig {
   pulseRate: number; // shots per second per trigger
   pulseSpeed: number; // world units / second
   pulseTtl: number; // projectile lifetime, seconds
+  pulseDamage: number; // damage per pulse hit
+  militaryRate: number; // shots per second (twice the pulse) [ROC-LAS-5]
+  militarySpeed: number; // twice the pulse speed
+  militaryTtl: number;
+  militaryDamage: number; // twice the pulse damage
+  beamRange: number; // how far a beam reaches when it hits nothing, world units [ROC-LAS-6]
+  beamPeriod: number; // seconds of contact per 1 damage (300 ms)
+  beamDamage: number; // damage applied each time `beamPeriod` of contact accrues
   muzzleOffset: number; // spawn distance from the ship centre
   muzzleSpread: number; // lateral gap between multiple lasers in one direction
-  pulseDamage: number; // damage per pulse hit
+  colliderScale: number; // matches the rendered hull size (SHIP_SCALE); scales beam hit radii
 }
 
 export const DEFAULT_WEAPONS: WeaponsConfig = {
   pulseRate: 6,
   pulseSpeed: 6,
   pulseTtl: 1.2,
+  pulseDamage: 1,
+  militaryRate: 12,
+  militarySpeed: 12,
+  militaryTtl: 1.0,
+  militaryDamage: 2,
+  beamRange: 3,
+  beamPeriod: 0.3,
+  beamDamage: 1,
   muzzleOffset: 0.25,
   muzzleSpread: 0.04, // half the previous gap: multi-laser mounts read as one fatter weapon, not two separate guns
-  pulseDamage: 1,
+  colliderScale: 1,
 };
 
 // Mount -> firing direction in the play plane (x right, z up-screen/forward).
@@ -40,10 +63,11 @@ export function acquireProjectile(world: World): Entity {
   const id = world.nextId++;
   if (reused) {
     reused.id = id;
+    reused.mil = false; // start clean; a spawner sets it if this is a military bolt
     world.entities.set(id, reused);
     return reused;
   }
-  const fresh: Entity = { id, kind: 'projectile', pos: vec3(), vel: vec3(), yaw: 0, bank: 0 };
+  const fresh: Entity = { id, kind: 'projectile', pos: vec3(), vel: vec3(), yaw: 0, bank: 0, mil: false };
   world.entities.set(id, fresh);
   return fresh;
 }
@@ -53,16 +77,56 @@ function recycleProjectile(world: World, e: Entity): void {
   world.pool.projectiles.push(e); // keep the object for reuse — no leak
 }
 
-function spawnPulse(world: World, origin: Vec3, dir: Vec3, cfg: WeaponsConfig): void {
+function spawnBolt(world: World, origin: Vec3, dir: Vec3, speed: number, ttl: number, damage: number, mil: boolean): void {
   const e = acquireProjectile(world);
   e.kind = 'projectile';
   e.team = 'player';
   e.pos = { x: origin.x, y: origin.y, z: origin.z };
-  e.vel = scale(dir, cfg.pulseSpeed);
+  e.vel = scale(dir, speed);
   e.yaw = 0;
   e.bank = 0;
-  e.ttl = cfg.pulseTtl;
-  e.damage = cfg.pulseDamage;
+  e.ttl = ttl;
+  e.damage = damage;
+  e.mil = mil;
+}
+
+// The nearest enemy/boss/asteroid the beam ray meets ahead of the muzzle, by ray-vs-collider-circle.
+function beamHit(world: World, origin: Vec3, dir: Vec3, range: number, colliderScale: number): { e: Entity; t: number } | null {
+  let best: Entity | null = null;
+  let bestT = range;
+  for (const e of world.entities.values()) {
+    if (e.kind !== 'enemy' && e.kind !== 'boss' && e.kind !== 'asteroid') continue;
+    const r = Math.max(e.colliderRx ?? 0.2, e.colliderRz ?? 0.2) * colliderScale * (e.scale ?? 1);
+    const lx = e.pos.x - origin.x;
+    const lz = e.pos.z - origin.z;
+    const tca = lx * dir.x + lz * dir.z; // projection onto the ray
+    if (tca < -r) continue; // fully behind the muzzle
+    const d2 = lx * lx + lz * lz - tca * tca; // squared distance from centre to the ray
+    if (d2 > r * r) continue; // ray misses the circle
+    const t = Math.max(0, tca - Math.sqrt(r * r - d2)); // entry distance (0 if muzzle is inside)
+    if (t < bestT) {
+      bestT = t;
+      best = e;
+    }
+  }
+  return best ? { e: best, t: bestT } : null;
+}
+
+// One continuous beam this step: trace it, record the segment to draw, and accrue contact damage
+// (1 per beamPeriod of fire). [ROC-LAS-6]
+function fireBeam(world: World, origin: Vec3, dir: Vec3, dt: number, cfg: WeaponsConfig): void {
+  const hit = beamHit(world, origin, dir, cfg.beamRange, cfg.colliderScale);
+  const reach = hit ? hit.t : cfg.beamRange;
+  world.beams.push({ ax: origin.x, az: origin.z, bx: origin.x + dir.x * reach, bz: origin.z + dir.z * reach });
+  if (!hit) return;
+
+  const target = hit.e;
+  target.beamExposure = (target.beamExposure ?? 0) + dt;
+  while ((target.beamExposure ?? 0) >= cfg.beamPeriod) {
+    target.beamExposure = (target.beamExposure ?? 0) - cfg.beamPeriod;
+    applyDamage(world, target, cfg.beamDamage);
+    if ((target.hull ?? 0) <= 0) break; // destroyed (and possibly removed) — stop burning it
+  }
 }
 
 export function weaponsSystem(
@@ -71,32 +135,48 @@ export function weaponsSystem(
   dt: number,
   cfg: WeaponsConfig = DEFAULT_WEAPONS,
 ): void {
+  world.beams = []; // beams are instantaneous: recomputed fresh every step
+
   const player = world.entities.get(PLAYER_ID);
   if (player) {
     world.player.fireCooldown = Math.max(0, world.player.fireCooldown - dt);
+    world.player.militaryCooldown = Math.max(0, world.player.militaryCooldown - dt);
 
     // Guns are disabled through the docking approach. [ROC-DCKG-2]
-    const disabled = world.levelState === 'DOCKING';
+    const firing = world.levelState !== 'DOCKING' && (input.firing || input.fireTapped);
+    const firePulse = firing && world.player.fireCooldown <= 0; // pulse cadence
+    const fireMil = firing && world.player.militaryCooldown <= 0; // military cadence (2x)
+    let firedPulse = false;
+    let firedMil = false;
 
-    // Held autofires; a tap fires one shot. Both honour the cooldown. Every installed laser
-    // fires along its mount; multiple lasers in one direction fan out slightly. [ROC-LAS-3, ROC-HP-3]
-    if (!disabled && (input.firing || input.fireTapped) && world.player.fireCooldown <= 0) {
-      const lasers = world.player.lasers;
-      let fired = false;
-      for (const { mount, dir } of MOUNT_DIRS) {
-        const n = lasers[mount].length;
-        const perp = vec3(dir.z, 0, -dir.x); // in-plane perpendicular, for side-by-side muzzles
-        for (let i = 0; i < n; i++) {
-          const offset = (i - (n - 1) / 2) * cfg.muzzleSpread;
-          const origin = add(add(player.pos, scale(dir, cfg.muzzleOffset)), scale(perp, offset));
-          spawnPulse(world, origin, dir, cfg);
-          fired = true;
+    for (const { mount, dir } of MOUNT_DIRS) {
+      const lasers = world.player.lasers[mount];
+      const n = lasers.length;
+      const perp = vec3(dir.z, 0, -dir.x); // in-plane perpendicular, for side-by-side muzzles
+      for (let i = 0; i < n; i++) {
+        const offset = (i - (n - 1) / 2) * cfg.muzzleSpread;
+        const origin = add(add(player.pos, scale(dir, cfg.muzzleOffset)), scale(perp, offset));
+        const type = lasers[i];
+        if (type === 'beam') {
+          if (firing) fireBeam(world, origin, dir, dt, cfg);
+        } else if (type === 'military') {
+          if (fireMil) {
+            spawnBolt(world, origin, dir, cfg.militarySpeed, cfg.militaryTtl, cfg.militaryDamage, true);
+            firedMil = true;
+          }
+        } else if (firePulse) {
+          spawnBolt(world, origin, dir, cfg.pulseSpeed, cfg.pulseTtl, cfg.pulseDamage, false);
+          firedPulse = true;
         }
       }
-      if (fired) {
-        world.player.fireCooldown = 1 / cfg.pulseRate;
-        world.events.push({ type: 'sfx', id: 'laser_pulse' });
-      }
+    }
+    if (firedPulse) {
+      world.player.fireCooldown = 1 / cfg.pulseRate;
+      world.events.push({ type: 'sfx', id: 'laser_pulse' });
+    }
+    if (firedMil) {
+      world.player.militaryCooldown = 1 / cfg.militaryRate;
+      world.events.push({ type: 'sfx', id: 'laser_military' });
     }
   }
 

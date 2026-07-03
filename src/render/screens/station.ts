@@ -59,9 +59,14 @@ export function stationButtons(world: World, ctx: StationContext, w: number, h: 
     ...DIRECTIONS.map((dir) => {
       const cap_ = world.player.hardpoints[dir];
       const used = world.player.lasers[dir].length;
+      // A full direction can still take an upgrade laser by replacing a pulse, refunding it. [ROC-LAS-6]
+      const replace = freeIn(world, dir) <= 0 && cap_ > 0 && selected !== 'pulse' && world.player.lasers[dir].includes('pulse');
+      const price = replace ? laserPrice - prices.lasers.pulse : laserPrice;
       return {
-        label: `Fit ${cap(dir)} (${used}/${cap_})  ${laserPrice}cr`,
-        enabled: freeIn(world, dir) > 0 && affordable(world, laserPrice),
+        label: replace
+          ? `Fit ${cap(dir)} (${used}/${cap_}) replace pulse  ${price}cr`
+          : `Fit ${cap(dir)} (${used}/${cap_})  ${price}cr`,
+        enabled: (freeIn(world, dir) > 0 || replace) && affordable(world, price),
         action: fitAction[dir] as StationAction,
       };
     }),

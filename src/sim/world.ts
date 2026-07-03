@@ -20,7 +20,17 @@ export interface PlayerState {
   escapePod: boolean;
   lives: number;
   fireCooldown: number; // seconds until the next pulse may fire [ROC-LAS-3]
+  militaryCooldown: number; // seconds until the next military-laser bolt may fire [ROC-LAS-5]
   invulnTtl: number; // post-spawn / post-hit invulnerability, seconds [ROC-LIFE-2]
+}
+
+// A live beam-laser shot: a straight segment from the muzzle to whatever it hit (or its max
+// range). Recomputed every step by the weapons system, drawn by the shell. [ROC-LAS-6]
+export interface BeamSeg {
+  ax: number;
+  az: number;
+  bx: number;
+  bz: number;
 }
 
 // Pending-spawn schedule for an active wave (kept in the World so replays are deterministic).
@@ -76,6 +86,7 @@ export interface World {
   difficulty: number; // global difficulty (1 = normal); scales count + enemy stats [ROC-DIF-1,2]
   entities: Map<number, Entity>;
   nextId: number;
+  beams: BeamSeg[]; // live beam-laser segments this step (render-only; not serialised) [ROC-LAS-6]
   player: PlayerState;
   econ: { wallet: number; score: number }; // credits vs lifetime score [ROC-ECO-2]
   cargo: Record<string, number>; // type -> tonnage, sellable at dock
@@ -122,6 +133,7 @@ export function makeWorld(seed: number): World {
     difficulty: 1,
     entities,
     nextId: PLAYER_ID + 1,
+    beams: [],
     player: {
       shipClass: 'sidewinder',
       hardpoints: { front: 2, rear: 1, left: 0, right: 0 }, // matches ships.json Sidewinder
@@ -135,6 +147,7 @@ export function makeWorld(seed: number): World {
       escapePod: false,
       lives: 3,
       fireCooldown: 0,
+      militaryCooldown: 0,
       invulnTtl: 0,
     },
     econ: { wallet: 0, score: 0 },

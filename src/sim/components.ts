@@ -53,6 +53,8 @@ export interface Entity {
   speed?: number; // current scalar speed (missiles accelerate toward their max) [ROC-MIS-3]
   team?: 'player' | 'enemy'; // who fired a projectile
   damage?: number; // damage dealt by a projectile
+  mil?: boolean; // a military-laser bolt: rendered shorter + thicker [ROC-LAS-5]
+  beamExposure?: number; // seconds of continuous beam-laser fire accumulated toward the next hit [ROC-LAS-6]
   colliderRx?: number; // fallback collider radii (play plane), used when no hull silhouette is available
   colliderRz?: number;
   hitMeshId?: string; // collide against this mesh's silhouette instead of meshId (e.g. a splinter

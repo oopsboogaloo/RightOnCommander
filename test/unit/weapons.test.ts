@@ -3,6 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { makeWorld } from '../../src/sim/world.js';
+import { vec3 } from '../../src/sim/math/vec3.js';
 import { weaponsSystem, DEFAULT_WEAPONS } from '../../src/sim/systems/weapons.js';
 import type { InputFrame } from '../../src/interfaces.js';
 import type { Entity } from '../../src/sim/components.js';
@@ -65,6 +66,59 @@ describe('weaponsSystem', () => {
     expect(p.team).toBe('player');
     expect(p.vel.z).toBeCloseTo(DEFAULT_WEAPONS.pulseSpeed, 6);
     expect(p.pos.z).toBeGreaterThan(0);
+  });
+
+  it('military lasers fire twice as fast as pulses', () => {
+    const w = makeWorld(1);
+    w.player.lasers.front = ['military'];
+    for (let i = 0; i < 60; i++) weaponsSystem(w, frame({ firing: true }), DT); // 0.5s
+    expect(projectiles(w).length).toBe(DEFAULT_WEAPONS.militaryRate / 2); // 6 in 0.5s at 12/s [ROC-LAS-5]
+  });
+
+  it('military bolts travel twice as fast, hit twice as hard, and flag the thicker render', () => {
+    const w = makeWorld(1);
+    w.player.lasers.front = ['military'];
+    weaponsSystem(w, frame({ fireTapped: true }), DT);
+    const p = projectiles(w)[0];
+    expect(p.mil).toBe(true);
+    expect(p.vel.z).toBeCloseTo(DEFAULT_WEAPONS.militarySpeed, 6); // 2x pulse speed
+    expect(p.damage).toBe(DEFAULT_WEAPONS.militaryDamage); // 2x pulse damage [ROC-LAS-5]
+  });
+
+  it('a beam is an instant hitscan that burns 1 damage per 300ms into the first target', () => {
+    const w = makeWorld(1);
+    w.player.lasers.front = ['beam'];
+    const enemy: Entity = { id: w.nextId++, kind: 'enemy', pos: vec3(0, 0, 1), vel: vec3(), yaw: 0, bank: 0, hull: 3, hullMax: 3, shield: 0, colliderRx: 0.2, colliderRz: 0.2 };
+    w.entities.set(enemy.id, enemy);
+
+    for (let i = 0; i < Math.round(0.35 / DT); i++) weaponsSystem(w, frame({ firing: true }), DT);
+    expect(enemy.hull).toBe(2); // one 300ms window of contact = 1 damage [ROC-LAS-6]
+    expect(w.beams).toHaveLength(1); // a live beam segment while firing
+    expect(projectiles(w).length).toBe(0); // instant — no travelling bolt
+
+    for (let i = 0; i < Math.round(0.3 / DT); i++) weaponsSystem(w, frame({ firing: true }), DT);
+    expect(enemy.hull).toBe(1); // a second window = a second point of damage
+  });
+
+  it('stops firing (and clears the beam) when the trigger is released', () => {
+    const w = makeWorld(1);
+    w.player.lasers.front = ['beam'];
+    const enemy: Entity = { id: w.nextId++, kind: 'enemy', pos: vec3(0, 0, 1), vel: vec3(), yaw: 0, bank: 0, hull: 3, hullMax: 3, shield: 0, colliderRx: 0.2, colliderRz: 0.2 };
+    w.entities.set(enemy.id, enemy);
+    weaponsSystem(w, frame({ firing: true }), DT);
+    expect(w.beams).toHaveLength(1);
+    weaponsSystem(w, frame(), DT); // released
+    expect(w.beams).toHaveLength(0);
+  });
+
+  it('a beam and a pulse in the same mount both operate', () => {
+    const w = makeWorld(1);
+    w.player.lasers.front = ['beam', 'pulse'];
+    const enemy: Entity = { id: w.nextId++, kind: 'enemy', pos: vec3(0, 0, 1), vel: vec3(), yaw: 0, bank: 0, hull: 5, hullMax: 5, shield: 0, colliderRx: 0.2, colliderRz: 0.2 };
+    w.entities.set(enemy.id, enemy);
+    weaponsSystem(w, frame({ firing: true }), DT);
+    expect(w.beams).toHaveLength(1); // the beam traced
+    expect(projectiles(w).length).toBe(1); // and the pulse fired [ROC-LAS-6]
   });
 
   it('recycles projectiles into the pool (reuse, no leak)', () => {

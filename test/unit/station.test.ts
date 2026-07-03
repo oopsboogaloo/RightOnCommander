@@ -67,6 +67,26 @@ describe('fit lasers', () => {
     expect(fitLaserAt(w, ctx, 'rear', 'pulse').ok).toBe(false); // rear now full (1/1)
   });
 
+  it('adds a second laser alongside the first when a hardpoint is free (both operate)', () => {
+    const w = makeWorld(1); // Sidewinder front cap 2, starts with one pulse
+    w.econ.wallet = 5000;
+    expect(fitLaserAt(w, ctx, 'front', 'beam').ok).toBe(true);
+    expect(w.player.lasers.front).toEqual(['pulse', 'beam']); // added, not replaced [ROC-LAS-6]
+    expect(w.econ.wallet).toBe(4000); // full beam price
+  });
+
+  it('replaces a pulse and refunds it when fitting an upgrade to a full direction', () => {
+    const w = makeWorld(1); // Sidewinder rear cap 1
+    w.econ.wallet = 5000;
+    expect(fitLaserAt(w, ctx, 'rear', 'pulse').ok).toBe(true); // rear ['pulse'], -100
+    expect(w.econ.wallet).toBe(4900);
+    const r = fitLaserAt(w, ctx, 'rear', 'beam'); // rear full -> beam replaces the pulse
+    expect(r.ok).toBe(true);
+    expect(r.replaced).toBe('pulse');
+    expect(w.player.lasers.rear).toEqual(['beam']); // swapped, not stacked
+    expect(w.econ.wallet).toBe(4000); // 4900 - (1000 beam - 100 pulse refund) [ROC-LAS-6]
+  });
+
   it('reports the shortfall when too poor', () => {
     const w = makeWorld(1);
     applyShip(w, ctx.ships, 'cobra_mk3'); // a free hardpoint exists, so price is what blocks it

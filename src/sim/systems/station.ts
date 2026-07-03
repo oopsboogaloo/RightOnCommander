@@ -70,16 +70,32 @@ export function buyShip(world: World, ctx: StationContext): StationResult {
   return { ok: true, shipId: next };
 }
 
-// Fit a laser of `type` to `dir`, honouring hardpoint/one-per-direction rules and the price. [ROC-STN-4]
+// Fit a laser of `type` to `dir`. A free hardpoint takes another laser (they all fire together);
+// when the direction is full, an upgrade laser (beam/military) replaces a pulse and refunds the
+// pulse's price. [ROC-STN-4, ROC-LAS-5,6]
 export function fitLaserAt(world: World, ctx: StationContext, dir: Direction, type: LaserType): StationResult {
-  const rule = canFitLaser(world, dir);
-  if (!rule.ok) return fail(rule.reason ?? 'cannot fit');
   const price = ctx.prices.lasers[type];
-  const err = charge(world, price);
-  if (err) return err;
-  world.player.lasers[dir].push(type);
-  world.events.push({ type: 'laserFitted', dir, laser: type });
-  return { ok: true };
+
+  if (canFitLaser(world, dir).ok) {
+    const err = charge(world, price);
+    if (err) return err;
+    world.player.lasers[dir].push(type);
+    world.events.push({ type: 'laserFitted', dir, laser: type });
+    return { ok: true };
+  }
+
+  // Full: swap out a pulse for the upgrade and hand its price back. [ROC-LAS-6]
+  const idx = type !== 'pulse' ? world.player.lasers[dir].indexOf('pulse') : -1;
+  if (idx >= 0) {
+    const refund = ctx.prices.lasers.pulse;
+    const err = charge(world, price - refund); // net cost: pay the new laser, credited the pulse
+    if (err) return err;
+    world.player.lasers[dir][idx] = type;
+    world.events.push({ type: 'laserFitted', dir, laser: type, replaced: 'pulse', refund });
+    return { ok: true, replaced: 'pulse', refund };
+  }
+
+  return fail('no free hardpoint in that direction');
 }
 
 export function buyEcm(world: World, ctx: StationContext): StationResult {

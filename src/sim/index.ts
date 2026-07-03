@@ -12,7 +12,7 @@ import { snapshot, restore, type WorldSnapshot } from './snapshot.js';
 import { makeWorld, PLAYER_ID, type World } from './world.js';
 import { vec3 } from './math/vec3.js';
 import { movementSystem } from './systems/movement.js';
-import { weaponsSystem } from './systems/weapons.js';
+import { weaponsSystem, DEFAULT_WEAPONS } from './systems/weapons.js';
 import { collisionSystem, meshSilhouette, hullRadius } from './systems/collision.js';
 import type { Pt } from './math/geom2.js';
 import { damageSystem } from './systems/damage.js';
@@ -42,6 +42,9 @@ const COLLISION_CELL = 0.8;
 // drawn — and collided — at this fraction so the hitbox matches the sprite. The renderer
 // imports this for its model matrix; collision scales every collider by it. [DEFECTS D2/D4]
 export const SHIP_SCALE = 1 / 3;
+
+// Beam-laser hit radii must match the rendered/collided hull size. [ROC-LAS-6]
+const WEAPONS = { ...DEFAULT_WEAPONS, colliderScale: SHIP_SCALE };
 
 export interface SimConfig {
   [key: string]: unknown;
@@ -152,7 +155,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     world.events = [];
 
     movementSystem(world, input, SIM_DT);
-    weaponsSystem(world, input, SIM_DT);
+    weaponsSystem(world, input, SIM_DT, WEAPONS);
     missilesSystem(world, SIM_DT);
     ecmSystem(world, SIM_DT); // boss ECM pops player missiles after its fuse [ROC-BECM-*]
     waveSystem(world, rng, SIM_DT, waveCtx);

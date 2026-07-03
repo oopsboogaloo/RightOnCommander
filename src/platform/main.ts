@@ -253,12 +253,13 @@ startGameLoop({
         case 'missile': {
           // Missiles render as a small dart; pulses as a slightly longer streak. Enemy laser
           // bolts render at half size so incoming fire reads as smaller than the player's own.
+          // Military bolts are shorter and thicker than a pulse. [ROC-LAS-5]
           const isEnemyBolt = e.kind === 'projectile' && e.team === 'enemy';
-          const len = e.kind === 'missile' ? 0.09 : isEnemyBolt ? PULSE_LEN * 0.5 : PULSE_LEN;
+          const len = e.kind === 'missile' ? 0.09 : e.mil ? PULSE_LEN * 0.55 : isEnemyBolt ? PULSE_LEN * 0.5 : PULSE_LEN;
           const tail = sub(e.pos, scale(normalize(e.vel), len));
           renderer.drawWorldLine(e.pos, tail, {
             stroke: '#fff',
-            lineWidth: isEnemyBolt ? 1 : 2,
+            lineWidth: e.mil ? 4 : isEnemyBolt ? 1 : 2,
           });
           break;
         }
@@ -324,6 +325,15 @@ startGameLoop({
       }
     }
     if (particles.length) renderer.drawWorldParticles(particles, { fill: '#fff', size: 2 });
+
+    // Beam lasers: instant, continuous shots from the ship to whatever they hit — a soft wide
+    // underlay plus a bright core. [ROC-LAS-6]
+    for (const b of sim.state.beams) {
+      const a = vec3(b.ax, 0, b.az);
+      const c = vec3(b.bx, 0, b.bz);
+      renderer.drawWorldLine(a, c, { stroke: 'rgba(120,200,255,0.35)', lineWidth: 6 });
+      renderer.drawWorldLine(a, c, { stroke: '#dff', lineWidth: 2 });
+    }
 
     // Player ship, interpolated between the last two sim states. Blink while invulnerable
     // (just spawned / after a hit) so the i-frames read on screen. [ROC-LIFE-2]
