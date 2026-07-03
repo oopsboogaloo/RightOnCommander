@@ -26,7 +26,7 @@ const CULL_Z = -1.9; // past the bottom edge — drifted off-field, quietly remo
 // own lifetime it could linger forever, permanently blocking the ASTEROIDS phase from clearing.
 const SPLINTER_TTL = 8;
 
-const LARGE = { hull: 4, bounty: 0, meshId: 'asteroid', colliderRx: 0.24, colliderRz: 0.24 };
+const LARGE = { hull: 3, bounty: 0, meshId: 'asteroid', colliderRx: 0.24, colliderRz: 0.24 };
 const SPLINTER = { hull: 1, bounty: 4, meshId: 'splinter', colliderRx: 0.11, colliderRz: 0.11 };
 
 // A splinter reads better on screen as a small asteroid chunk than the authentic-but-oddly-

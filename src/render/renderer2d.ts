@@ -71,6 +71,7 @@ interface BgRock {
 // asteroid belt" and set this level apart. Render-only (Math.random, wall-clock), like the stars.
 class BackgroundAsteroids {
   private rocks: BgRock[] = [];
+  private revealed = false;
 
   constructor(count = 25) {
     for (let i = 0; i < count; i++) {
@@ -90,6 +91,21 @@ class BackgroundAsteroids {
         spin: (Math.random() - 0.5) * 0.25,
         verts,
       });
+    }
+  }
+
+  get isRevealed(): boolean {
+    return this.revealed;
+  }
+
+  // Called as the ship drops out of hyperspace: park every rock above the top edge (staggered) so
+  // the belt drifts into view rather than being there from the start — "arriving at the field".
+  reveal(): void {
+    if (this.revealed) return;
+    this.revealed = true;
+    for (const r of this.rocks) {
+      r.x = Math.random();
+      r.y = -0.02 - Math.random() * 1.5;
     }
   }
 
@@ -117,6 +133,7 @@ class BackgroundAsteroids {
       const c = Math.cos(r.rot);
       const s = Math.sin(r.rot);
       const shade = Math.round(42 + r.depth * 34); // dark grey, nearer rocks a touch lighter
+      ctx.fillStyle = '#000'; // opaque — occludes the stars behind the rock
       ctx.strokeStyle = `rgb(${shade},${shade},${shade})`;
       ctx.beginPath();
       r.verts.forEach((v, i) => {
@@ -126,6 +143,7 @@ class BackgroundAsteroids {
         else ctx.lineTo(px, py);
       });
       ctx.closePath();
+      ctx.fill();
       ctx.stroke();
     }
   }
@@ -172,10 +190,15 @@ export class Renderer2D implements Renderer {
     ctx.fillRect(0, 0, this.w, this.h);
     this.starfield.update(1 / 60, scroll);
     this.starfield.draw(ctx, this.w, this.h, scroll);
-    if (this.showAsteroidBackdrop) {
+    if (this.showAsteroidBackdrop && this.bgAsteroids.isRevealed) {
       this.bgAsteroids.update(1 / 60, scroll);
       this.bgAsteroids.draw(ctx, this.w, this.h);
     }
+  }
+
+  // The shell calls this as the ship exits hyperspace, so the belt drifts into view. [ROC-L1-1]
+  revealAsteroidBelt(): void {
+    this.bgAsteroids.reveal();
   }
 
   drawMesh(mesh: Mesh, xform: unknown, opts: DrawOpts = {}): void {

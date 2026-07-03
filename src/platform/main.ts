@@ -225,6 +225,10 @@ startGameLoop({
   step: () => {
     prev = curr;
     const events = sim.step(input.sample(DT));
+    // Reveal the asteroid belt as we drop out of hyperspace, so it drifts into view — arriving
+    // at the field. Idempotent. [ROC-L1-1]
+    const ls = sim.state.levelState;
+    if (ls !== 'LAUNCH' && ls !== 'HYPERSPACE') renderer.revealAsteroidBelt();
     curr = readPlayerPose();
     drainFloaters(events);
   },
