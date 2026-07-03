@@ -17,9 +17,10 @@ import {
   FDL_TRACK,
   FDL_FLIP_RANGE,
   FDL_FIRE_RATE,
+  FDL_ENTRY_SEC,
   HERMIT_SPAWN_SEC,
+  HERMIT_INITIAL_ESCORTS,
   HERMIT_ESCORT_CAP,
-  HERMIT_SPIN,
 } from '../../src/sim/systems/boss.js';
 
 const DT = 1 / 120;
@@ -97,11 +98,18 @@ describe('strafe track', () => {
     expect(w1.z).toBeCloseTo(w0.z, 10);
   });
 
-  it('moves the boss continuously at track speed and reverses within [200, 2000] ms', () => {
+  it('flies in from off-screen, then moves at track speed and reverses within [200, 2000] ms', () => {
     const w = makeWorld(1);
     const rng = createRng(7);
     const boss = spawnStrafe(w);
-    const ai = boss.ai as { dir: 1 | -1; rate: number };
+    const ai = boss.ai as { state: string; dir: 1 | -1; rate: number };
+    expect(ai.state).toBe('entry'); // gliding in — holds fire [ROC-FDL-*]
+    expect(ai.rate).toBe(0);
+    expect(boss.pos.z).toBeGreaterThan(1.8); // starts above the top edge
+
+    // Drive through the entry glide; it latches onto the track and opens fire.
+    for (let i = 0; i < Math.round((FDL_ENTRY_SEC + 0.05) / DT); i++) bossSystem(w, rng, DT, ctx);
+    expect(ai.state).toBe('strafe');
     expect(ai.rate).toBe(FDL_FIRE_RATE); // 1.25/s = one aimed shot every 800 ms [ROC-FDL-4]
 
     let last = { ...boss.pos };
@@ -129,7 +137,7 @@ describe('strafe track', () => {
 });
 
 describe('hermit', () => {
-  it('rolls slowly about its docking axis and launches an adder every 5 s, capped at 3 alive', () => {
+  it('rolls slowly, launches an opening burst of 2, then one every 2.5 s, capped at 3 alive', () => {
     const w = makeWorld(1);
     const rng = createRng(3);
     const hermit = spawnHermit(w);
@@ -139,14 +147,12 @@ describe('hermit', () => {
       for (let i = 0; i < Math.round(sec / DT); i++) bossSystem(w, rng, DT, ctx);
     };
 
-    run(HERMIT_SPAWN_SEC - 0.1);
-    expect(escorts(w)).toHaveLength(0); // not yet
-    run(0.2);
-    expect(escorts(w)).toHaveLength(1); // first at 5 s [ROC-HERM-4]
-    expect(hermit.bank).toBeCloseTo(bank0 + HERMIT_SPIN * (HERMIT_SPAWN_SEC + 0.1), 1); // [ROC-HERM-3]
+    run(0.1);
+    expect(escorts(w)).toHaveLength(HERMIT_INITIAL_ESCORTS); // 2 already out when the fight opens [ROC-HERM-4]
+    expect(hermit.bank).toBeGreaterThan(bank0); // rolling [ROC-HERM-3]
 
-    run(2 * HERMIT_SPAWN_SEC);
-    expect(escorts(w)).toHaveLength(3);
+    run(HERMIT_SPAWN_SEC);
+    expect(escorts(w)).toHaveLength(3); // +1 at 2.5 s reaches the cap
     run(2 * HERMIT_SPAWN_SEC);
     expect(escorts(w)).toHaveLength(HERMIT_ESCORT_CAP); // never above the cap [ROC-HERM-4]
 
@@ -167,7 +173,7 @@ describe('hermit', () => {
     const hermit = spawnHermit(w);
     const recId = w.hermitWaveId!;
     for (let i = 0; i < Math.round(6 / DT); i++) bossSystem(w, rng, DT, ctx);
-    expect(escorts(w)).toHaveLength(1);
+    expect(escorts(w)).toHaveLength(3); // opening burst of 2 + one more at 2.5 s, at the cap
 
     w.entities.delete(hermit.id); // hermit destroyed
     for (let i = 0; i < Math.round(4 / DT); i++) {
@@ -183,12 +189,12 @@ describe('hermit', () => {
     const rng2 = createRng(3);
     const hermit2 = spawnHermit(w2);
     for (let i = 0; i < Math.round(6 / DT); i++) bossSystem(w2, rng2, DT, ctx);
-    expect(escorts(w2)).toHaveLength(1);
+    expect(escorts(w2)).toHaveLength(3);
     w2.entities.delete(hermit2.id);
     bossSystem(w2, rng2, DT, ctx); // closes the record, escorts turn to flee
     for (const e of escorts(w2)) w2.entities.delete(e.id); // shot down before exiting
     waveSystem(w2, rng2, DT, ctx); // reconcile + resolve
     const bonus = w2.events.find((e) => e.type === 'waveBonus');
-    expect(bonus?.amount).toBe(0.5 * 16); // [ROC-HERM-12, ROC-ECO-1a]
+    expect(bonus?.amount).toBe(0.5 * 3 * 16); // 50% of the three escorts' summed bounties [ROC-HERM-12, ROC-ECO-1a]
   });
 });

@@ -57,9 +57,85 @@ class Starfield {
   }
 }
 
+interface BgRock {
+  x: number; // normalised [0,1) across the canvas
+  y: number;
+  depth: number; // parallax layer (0.6..1], nearer = faster/bigger/lighter
+  radius: number; // as a fraction of min(w,h)
+  rot: number;
+  spin: number; // slow tumble, rad/s
+  verts: { x: number; y: number }[]; // unit-circle irregular polygon
+}
+
+// A slow, dark-grey wireframe asteroid field drawn just above the starfield, to sell "dense
+// asteroid belt" and set this level apart. Render-only (Math.random, wall-clock), like the stars.
+class BackgroundAsteroids {
+  private rocks: BgRock[] = [];
+
+  constructor(count = 25) {
+    for (let i = 0; i < count; i++) {
+      const n = 6 + Math.floor(Math.random() * 4); // 6-9 vertices
+      const verts: { x: number; y: number }[] = [];
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2;
+        const r = 0.7 + Math.random() * 0.6; // jagged radius 0.7..1.3
+        verts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
+      }
+      this.rocks.push({
+        x: Math.random(),
+        y: Math.random(),
+        depth: 0.6 + Math.random() * 0.4,
+        radius: 0.012 + Math.random() * 0.04, // range of sizes
+        rot: Math.random() * Math.PI * 2,
+        spin: (Math.random() - 0.5) * 0.25,
+        verts,
+      });
+    }
+  }
+
+  // Drift ~1.5x the starfield's base rate (still very slow), following the sim `scroll` so the
+  // belt halts for boss fights; the hyperspace surge is capped so it doesn't go berserk.
+  update(dt: number, scroll = 1): void {
+    const sc = Math.min(scroll, 3);
+    for (const r of this.rocks) {
+      r.y += dt * 0.075 * r.depth * sc;
+      if (scroll > 0) r.rot += dt * r.spin;
+      while (r.y >= 1.1) {
+        r.y -= 1.2;
+        r.x = Math.random();
+      }
+    }
+  }
+
+  draw(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+    const unit = Math.min(w, h);
+    ctx.lineWidth = 1;
+    for (const r of this.rocks) {
+      const cx = r.x * w;
+      const cy = r.y * h;
+      const rad = r.radius * unit;
+      const c = Math.cos(r.rot);
+      const s = Math.sin(r.rot);
+      const shade = Math.round(42 + r.depth * 34); // dark grey, nearer rocks a touch lighter
+      ctx.strokeStyle = `rgb(${shade},${shade},${shade})`;
+      ctx.beginPath();
+      r.verts.forEach((v, i) => {
+        const px = cx + (v.x * c - v.y * s) * rad;
+        const py = cy + (v.x * s + v.y * c) * rad;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.closePath();
+      ctx.stroke();
+    }
+  }
+}
+
 export class Renderer2D implements Renderer {
   private ctx: CanvasRenderingContext2D;
   private starfield: Starfield;
+  private bgAsteroids = new BackgroundAsteroids();
+  showAsteroidBackdrop = false; // set by the shell for asteroid-belt levels
   camera: Camera;
 
   // Viewport mapping, refreshed each frame.
@@ -96,6 +172,10 @@ export class Renderer2D implements Renderer {
     ctx.fillRect(0, 0, this.w, this.h);
     this.starfield.update(1 / 60, scroll);
     this.starfield.draw(ctx, this.w, this.h, scroll);
+    if (this.showAsteroidBackdrop) {
+      this.bgAsteroids.update(1 / 60, scroll);
+      this.bgAsteroids.draw(ctx, this.w, this.h);
+    }
   }
 
   drawMesh(mesh: Mesh, xform: unknown, opts: DrawOpts = {}): void {

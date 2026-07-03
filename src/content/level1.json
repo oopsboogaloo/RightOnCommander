@@ -8,6 +8,14 @@
     "All pilots start their careers at Lave station."
   ],
   "launchMs": 2500,
+  "backdrop": "asteroids",
+  "combatAsteroids": [
+    { "count": 6, "spacingMs": 3500, "delayMs": 2500, "speed": 0.26, "xSpread": 0.95 }
+  ],
+  "midAsteroids": [
+    { "count": 8, "spacingMs": 420, "delayMs": 0, "speed": 0.3, "xSpread": 0.9 },
+    { "count": 10, "spacingMs": 380, "delayMs": 3600, "speed": 0.34, "xSpread": 0.95 }
+  ],
   "asteroidWaves": [
     {
       "count": 6,

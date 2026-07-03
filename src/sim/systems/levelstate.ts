@@ -11,12 +11,10 @@
 
 import { vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
-import { PLAYER_ID, type World } from '../world.js';
+import { type World } from '../world.js';
 import { startWave, type WaveDef, type WaveContext } from './waves.js';
 import { startAsteroidWaves, type AsteroidFieldDef } from './asteroids.js';
 import { bossPlacement } from './boss.js';
-import { pointInPort, portAligned, portDims, toLocal } from './dock.js';
-import { applyDamage } from './damage.js';
 
 export type LevelState =
   | 'LAUNCH'
@@ -24,6 +22,7 @@ export type LevelState =
   | 'INFO'
   | 'ASTEROIDS'
   | 'WAVES_A'
+  | 'ASTEROIDS_B'
   | 'MID_BOSS'
   | 'WAVES_B'
   | 'END_BOSS'
@@ -37,6 +36,8 @@ export interface LevelDef {
   facts?: string[]; // a few classic-Elite facts for the post-jump info card [ROC-HYP-5]
   launchMs?: number;
   asteroidWaves?: AsteroidFieldDef[]; // opening asteroid waves, if the level has any [ROC-L1-1]
+  midAsteroids?: AsteroidFieldDef[]; // a second dense field just before the mid-boss [ROC-L1-1]
+  combatAsteroids?: AsteroidFieldDef[]; // a light trickle that drifts through the ship-wave groups
   wavesA: WaveDef[];
   midBoss: string; // enemy name (spawned as a boss)
   wavesB: WaveDef[];
@@ -82,16 +83,17 @@ export function hyperCountdown(levelTimer: number): number | null {
   return remaining > 0 ? Math.ceil(remaining - 1e-9) : null;
 }
 
-// The docking Coriolis: twice the old placeholder size, scrolling in from the top then holding
-// while it slowly rotates. Its centred port docks the player; its hull kills. [ROC-DCKG-1,3,4]
+// The end-of-level Coriolis: scrolls in from the top, holds while it slowly rotates, then the
+// game moves to the shop automatically. It is purely a backdrop now — no collision, no fly-in
+// docking (that minigame wasn't fun). [ROC-DCKG-1]
 export const DOCK_STATION = {
   scale: 2,
   spawnZ: 2.4,
   holdZ: 0.55,
   approachSpeed: 0.4,
   spin: 0.25, // rad/s roll about the docking axis — matches the hermit's slow spin
-  bodyRadius: 0.38, // deadly-hull radius (a bit inside the drawn rim, for grace)
 };
+export const DOCK_SETTLE_SEC = 1.2; // beat after the station is fully in view before the shop opens [ROC-DCKG-1]
 
 // The departure Coriolis the player launches from, pointing up-screen. [ROC-HYP-1]
 const DEPART_STATION = { scale: 2, spawnZ: -0.35, speed: 0.55, cullZ: -2.4 };
@@ -213,6 +215,11 @@ export function enterLevelState(world: World, state: LevelState, level: LevelDef
       break;
     case 'WAVES_A':
       startGroup(world, level.wavesA, ctx);
+      if (level.combatAsteroids) startAsteroidWaves(world, level.combatAsteroids); // rocks amongst the ships
+      break;
+    case 'ASTEROIDS_B':
+      // A second dense field drifts through just before the mid-boss. [ROC-L1-1]
+      if (level.midAsteroids) startAsteroidWaves(world, level.midAsteroids);
       break;
     case 'MID_BOSS':
       world.scroll = 0; // the fight is signalled by the scrolling stopping [ROC-BOSS-1]
@@ -220,18 +227,23 @@ export function enterLevelState(world: World, state: LevelState, level: LevelDef
       break;
     case 'WAVES_B':
       startGroup(world, level.wavesB, ctx);
+      if (level.combatAsteroids) startAsteroidWaves(world, level.combatAsteroids);
       break;
     case 'END_BOSS':
-      world.scroll = 0; // [ROC-BOSS-1]
+      // A strafe boss (the FdL) flies in from off-screen while the field keeps scrolling and halts
+      // it itself once it reaches its track; other bosses halt the field immediately. [ROC-FDL-*, ROC-BOSS-1]
+      if (ctx.enemies[level.endBoss]?.behavior !== 'strafe') world.scroll = 0;
       spawnBoss(world, level.endBoss, ctx);
       break;
     case 'VIPER_INTERCEPT':
       if (level.viper) startWave(world, level.viper, ctx);
       break;
     case 'DOCKING':
-      // Scrolling has resumed; the station scrolls into view and holds, rolling. Spawned facing
-      // away (yaw π) so the Coriolis's own docking slot — modelled on its +z face — points at the
-      // player, then rolls about that axis so the slot spins in place. [ROC-DCKG-1,3]
+      // Scrolling has resumed; the station scrolls into view and holds, rolling (it just looks
+      // good). Spawned facing away (yaw π) so the Coriolis's own modelled slot faces the player.
+      // Once it is fully in view we wait DOCK_SETTLE_SEC, then open the shop automatically — no
+      // collision, no fly-in. [ROC-DCKG-1]
+      world.levelTimer = DOCK_SETTLE_SEC;
       spawnStation(
         world,
         { kind: 'dock', spin: DOCK_STATION.spin, holdZ: DOCK_STATION.holdZ },
@@ -271,39 +283,19 @@ function stationTick(world: World, dt: number): void {
   }
 }
 
-// The docking approach. The port is at the centre of rotation; while it is within 30° of
-// horizontal, a corridor along the slot is safe to fly — reaching the centred port rectangle
-// docks. Touching the hull anywhere else (or being caught inside as rotation breaks the
-// alignment) is a fatal collision. [ROC-DCKG-3,4]
-function dockingCheck(world: World, level: LevelDef, ctx: WaveContext): void {
-  const player = world.entities.get(PLAYER_ID);
-  if (!player || (player.hull ?? 0) <= 0) return;
+// The station is a backdrop now: once it has scrolled in and is holding, wait a beat and open the
+// shop. No collision, no fly-in. [ROC-DCKG-1]
+function dockingCheck(world: World, dt: number, level: LevelDef, ctx: WaveContext): void {
   let station: Entity | undefined;
   for (const e of world.entities.values()) {
     if (e.kind === 'station' && (e.ai as StationAi).kind === 'dock') station = e;
   }
-  if (!station) return;
-
-  const aligned = portAligned(station);
-  if (pointInPort(station, player.pos.x, player.pos.z) && aligned) {
+  // Only start the settle countdown once the station has reached its hold (stationTick zeroes vel).
+  if (!station || station.vel.z !== 0) return;
+  world.levelTimer -= dt;
+  if (world.levelTimer <= 0) {
     world.events.push({ type: 'docked' });
     enterLevelState(world, 'DOCK', level, ctx);
-    return;
-  }
-
-  if (world.player.invulnTtl > 0) return;
-  const dx = player.pos.x - station.pos.x;
-  const dz = player.pos.z - station.pos.z;
-  const inBody = dx * dx + dz * dz <= DOCK_STATION.bodyRadius * DOCK_STATION.bodyRadius;
-  if (!inBody) return;
-
-  // Inside the deadly hull — unless riding the aligned slot corridor toward the port.
-  const local = toLocal(station, player.pos.x, player.pos.z);
-  const inCorridor = aligned && Math.abs(local.z) <= portDims(station).halfShort;
-  if (!inCorridor) {
-    // Collision = death, outright: no shield ring soaks a station crash. [ROC-DCKG-4]
-    player.shield = 0;
-    applyDamage(world, player, 9999); // gamestate then spends the life
   }
 }
 
@@ -358,7 +350,11 @@ export function levelStateSystem(world: World, dt: number, level: LevelDef, ctx:
       if (asteroidFieldCleared(world)) enterLevelState(world, 'WAVES_A', level, ctx);
       break;
     case 'WAVES_A':
-      if (groupCleared(world)) enterLevelState(world, 'MID_BOSS', level, ctx);
+      if (groupCleared(world))
+        enterLevelState(world, level.midAsteroids?.length ? 'ASTEROIDS_B' : 'MID_BOSS', level, ctx);
+      break;
+    case 'ASTEROIDS_B':
+      if (asteroidFieldCleared(world)) enterLevelState(world, 'MID_BOSS', level, ctx);
       break;
     case 'MID_BOSS':
       tickBossFade(() => enterLevelState(world, 'WAVES_B', level, ctx));
@@ -375,7 +371,7 @@ export function levelStateSystem(world: World, dt: number, level: LevelDef, ctx:
       if (groupCleared(world)) enterLevelState(world, 'DOCKING', level, ctx);
       break;
     case 'DOCKING':
-      dockingCheck(world, level, ctx);
+      dockingCheck(world, dt, level, ctx);
       break;
     case 'DOCK':
       break; // terminal — gamestate takes over at the station

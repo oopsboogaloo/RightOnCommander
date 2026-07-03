@@ -100,6 +100,7 @@ for (const [id, m] of Object.entries(MESHES)) {
 
 const sim = createSim({ seed: 1, content: { enemies, level: level1, meshes: MESHES } });
 const renderer = new Renderer2D(ctx);
+renderer.showAsteroidBackdrop = (level1 as { backdrop?: string }).backdrop === 'asteroids'; // dense-belt levels
 const input = new DomInput({ canvas, storage: createLocalStorage() });
 
 // Station shop wiring: the dock screen shows when the level reaches DOCK; taps route to intents.

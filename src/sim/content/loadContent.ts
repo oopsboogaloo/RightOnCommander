@@ -95,10 +95,12 @@ function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
     if (!Array.isArray(arr)) throw new Error(`content: level.${key} must be an array`);
     return arr.map((w, i) => parseWave(w, enemies, `level.${key}[${i}]`));
   };
-  const asteroidWaves = raw.asteroidWaves;
-  if (asteroidWaves !== undefined && !Array.isArray(asteroidWaves)) {
-    throw new Error('content: "level.asteroidWaves" must be an array');
-  }
+  const asteroidGroup = (key: string): AsteroidFieldDef[] | undefined => {
+    const arr = raw[key];
+    if (arr === undefined) return undefined;
+    if (!Array.isArray(arr)) throw new Error(`content: "level.${key}" must be an array`);
+    return arr.map((w, i) => parseAsteroidWave(w, `level.${key}[${i}]`));
+  };
   const facts = raw.facts;
   if (facts !== undefined && (!Array.isArray(facts) || facts.some((f) => typeof f !== 'string'))) {
     throw new Error('content: "level.facts" must be an array of strings');
@@ -108,7 +110,9 @@ function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
     name: typeof raw.name === 'string' ? raw.name : undefined,
     facts: facts as string[] | undefined,
     launchMs: raw.launchMs === undefined ? undefined : num(raw.launchMs, 'level.launchMs'),
-    asteroidWaves: asteroidWaves?.map((w, i) => parseAsteroidWave(w, `level.asteroidWaves[${i}]`)),
+    asteroidWaves: asteroidGroup('asteroidWaves'),
+    midAsteroids: asteroidGroup('midAsteroids'),
+    combatAsteroids: asteroidGroup('combatAsteroids'),
     wavesA: group('wavesA'),
     midBoss: boss('midBoss'),
     wavesB: group('wavesB'),

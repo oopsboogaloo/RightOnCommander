@@ -20,7 +20,8 @@ import type { WaveContext } from './waves.js';
 
 export const HERMIT_POS = { x: 0, z: 1.05 }; // middle top of the screen [ROC-HERM-2]
 export const HERMIT_SPIN = 0.25; // slow y-rotation, rad/s [ROC-HERM-3]
-export const HERMIT_SPAWN_SEC = 5; // an adder every 5 seconds [ROC-HERM-4]
+export const HERMIT_SPAWN_SEC = 2.5; // an adder every 2.5 seconds [ROC-HERM-4]
+export const HERMIT_INITIAL_ESCORTS = 2; // adders already launched when the fight opens [ROC-HERM-4]
 export const HERMIT_ESCORT_CAP = 3; // max adders on screen [ROC-HERM-4]
 const ESCORT_ENEMY = 'adder';
 const ESCORT_FIRE_RATE = 0.225; // aimed shots/sec, matching the level's (halved) adder waves
@@ -42,17 +43,26 @@ export const FDL_TRACK: TrackDef = { cx: 0, cz: 0.55, hx: 0.65, hz: 0.4, r: 0.18
 export const FDL_FLIP_RANGE: [number, number] = [0.2, 2.0]; // direction-reversal interval, s [ROC-FDL-3]
 export const FDL_FIRE_RATE = 1.25; // one aimed shot every 800 ms [ROC-FDL-4]
 
+// The FdL flies in from off the top of the screen (rather than popping onto its track) while the
+// starfield keeps scrolling, then halts the field and starts strafing once it arrives. [ROC-FDL-*]
+export const FDL_ENTRY_SPAWN_Z = 2.2; // above the top edge (enemies enter around z=1.8)
+export const FDL_ENTRY_SEC = 1.8; // glide-in duration
+
 interface HermitAi {
   kind: 'hermit';
   spawnTimer: number;
+  started: boolean; // whether the opening escort burst has launched [ROC-HERM-4]
 }
 
 interface StrafeAi {
   kind: 'strafe';
+  state: 'entry' | 'strafe'; // gliding in from off-screen, or strafing the track [ROC-FDL-*]
+  age: number; // seconds in the current phase (drives the entry glide)
+  from: { x: number; z: number }; // off-screen spawn pose, for the entry glide
   s: number; // arc-length position along the track
   dir: 1 | -1;
   flip: number; // seconds until the next direction reversal
-  rate: number; // read by aiSystem: aimed fire cadence [ROC-FDL-4]
+  rate: number; // read by aiSystem: aimed fire cadence (0 while entering) [ROC-FDL-4]
   aimed: boolean;
   cooldown: number;
 }
@@ -87,16 +97,18 @@ export function bossPlacement(behavior: string | undefined): {
     return {
       pos: { x: HERMIT_POS.x, y: 0, z: HERMIT_POS.z },
       yaw: 0,
-      ai: { kind: 'hermit', spawnTimer: HERMIT_SPAWN_SEC },
+      ai: { kind: 'hermit', spawnTimer: HERMIT_SPAWN_SEC, started: false },
       port: true, // Coriolis-style docking-port rectangle on the rotation axis [ROC-HERM-1,3]
     };
   }
   if (behavior === 'strafe') {
-    const p = trackPoint(FDL_TRACK, 0);
+    // Spawn off the top of the screen, above the track's x, and glide in. rate 0 => holds fire
+    // until it reaches the track. [ROC-FDL-*]
+    const from = { x: trackPoint(FDL_TRACK, 0).x, z: FDL_ENTRY_SPAWN_Z };
     return {
-      pos: { x: p.x, y: 0, z: p.z },
+      pos: { x: from.x, y: 0, z: from.z },
       yaw: Math.PI,
-      ai: { kind: 'strafe', s: 0, dir: 1, flip: 1.0, rate: FDL_FIRE_RATE, aimed: true, cooldown: 1 / FDL_FIRE_RATE },
+      ai: { kind: 'strafe', state: 'entry', age: 0, from, s: 0, dir: 1, flip: 1.0, rate: 0, aimed: true, cooldown: 1 / FDL_FIRE_RATE },
     };
   }
   // Legacy static boss: up-screen, facing the player.
@@ -264,6 +276,29 @@ function moveEscort(world: World, e: Entity, dt: number): void {
 
 function moveStrafe(world: World, e: Entity, rng: Rng, dt: number): void {
   const ai = e.ai as StrafeAi;
+  const player = world.entities.get(1);
+
+  // Entry: glide in from off-screen down to the track start while the field still scrolls; once
+  // arrived, halt the field and open fire. [ROC-FDL-*]
+  if (ai.state === 'entry') {
+    ai.age += dt;
+    const k = smoothstep(Math.min(1, ai.age / FDL_ENTRY_SEC));
+    const target = trackPoint(FDL_TRACK, 0);
+    const prev = { x: e.pos.x, z: e.pos.z };
+    e.pos.x = ai.from.x + (target.x - ai.from.x) * k;
+    e.pos.z = ai.from.z + (target.z - ai.from.z) * k;
+    e.vel = vec3((e.pos.x - prev.x) / dt, 0, (e.pos.z - prev.z) / dt);
+    if (player) e.yaw = Math.atan2(player.pos.x - e.pos.x, player.pos.z - e.pos.z);
+    e.bank = clampAbs(-0.8 * e.vel.x, 0.5);
+    if (ai.age >= FDL_ENTRY_SEC) {
+      ai.state = 'strafe';
+      ai.rate = FDL_FIRE_RATE; // now it fires
+      ai.cooldown = 1 / FDL_FIRE_RATE;
+      ai.s = 0;
+      world.scroll = 0; // the fight proper begins; halt the field [ROC-BOSS-1]
+    }
+    return;
+  }
 
   // Reverse the strafe direction at a random interval in [200 ms, 2000 ms]. [ROC-FDL-3]
   ai.flip -= dt;
@@ -280,7 +315,6 @@ function moveStrafe(world: World, e: Entity, rng: Rng, dt: number): void {
   e.vel = vec3((e.pos.x - prev.x) / dt, 0, (e.pos.z - prev.z) / dt);
 
   // Keep the guns (and the nose) on the player while strafing; bank into the motion.
-  const player = world.entities.get(1);
   if (player) e.yaw = Math.atan2(player.pos.x - e.pos.x, player.pos.z - e.pos.z);
   e.bank = clampAbs(-0.8 * e.vel.x, 0.5);
 }
@@ -301,7 +335,16 @@ export function bossSystem(world: World, rng: Rng, dt: number, ctx: WaveContext)
     const ai = hermit.ai as HermitAi;
     hermit.bank += HERMIT_SPIN * dt; // slow roll about the docking axis; the port rides it [ROC-HERM-3]
 
-    // An adder every 5 seconds while under the on-screen cap, until the rock dies. [ROC-HERM-4]
+    // Launch the opening burst so a couple of adders are already out when the fight opens. Runs on
+    // the first tick, once the wave record exists (set by spawnBoss). [ROC-HERM-4]
+    if (!ai.started) {
+      ai.started = true;
+      for (let i = 0; i < HERMIT_INITIAL_ESCORTS && escorts(world).length < HERMIT_ESCORT_CAP; i++) {
+        spawnEscort(world, rng, hermit, ctx);
+      }
+    }
+
+    // Then an adder every 2.5 seconds while under the on-screen cap, until the rock dies. [ROC-HERM-4]
     ai.spawnTimer -= dt;
     if (ai.spawnTimer <= 0) {
       if (escorts(world).length < HERMIT_ESCORT_CAP) spawnEscort(world, rng, hermit, ctx);

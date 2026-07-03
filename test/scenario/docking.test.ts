@@ -1,6 +1,6 @@
-// T5a.7 scenario: the docking sequence — the 2x Coriolis scrolls in and holds while rotating,
-// guns and missiles are disabled, entering the port while it is within 30° of horizontal docks,
-// and a collision costs a life but still reaches the shop. [ROC-DCKG-1..4]
+// T5a.7 scenario: the end-of-level station — the 2x Coriolis scrolls in and holds while rotating,
+// guns and missiles are disabled, and once it is fully in view the shop opens automatically after
+// a short beat. The station is a backdrop: no collision, no fly-in docking. [ROC-DCKG-1,2]
 
 import { describe, it, expect } from 'vitest';
 import { makeSim, emptyInput } from '../harness.js';
@@ -9,7 +9,9 @@ import type { Sim } from '../../src/sim/index.js';
 import type { Entity } from '../../src/sim/components.js';
 import type { InputFrame } from '../../src/interfaces.js';
 import { loadContent } from '../../src/sim/content/loadContent.js';
-import { enterLevelState, DOCK_STATION } from '../../src/sim/systems/levelstate.js';
+import { enterLevelState, DOCK_STATION, DOCK_SETTLE_SEC } from '../../src/sim/systems/levelstate.js';
+
+const settleSteps = Math.ceil((DOCK_SETTLE_SEC + 0.1) * 120);
 
 const firing = (): InputFrame => ({ ...emptyInput(), firing: true });
 
@@ -72,48 +74,44 @@ describe('docking sequence', () => {
     expect(armed).toHaveLength(0); // [ROC-DCKG-2]
   });
 
-  it('docks when the player enters the port within 30° of horizontal', () => {
+  it('opens the shop automatically a beat after the station holds — no input needed', () => {
     const sim = makeSim(1, content);
     startDocking(sim);
     const st = station(sim)!;
-    st.pos.z = DOCK_STATION.holdZ;
+    st.pos.z = DOCK_STATION.holdZ; // fully in view, holding
     st.vel = { x: 0, y: 0, z: 0 };
-    st.bank = Math.PI / 12; // 15° — inside the tolerance [ROC-DCKG-3]
-    sim.state.entities.get(PLAYER_ID)!.pos = { ...st.pos };
 
-    const events = sim.step(emptyInput());
+    const all: { type: string }[] = [];
+    for (let i = 0; i < settleSteps; i++) all.push(...sim.step(emptyInput()));
+
     expect(sim.state.levelState).toBe('DOCK');
-    expect(events.some((e) => e.type === 'docked')).toBe(true);
-    expect(events.some((e) => e.type === 'dock')).toBe(true); // shop screen entry [ROC-LVL-1]
-    expect(sim.state.player.lives).toBe(3); // clean dock, no life lost
+    expect(all.some((e) => e.type === 'docked')).toBe(true);
+    expect(all.some((e) => e.type === 'dock')).toBe(true); // shop screen entry [ROC-LVL-1]
+    expect(sim.state.player.lives).toBe(3); // no life lost — nothing to crash into [ROC-DCKG-1]
   });
 
-  it('kills on a collision (misaligned port), then still reaches the shop with a life lost', () => {
+  it('does not wait, or advance, until the station is fully in view', () => {
     const sim = makeSim(1, content);
     startDocking(sim);
     const st = station(sim)!;
-    st.pos.z = DOCK_STATION.holdZ;
-    st.vel = { x: 0, y: 0, z: 0 };
-    st.bank = Math.PI / 4; // 45° — the doors are closed [ROC-DCKG-3]
-    sim.state.entities.get(PLAYER_ID)!.pos = { ...st.pos };
+    st.pos.z = DOCK_STATION.holdZ + 0.6; // still scrolling in
+    st.vel = { x: 0, y: 0, z: -DOCK_STATION.approachSpeed };
 
-    sim.step(emptyInput());
-    expect(sim.state.player.lives).toBe(2); // collision = death [ROC-DCKG-4]
-    expect(sim.state.levelState).toBe('DOCK'); // the dock is not retried [ROC-DCKG-4]
+    for (let i = 0; i < settleSteps; i++) sim.step(emptyInput());
+    expect(sim.state.levelState).toBe('DOCKING'); // hasn't held long enough yet
   });
 
-  it('kills on hull contact away from the port', () => {
+  it('never collides with the station hull — it is just a backdrop', () => {
     const sim = makeSim(1, content);
     startDocking(sim);
     const st = station(sim)!;
     st.pos.z = DOCK_STATION.holdZ;
     st.vel = { x: 0, y: 0, z: 0 };
-    st.bank = 0; // aligned — but the player hits the hull, not the slot
-    const p = sim.state.entities.get(PLAYER_ID)!;
-    p.pos = { x: st.pos.x + 0.1, y: 0, z: st.pos.z + 0.3 }; // inside the body, off the corridor
+    st.bank = Math.PI / 4; // an orientation that used to be a lethal misalignment
+    sim.state.entities.get(PLAYER_ID)!.pos = { ...st.pos }; // parked inside the hull
 
-    sim.step(emptyInput());
-    expect(sim.state.player.lives).toBe(2); // [ROC-DCKG-4]
-    expect(sim.state.levelState).toBe('DOCK');
+    for (let i = 0; i < settleSteps; i++) sim.step(emptyInput());
+    expect(sim.state.player.lives).toBe(3); // no death
+    expect(sim.state.levelState).toBe('DOCK'); // and it still reaches the shop
   });
 });
