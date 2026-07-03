@@ -38,9 +38,9 @@ export interface TrackDef {
   speed: number; // fast — hard to hit [ROC-FDL-3]
 }
 
-export const FDL_TRACK: TrackDef = { cx: 0, cz: 0.55, hx: 0.65, hz: 0.4, r: 0.18, speed: 1.4 };
+export const FDL_TRACK: TrackDef = { cx: 0, cz: 0.55, hx: 0.65, hz: 0.4, r: 0.18, speed: 0.56 };
 export const FDL_FLIP_RANGE: [number, number] = [0.2, 2.0]; // direction-reversal interval, s [ROC-FDL-3]
-export const FDL_FIRE_RATE = 2.5; // one aimed shot every 400 ms [ROC-FDL-4]
+export const FDL_FIRE_RATE = 1.25; // one aimed shot every 800 ms [ROC-FDL-4]
 
 interface HermitAi {
   kind: 'hermit';

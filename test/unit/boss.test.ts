@@ -102,7 +102,7 @@ describe('strafe track', () => {
     const rng = createRng(7);
     const boss = spawnStrafe(w);
     const ai = boss.ai as { dir: 1 | -1; rate: number };
-    expect(ai.rate).toBe(FDL_FIRE_RATE); // 2.5/s = one aimed shot every 400 ms [ROC-FDL-4]
+    expect(ai.rate).toBe(FDL_FIRE_RATE); // 1.25/s = one aimed shot every 800 ms [ROC-FDL-4]
 
     let last = { ...boss.pos };
     let lastDir = ai.dir;
