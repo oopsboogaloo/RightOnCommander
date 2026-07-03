@@ -14,7 +14,7 @@ describe('loadContent', () => {
     expect(enemies.fer_de_lance_boss.shield).toBe(8); // [ROC-FDL-2]
     expect(enemies.fer_de_lance_boss.ecm).toBe(true);
     expect(enemies.hermit.behavior).toBe('hermit');
-    expect(enemies.hermit.meshId).toBe('asteroid'); // asteroid, not the station placeholder [ROC-HERM-1]
+    expect(enemies.hermit.meshId).toBe('rock_hermit'); // bespoke rock-hermit hull with a modelled bay [ROC-HERM-1]
     expect(level?.midBoss).toBe('hermit');
     expect(level?.endBoss).toBe('fer_de_lance_boss');
     expect(level?.name).toBe('Lave'); // hyperspace destination [ROC-HYP-2]

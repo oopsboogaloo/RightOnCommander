@@ -1,7 +1,7 @@
 // Boss behaviours. Two archetypes drive the Level 1 fights and are reusable by later levels:
 //
-// - 'hermit': the pirate hermit asteroid — parked top-centre, spinning slowly about y with its
-//   docking port on the rotation axis, launching an adder escort every few seconds (or letting
+// - 'hermit': the pirate hermit asteroid — parked top-centre, rolling slowly about its docking
+//   axis (through the port on its player-facing face), launching an adder escort every few seconds (or letting
 //   one slip in from a screen edge) until it is destroyed; survivors then flee off-screen. All
 //   escorts across the whole fight form one open wave, so clearing every one of them (fleers
 //   included) pays the standard 50% bonus. [requirements §3.24, ROC-HERM-3..6,11,12]
@@ -299,7 +299,7 @@ export function bossSystem(world: World, rng: Rng, dt: number, ctx: WaveContext)
 
   if (hermit) {
     const ai = hermit.ai as HermitAi;
-    hermit.yaw += HERMIT_SPIN * dt; // slow y-rotation; the port rides the axis [ROC-HERM-3]
+    hermit.bank += HERMIT_SPIN * dt; // slow roll about the docking axis; the port rides it [ROC-HERM-3]
 
     // An adder every 5 seconds while under the on-screen cap, until the rock dies. [ROC-HERM-4]
     ai.spawnTimer -= dt;

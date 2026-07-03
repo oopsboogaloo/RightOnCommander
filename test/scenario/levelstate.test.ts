@@ -50,7 +50,7 @@ function playerWins(w: ReturnType<typeof makeWorld>): void {
     const st = [...w.entities.values()].find((e) => e.kind === 'station');
     const p = w.entities.get(PLAYER_ID);
     if (st && p) {
-      st.yaw = 0; // port horizontal — inside the 30° tolerance [ROC-DCKG-3]
+      st.bank = 0; // port level — inside the 30° tolerance [ROC-DCKG-3]
       p.pos = { ...st.pos };
     }
   }
