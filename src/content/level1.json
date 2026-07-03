@@ -67,7 +67,7 @@
       "delayMs": 4950,
       "durationMs": 6000,
       "fire": {
-        "rate": 0.5,
+        "rate": 0.25,
         "aimed": true
       }
     },
@@ -123,7 +123,7 @@
         "x0": 1.2
       },
       "fire": {
-        "rate": 0.5,
+        "rate": 0.25,
         "aimed": true
       }
     },
@@ -153,7 +153,7 @@
         "cycles": 2
       },
       "fire": {
-        "rate": 0.5,
+        "rate": 0.25,
         "aimed": true
       }
     },
@@ -182,7 +182,7 @@
         "x1": 0.3
       },
       "fire": {
-        "rate": 0.6,
+        "rate": 0.3,
         "aimed": true
       }
     },
@@ -233,7 +233,7 @@
       "delayMs": 2700,
       "durationMs": 6000,
       "fire": {
-        "rate": 0.6,
+        "rate": 0.3,
         "aimed": true
       }
     },
@@ -259,7 +259,7 @@
       "delayMs": 8100,
       "durationMs": 6000,
       "fire": {
-        "rate": 0.6,
+        "rate": 0.3,
         "aimed": true
       }
     },
@@ -288,7 +288,7 @@
         "x1": 0.3
       },
       "fire": {
-        "rate": 0.6,
+        "rate": 0.3,
         "aimed": true
       }
     },
@@ -331,7 +331,7 @@
         "x0": 1.2
       },
       "fire": {
-        "rate": 0.6,
+        "rate": 0.3,
         "aimed": true
       }
     },
@@ -348,7 +348,7 @@
         "cycles": 3
       },
       "fire": {
-        "rate": 0.6,
+        "rate": 0.3,
         "aimed": true
       }
     },
@@ -364,7 +364,7 @@
         "x0": -1.2
       },
       "fire": {
-        "rate": 0.7,
+        "rate": 0.35,
         "aimed": true
       }
     },
@@ -377,7 +377,7 @@
       "delayMs": 29250,
       "durationMs": 6000,
       "fire": {
-        "rate": 0.6,
+        "rate": 0.3,
         "aimed": true
       }
     },
