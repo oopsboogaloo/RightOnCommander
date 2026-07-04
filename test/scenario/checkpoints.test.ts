@@ -53,7 +53,7 @@ describe('death checkpoints', () => {
     player.hull = 0; // and then the player dies
 
     sim.step(emptyInput());
-    expect(sim.state.player.lives).toBe(2); // a life is still spent [§3.16]
+    expect(sim.state.player.lives).toBe(3); // a life is still spent [§3.16]
     expect(sim.state.levelState).toBe('MID_BOSS'); // the fight continues, nothing resets [ROC-LIFE-2]
 
     runOutRespawn(sim);
@@ -77,7 +77,7 @@ describe('death checkpoints', () => {
     player.hull = 0;
     sim.step(emptyInput());
 
-    expect(sim.state.player.lives).toBe(2);
+    expect(sim.state.player.lives).toBe(3);
     expect(sim.state.levelState).toBe('WAVES_B'); // no checkpoint reset [ROC-LIFE-2]
     expect(sim.state.entities.has(enemy.id)).toBe(true); // the same enemy, untouched
 
@@ -96,7 +96,7 @@ describe('death checkpoints', () => {
     player.hull = 0;
     sim.step(emptyInput());
 
-    expect(sim.state.player.lives).toBe(2);
+    expect(sim.state.player.lives).toBe(3);
     expect(sim.state.levelState).toBe('WAVES_A'); // never restarts to LAUNCH [ROC-LIFE-2]
 
     runOutRespawn(sim);

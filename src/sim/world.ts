@@ -23,6 +23,9 @@ export interface PlayerState {
   fireCooldown: number; // seconds until the next pulse may fire [ROC-LAS-3]
   militaryCooldown: number; // seconds until the next military-laser bolt may fire [ROC-LAS-5]
   invulnTtl: number; // post-spawn / post-hit invulnerability, seconds [ROC-LIFE-2]
+  // Blink-on-screen window, set only on respawn (never by a ramming contact) so blinking reads as
+  // "fresh ship, briefly invulnerable" and never as "ordinary hit landed". [ROC-LIFE-2b]
+  respawnBlinkTtl: number;
   // Set the instant the ship would otherwise be destroyed (no bomb saved it): the wreck sits
   // inert while its dramatic, in-place explosion plays out, then a new ship appears here once the
   // timer elapses (or GAME_OVER, if lives ran out). [ROC-LIFE-2,3]
@@ -151,10 +154,11 @@ export function makeWorld(seed: number): World {
       energyBombs: 0,
       energyBank: false,
       energyBankTimer: 0,
-      lives: 3,
+      lives: 4,
       fireCooldown: 0,
       militaryCooldown: 0,
       invulnTtl: 0,
+      respawnBlinkTtl: 0,
       respawnPending: null,
     },
     econ: { wallet: 0, score: 0 },

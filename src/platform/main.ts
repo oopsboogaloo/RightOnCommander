@@ -347,11 +347,11 @@ startGameLoop({
     }
 
     // Player ship, interpolated between the last two sim states. Hidden while the wreck's
-    // dramatic explosion plays out (respawnPending); blinks while invulnerable just after a fresh
-    // ship appears, so the i-frames read on screen. [ROC-LIFE-2,3]
+    // dramatic explosion plays out (respawnPending); blinks only during the fresh-ship window
+    // right after a respawn, never for an ordinary hit's brief ramming i-frames. [ROC-LIFE-2,2b,3]
     const player = sim.state.entities.get(PLAYER_ID)!;
-    const invuln = sim.state.player.invulnTtl;
-    const blinkOff = invuln > 0 && Math.floor(invuln / 0.1) % 2 === 1;
+    const blink = sim.state.player.respawnBlinkTtl;
+    const blinkOff = blink > 0 && Math.floor(blink / 0.1) % 2 === 1;
     if (sim.state.mode !== 'GAME_OVER' && !blinkOff && !sim.state.player.respawnPending) {
       const pmesh = (player.meshId && MESHES[player.meshId]) || MESHES.sidewinder;
       const pos = vec3(lerp(prev.x, curr.x, alpha), lerp(prev.y, curr.y, alpha), lerp(prev.z, curr.z, alpha));
@@ -454,15 +454,16 @@ startGameLoop({
     if (sim.state.mode === 'GAME_OVER') {
       renderer.drawText('GAME OVER', { x: w / 2, y: h / 2 }, { fill: '#f55', font: '32px monospace', align: 'center' });
     } else {
-      // Persistent status bar, bottom of the screen: hull, shield, missile level + countdown,
-      // energy bomb, energy bank countdown, score/credits/lives. An ECM countdown will join this
-      // row later. [ROC-HUD-2,3]
+      // Persistent status bar, bottom of the screen: shield, missile level + countdown, energy
+      // bomb, energy bank countdown, score/credits/lives. No hull readout — the player has no hull
+      // buffer once shields are down, one more hit is simply lethal. An ECM countdown will join
+      // this row later. [ROC-HUD-2,3]
       const ps = sim.state.player;
       const missileStr = ps.missileGrade > 0 ? `Missile L${ps.missileGrade} ${Math.ceil(ps.missileTimer)}s` : 'Missile -';
       const bombCap = energyBombCap(ps.shipClass);
       const bankStr = ps.energyBank ? `Bank ${Math.ceil(ps.energyBankTimer)}s` : 'Bank -';
       renderer.drawText(
-        `Hull ${player.hull ?? 0}/${player.hullMax ?? 0}   Shield ${player.shield ?? 0}/${player.shieldMax ?? 0}   ${missileStr}   Bomb ${ps.energyBombs}/${bombCap}   ${bankStr}`,
+        `Shield ${player.shield ?? 0}/${player.shieldMax ?? 0}   ${missileStr}   Bomb ${ps.energyBombs}/${bombCap}   ${bankStr}`,
         { x: w / 2, y: h - 32 },
         { fill: '#9ab', font: '12px monospace', align: 'center' },
       );

@@ -104,7 +104,9 @@ function rams(player: Entity, e: Entity, cfg: GamestateConfig): boolean {
   return dx * dx + dz * dz <= (pr + er) * (pr + er);
 }
 
-// Restore the player to full and grant a window of invulnerability at `x,z`.
+// Restore the player to full and grant a window of invulnerability at `x,z`. Blinking is reserved
+// for this window alone — a ramming contact's i-frames set `invulnTtl` but never `respawnBlinkTtl`
+// — so a ship on screen blinking always means "just respawned", never "just took a hit". [ROC-LIFE-2b]
 function respawnPlayer(world: World, x: number, z: number, invuln: number): void {
   const p = world.entities.get(PLAYER_ID);
   if (!p) return;
@@ -116,6 +118,7 @@ function respawnPlayer(world: World, x: number, z: number, invuln: number): void
   p.vel = { x: 0, y: 0, z: 0 };
   p.bank = 0;
   world.player.invulnTtl = invuln;
+  world.player.respawnBlinkTtl = invuln;
 }
 
 // Emergency energy bomb: instead of the ship dying, one bomb is spent to clear the board — every
@@ -144,6 +147,7 @@ export function gamestateSystem(
   if (world.mode === 'GAME_OVER') return;
 
   if (world.player.invulnTtl > 0) world.player.invulnTtl = Math.max(0, world.player.invulnTtl - dt);
+  if (world.player.respawnBlinkTtl > 0) world.player.respawnBlinkTtl = Math.max(0, world.player.respawnBlinkTtl - dt);
 
   // The ship is mid-explosion, waiting to respawn: frozen in place (movement/weapons/missiles are
   // gated on this same flag), immune to further hits, no ram checks, nothing re-triggers. [ROC-LIFE-3]

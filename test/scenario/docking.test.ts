@@ -87,7 +87,7 @@ describe('docking sequence', () => {
     expect(sim.state.levelState).toBe('DOCK');
     expect(all.some((e) => e.type === 'docked')).toBe(true);
     expect(all.some((e) => e.type === 'dock')).toBe(true); // shop screen entry [ROC-LVL-1]
-    expect(sim.state.player.lives).toBe(3); // no life lost — nothing to crash into [ROC-DCKG-1]
+    expect(sim.state.player.lives).toBe(4); // no life lost — nothing to crash into [ROC-DCKG-1]
   });
 
   it('does not wait, or advance, until the station is fully in view', () => {
@@ -111,7 +111,7 @@ describe('docking sequence', () => {
     sim.state.entities.get(PLAYER_ID)!.pos = { ...st.pos }; // parked inside the hull
 
     for (let i = 0; i < settleSteps; i++) sim.step(emptyInput());
-    expect(sim.state.player.lives).toBe(3); // no death
+    expect(sim.state.player.lives).toBe(4); // no death
     expect(sim.state.levelState).toBe('DOCK'); // and it still reaches the shop
   });
 });

@@ -40,11 +40,16 @@ export function applyDamage(
   if ((e.shield ?? 0) > 0) {
     e.shield = (e.shield ?? 0) - 1; // remove one ring [ROC-DMG-2, ROC-DMG-5]
     e.shieldFlashTtl = cfg.shieldFlashDuration; // flash shield, not hull
+    // The player also flashes white on a shield-absorbed hit, same as any other hit — hull damage
+    // isn't the only thing that reads on screen. [ROC-DMG-2a]
+    if (e.kind === 'player') e.flashTtl = cfg.flashDuration;
     world.events.push({ type: 'sfx', id: 'shield_hit' });
     return;
   }
 
-  e.hull = (e.hull ?? 0) - damage; // unshielded: hull damage [ROC-DMG-6]
+  // The player has no hull hit-point buffer: once shields are down, any further hit is instantly
+  // lethal. Every other entity keeps graduated hull damage. [ROC-DMG-2a, ROC-LIFE-1]
+  e.hull = e.kind === 'player' ? 0 : (e.hull ?? 0) - damage;
   e.flashTtl = cfg.flashDuration; // white flash applies to ANY hull hit [ROC-DMG-6a]
   world.events.push({ type: 'fragments', pos: { ...e.pos }, vel: { ...e.vel }, meshId: e.meshId });
 

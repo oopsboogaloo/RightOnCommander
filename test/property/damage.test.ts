@@ -85,7 +85,21 @@ describe('damage & shields', () => {
       const shielded = target({ kind, shield: 1, shieldMax: 1, hull: 5, hullMax: 5 });
       applyDamage(w, shielded, 1);
       expect(shielded.shieldFlashTtl).toBeGreaterThan(0);
-      expect(shielded.flashTtl ?? 0).toBe(0);
+      // The player also flashes white on a shield-absorbed hit (every other kind doesn't). [ROC-DMG-2a]
+      if (kind === 'player') expect(shielded.flashTtl ?? 0).toBeGreaterThan(0);
+      else expect(shielded.flashTtl ?? 0).toBe(0);
     }
+  });
+
+  it('the player has no hull buffer: any hit while unshielded is instantly lethal (unlike every other kind)', () => {
+    const w = makeWorld(1);
+    const player = target({ kind: 'player', shield: 0, hull: 5, hullMax: 5 });
+    applyDamage(w, player, 1);
+    expect(player.hull).toBe(0);
+    expect(w.events.some((e) => e.type === 'destroyed' && e.id === player.id)).toBe(true);
+
+    const enemy = target({ id: 100, kind: 'enemy', shield: 0, hull: 5, hullMax: 5 });
+    applyDamage(w, enemy, 1);
+    expect(enemy.hull).toBe(4); // graduated damage, unaffected
   });
 });

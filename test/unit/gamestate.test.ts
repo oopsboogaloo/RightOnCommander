@@ -79,6 +79,17 @@ describe('player takes damage', () => {
     expect(w.entities.get(PLAYER_ID)!.shield).toBe(before); // i-frames held
   });
 
+  it('a ramming contact grants i-frames but never blink — blink is reserved for a fresh respawn', () => {
+    const w = makeWorld(1);
+    shielded(w);
+    const e = addEnemyShip(w, vec3(0, 0, 0)); // overlapping the player at origin
+    e.hull = 99;
+    e.hullMax = 99;
+    gamestateSystem(w, DT, CFG);
+    expect(w.player.invulnTtl).toBeGreaterThan(0); // i-frames granted
+    expect(w.player.respawnBlinkTtl).toBe(0); // but no blink [ROC-LIFE-2b]
+  });
+
   it('ramming wrecks a fighter and only dents a boss', () => {
     const w = makeWorld(1);
     const fighter = addEnemyShip(w, vec3(0, 0, 0)); // hull 3 < ramDamage 4
@@ -105,7 +116,7 @@ describe('death, lives & respawn', () => {
     p.pos = vec3(0.5, 0, 0.7);
     gamestateSystem(w, DT, CFG);
 
-    expect(w.player.lives).toBe(2); // spent right away
+    expect(w.player.lives).toBe(3); // spent right away
     expect(w.player.respawnPending).toBeTruthy(); // wreck waits, nothing has respawned yet
     expect(p.hull).toBe(0); // still a wreck
     expect(w.mode).not.toBe('GAME_OVER');
@@ -116,6 +127,7 @@ describe('death, lives & respawn', () => {
     expect(p.shield).toBe(p.shieldMax);
     expect(p.pos).toEqual(vec3(0.5, 0, 0.7)); // respawns in place, not recentred [ROC-LIFE-2]
     expect(w.player.invulnTtl).toBeGreaterThan(0);
+    expect(w.player.respawnBlinkTtl).toBeGreaterThan(0); // blinks only for this fresh-ship window [ROC-LIFE-2b]
   });
 
   it('freezes the wreck through the pending window: further hits and ram checks do nothing', () => {
@@ -124,13 +136,13 @@ describe('death, lives & respawn', () => {
     p.shield = 0;
     p.hull = 0;
     gamestateSystem(w, DT, CFG);
-    expect(w.player.lives).toBe(2);
+    expect(w.player.lives).toBe(3);
 
     const e = addEnemyShip(w, { ...p.pos });
     e.hull = 99;
     e.hullMax = 99;
     gamestateSystem(w, DT, CFG); // a ram-worthy overlap sits right on the wreck
-    expect(w.player.lives).toBe(2); // no second life lost
+    expect(w.player.lives).toBe(3); // no second life lost
     expect(p.hull).toBe(0); // still just the wreck, untouched
   });
 
@@ -149,7 +161,7 @@ describe('death, lives & respawn', () => {
 
     expect(w.player.energyBombs).toBe(0); // consumed
     expect(p.hull).toBe(1); // bare survival, not a full heal
-    expect(w.player.lives).toBe(3); // no life spent — the ship never died
+    expect(w.player.lives).toBe(4); // no life spent — the ship never died
     expect(w.player.respawnPending).toBeNull(); // no explosion/respawn sequence at all
     expect(w.entities.has(enemy.id)).toBe(false); // wiped
     expect(w.entities.has(shot.id)).toBe(false); // enemy bullets wiped too
@@ -278,17 +290,19 @@ describe('ramming hugs the hull silhouette (not a bounding circle)', () => {
   });
 
   it('DOES ram head-on once the hulls actually touch', () => {
-    const { w, player } = ramWorld(vec3(0, 0, 0.14));
+    // Shielded here (unlike the unshielded no-touch case above): the player has no hull buffer,
+    // so a shield ring is what proves contact landed without also ending the run. [ROC-DMG-2a]
+    const { w, player } = ramWorld(vec3(0, 0, 0.14), 1);
     gamestateSystem(w, DT, realCfg);
-    expect(player.hull).toBe(2); // contact damage applied
+    expect(player.shield).toBe(0); // contact damage applied
   });
 
   it('DOES ram a wingtip overlap that the old bounding-circle test used to miss', () => {
     // x=0.24: the old circle-vs-circle test (radius sum 0.21) missed this despite the drawn
     // wingtips visibly overlapping. [DEFECTS review]
-    const { w, player } = ramWorld(vec3(0.24, 0, 0));
+    const { w, player } = ramWorld(vec3(0.24, 0, 0), 1);
     gamestateSystem(w, DT, realCfg);
-    expect(player.hull).toBe(2);
+    expect(player.shield).toBe(0);
   });
 
   it('a shield extends the ram range by its own gap, but still not out to the old false-positive distance', () => {
