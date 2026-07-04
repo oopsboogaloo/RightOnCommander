@@ -1,10 +1,12 @@
 # Right on Commander — Requirements Specification
 
-**Version:** 1.11 (draft — all design decisions resolved)
+**Version:** 1.12 (draft — all design decisions resolved)
 **Author:** Chloe
 **Notation:** EARS (Easy Approach to Requirements Syntax)
 **Status:** Spec under construction — review
 
+> **Changelog 1.11 → 1.12:** **Removed Level 3's star backdrop and star-flare hazard** (ROC-L3-1, ROC-L3-2, both dropped): at the game's actual portrait aspect ratio the "large white star" circle was big enough to cover the entire viewport rather than read as a curved limb off the right edge, whiting out the screen — including through the witchspace interlude and hyperspace starfield that precede the level. Level 3 now plays with no star backdrop and no environmental flare damage; its mid- and end-boss requirements (ROC-L3-3,4) are unaffected.
+>
 > **Changelog 1.10 → 1.11:** **Level 3 end boss changed** from the generation ship to an **Elite-rated ace pilot flying a fully-kitted Cobra Mk III** — military laser, beam lasers, missiles, and shields to match (ROC-L3-4 revised) — keeping every boss in the roster a real Elite hull rather than an original invention.
 >
 > **Changelog 1.9 → 1.10:** **Level 3 mid-boss changed** from the rogue station/Vipers to **a pair of Anacondas** (ROC-L3-3). **Added a witchspace interlude between Level 2 and Level 3** (new): the Level 2 → 3 hyperspace jump now lingers in witchspace — starfield held in its stretched, hyperspace state — for a **Thargoid wave the player must clear** before the jump resolves and Level 3 begins (ROC-WITCH-1..4). **Level 4 renamed "Alien warzone"** (was "Alien space") and **no longer entered via a forced witchspace misjump** — that framing now belongs to the Level 2→3 interlude instead — Level 4 is entered by an ordinary jump/launch like every other level (ROC-L4-0 revised). Level 4 also gains the **broken remains of Galactic Navy vessels** scattered through it as wreckage (ROC-L4-3, new), and **drops its mid-boss** — wave combat runs straight to the end boss — making it **shorter** than the standard §3.9 pacing (ROC-L4-4, new).
@@ -203,9 +205,7 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
 - **ROC-WITCH-3** Once the Thargoid wave is cleared, the system shall **resolve the hyperspace jump** — the stretched lines shrink back into the normal scrolling starfield (as ROC-HYP-4) — and proceed into Level 3's arrival (info card, then wave combat) exactly as any other inter-level jump.
 - **ROC-WITCH-4** This witchspace framing is used **only** for the Level 2 → 3 transition; Level 4 is entered by an ordinary jump (ROC-L4-0), since the witchspace beat has already been spent here.
 
-**Level 3 — Star surface**
-- **ROC-L3-1** The system shall render a **large white star occupying the right-hand side with massive curvature**.
-- **ROC-L3-2** The system shall present **dangerous ships** plus the **star as an environmental hazard, with occasional white star activity** (flares/eruptions).
+**Level 3**
 - **ROC-L3-3** *(v1.10 — was a rogue station with Vipers)* The system shall provide a **mid boss: a pair of Anacondas** fought together.
 - **ROC-L3-4** *(v1.11 — was a generation ship)* The system shall provide an **end boss: an Elite-rated ace pilot flying a fully-kitted Cobra Mk III** — military laser, beam lasers, missiles, and shields to match its pilot's rating — rather than an original hull, keeping the boss roster drawn entirely from real Elite ships.
 

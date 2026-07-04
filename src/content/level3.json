@@ -8,8 +8,6 @@
     "The system's star is a source of frequent flare activity."
   ],
   "launchMs": 2500,
-  "backdrop": "star",
-  "starFlare": { "intervalSec": 7, "warnSec": 1.5, "zoneX": 0.9, "damage": 1 },
   "witchspace": {
     "id": "l3w",
     "pattern": "sine_column",

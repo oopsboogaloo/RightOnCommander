@@ -160,12 +160,81 @@ function runStationAction(action: StationAction): void {
   }
 }
 
+// Hidden cheat unlock: tap all four screen corners in clockwise order, starting top-left, each
+// within CORNER_TIMEOUT_MS of the last. Unlocking grants a one-off pile of lives/credits and
+// reveals the Skip Level button for the rest of the session.
+const CORNER_ORDER = ['TL', 'TR', 'BR', 'BL'] as const;
+type Corner = (typeof CORNER_ORDER)[number];
+const CORNER_FRAC = 0.16; // corner hit zone, as a fraction of min(w,h)
+const CORNER_TIMEOUT_MS = 4000;
+const CHEAT_LIVES = 100;
+const CHEAT_CREDITS = 1_000_000;
+const CHEAT_FLASH_SEC = 3;
+
+let cheatUnlocked = false;
+let cheatSeq = 0;
+let cheatLastTapMs = 0;
+let cheatFlashTtl = 0;
+
+function cornerAt(px: number, py: number, w: number, h: number): Corner | null {
+  const z = Math.min(w, h) * CORNER_FRAC;
+  const top = py < z;
+  const bottom = py > h - z;
+  const left = px < z;
+  const right = px > w - z;
+  if (top && left) return 'TL';
+  if (top && right) return 'TR';
+  if (bottom && right) return 'BR';
+  if (bottom && left) return 'BL';
+  return null;
+}
+
+function activateCheat(): void {
+  cheatUnlocked = true;
+  cheatFlashTtl = CHEAT_FLASH_SEC;
+  sim.state.player.lives = CHEAT_LIVES;
+  sim.state.econ.wallet += CHEAT_CREDITS;
+}
+
+function tryCheatTap(px: number, py: number, w: number, h: number): void {
+  if (cheatUnlocked) return;
+  const corner = cornerAt(px, py, w, h);
+  if (!corner) return;
+  const now = performance.now();
+  if (cheatSeq > 0 && now - cheatLastTapMs > CORNER_TIMEOUT_MS) cheatSeq = 0; // took too long — restart
+  if (corner === CORNER_ORDER[cheatSeq]) {
+    cheatSeq += 1;
+    cheatLastTapMs = now;
+    if (cheatSeq === CORNER_ORDER.length) activateCheat();
+  } else {
+    cheatSeq = corner === CORNER_ORDER[0] ? 1 : 0; // a fresh top-left tap restarts the sequence
+    cheatLastTapMs = now;
+  }
+}
+
+// Skip Level: wipes whatever combat is underway and jumps straight to the docking approach — the
+// level ends exactly as a normal clear would, just without playing it out.
+const SKIP_BUTTON = { w: 84, h: 28, marginX: 10, marginY: 100 };
+function skipButtonRect(w: number): { x: number; y: number; w: number; h: number } {
+  return { x: w - SKIP_BUTTON.marginX - SKIP_BUTTON.w, y: SKIP_BUTTON.marginY, w: SKIP_BUTTON.w, h: SKIP_BUTTON.h };
+}
+function inRect(px: number, py: number, r: { x: number; y: number; w: number; h: number }): boolean {
+  return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+}
+
 canvas.addEventListener('pointerdown', (e) => {
-  if (!dockActive()) return;
   const w = canvas!.clientWidth || canvas!.width;
   const h = canvas!.clientHeight || canvas!.height;
-  const btn = buttonAt(stationButtons(sim.state, stationCtx, w, h, launchArmed, selectedLaser), e.offsetX, e.offsetY);
-  if (btn && btn.enabled) runStationAction(btn.action);
+
+  tryCheatTap(e.offsetX, e.offsetY, w, h);
+
+  if (dockActive()) {
+    const btn = buttonAt(stationButtons(sim.state, stationCtx, w, h, launchArmed, selectedLaser), e.offsetX, e.offsetY);
+    if (btn && btn.enabled) runStationAction(btn.action);
+    return;
+  }
+
+  if (cheatUnlocked && inRect(e.offsetX, e.offsetY, skipButtonRect(w))) sim.cheatSkipLevel();
 });
 
 interface Pose {
@@ -254,6 +323,7 @@ function drainFloaters(events: ReturnType<typeof sim.step>): void {
   ecmTextTtl = Math.max(0, ecmTextTtl - DT);
   bombFlashTtl = Math.max(0, bombFlashTtl - DT);
   bombTextTtl = Math.max(0, bombTextTtl - DT);
+  cheatFlashTtl = Math.max(0, cheatFlashTtl - DT);
   for (let i = floaters.length - 1; i >= 0; i--) {
     floaters[i].age += DT;
     if (floaters[i].age >= floaters[i].ttl) floaters.splice(i, 1);
@@ -264,13 +334,10 @@ startGameLoop({
   step: () => {
     prev = curr;
     const events = sim.step(input.sample(DT));
-    // Dense-belt levels show the drifting asteroid backdrop; star-surface levels show the star.
-    // Follows whichever level is active, not just the first. [ROC-L1-1, ROC-L3-1]
-    const lvl = currentLevel() as { backdrop?: string; starFlare?: { warnSec: number } };
+    // Dense-belt levels show the drifting asteroid backdrop. Follows whichever level is active,
+    // not just the first. [ROC-L1-1]
+    const lvl = currentLevel() as { backdrop?: string };
     renderer.showAsteroidBackdrop = lvl.backdrop === 'asteroids';
-    renderer.showStarBackdrop = lvl.backdrop === 'star';
-    const hazard = sim.state.hazard;
-    renderer.starFlareAlpha = lvl.starFlare && hazard && hazard.warnTtl > 0 ? hazard.warnTtl / lvl.starFlare.warnSec : 0;
     // Reveal the asteroid belt as we drop out of hyperspace, so it drifts into view — arriving
     // at the field. Idempotent. [ROC-L1-1]
     const ls = sim.state.levelState;
@@ -483,6 +550,30 @@ startGameLoop({
       renderer.drawText(currentLevel().name.toUpperCase(), { x: w / 2, y: h * 0.3 }, { fill: '#fff', font: '26px monospace', align: 'center' });
       (currentLevel().facts ?? []).forEach((line, i) => {
         renderer.drawText(line, { x: w / 2, y: h * 0.3 + 34 + i * 22 }, { fill: 'rgba(255,255,255,0.85)', font: '14px monospace', align: 'center' });
+      });
+    }
+
+    // Cheat unlock flash: a brief confirmation the corner-tap sequence worked. [dev cheat]
+    if (cheatFlashTtl > 0) {
+      const a = Math.min(1, cheatFlashTtl / (CHEAT_FLASH_SEC * 0.5));
+      renderer.drawText(`CHEAT ACTIVE — +${CHEAT_LIVES} lives, +${CHEAT_CREDITS.toLocaleString()}cr`, { x: w / 2, y: h * 0.2 }, {
+        fill: `rgba(255,255,255,${a.toFixed(2)})`,
+        font: '16px monospace',
+        align: 'center',
+      });
+    }
+
+    // Skip Level: revealed once the corner-tap cheat is unlocked; wipes the current combat and
+    // jumps straight to the docking approach. [dev cheat]
+    if (cheatUnlocked && !dockActive()) {
+      const r = skipButtonRect(w);
+      ctx!.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx!.lineWidth = 1;
+      ctx!.strokeRect(r.x, r.y, r.w, r.h);
+      renderer.drawText('SKIP LEVEL', { x: r.x + r.w / 2, y: r.y + r.h / 2 + 4 }, {
+        fill: 'rgba(255,255,255,0.85)',
+        font: '11px monospace',
+        align: 'center',
       });
     }
 

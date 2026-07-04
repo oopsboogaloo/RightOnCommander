@@ -18,7 +18,6 @@ import { type World } from '../world.js';
 import { startWave, type WaveDef, type WaveContext } from './waves.js';
 import { startAsteroidWaves, type AsteroidFieldDef } from './asteroids.js';
 import { bossPlacement } from './boss.js';
-import { initHazard, type StarFlareDef } from './hazards.js';
 
 export type LevelState =
   | 'LAUNCH'
@@ -48,7 +47,6 @@ export interface LevelDef {
   wavesB: WaveDef[];
   endBoss: string;
   viper?: WaveDef; // contraband interception wave
-  starFlare?: StarFlareDef; // Level 3's environmental star hazard [ROC-L3-1,2]
   witchspace?: WaveDef; // a Thargoid wave that must be cleared before the jump resolves; set only
   // on the level entered via the witchspace interlude (Level 3, L2->3) [ROC-WITCH-1..4]
 }
@@ -287,7 +285,6 @@ export function startLevel(world: World, level: LevelDef, ctx: WaveContext): voi
   world.bossFadeTtl = 0;
   world.ecm = { fuse: -1, cooldown: 0 };
   world.hermitWaveId = null;
-  world.hazard = initHazard(level.starFlare); // Level 3's star flare, where the level has one [ROC-L3-1,2]
   enterLevelState(world, 'LAUNCH', level, ctx);
 }
 

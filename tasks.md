@@ -305,6 +305,10 @@ have nowhere to load into until the campaign can actually advance between levels
   asserting both Anacondas reached and killed before `WAVES_B`, the Cobra ace reached and killed;
   **unit test** for the flare hazard's damage timing/zone on a known star position.
   **Refs:** ROC-L3-1..4.
+  **Later removed (v1.12):** the star backdrop covered the whole viewport at the game's actual
+  aspect ratio instead of reading as an edge limb, so both the backdrop and the flare hazard tied
+  to it (`hazards.ts`, `world.hazard`, `level.starFlare`) were deleted. Refs ROC-L3-3,4 stand;
+  ROC-L3-1,2 are gone.
 
 - [x] **T7.2a — Expand the regular-enemy roster (classic Elite ships).**
   **Do:** add Boa, Cobra Mk I, Moray (Star Boat), Shuttle, Worm, Chameleon, Iguana as new regular

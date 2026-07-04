@@ -1,7 +1,9 @@
 # Right on Commander — Design
 
-**Version:** 0.8 (draft — all design decisions resolved)
+**Version:** 0.9 (draft — all design decisions resolved)
 
+> **Changelog 0.8 → 0.9:** **Removed Level 3's star backdrop and star-flare hazard** — `renderer2d.ts`'s `drawStarBackdrop`/`showStarBackdrop`/`starFlareAlpha`, `systems/hazards.ts` (`HazardState`/`StarFlareDef`/`hazardsSystem`/`initHazard`) and `world.hazard`, and `level3.json`'s `backdrop`/`starFlare` fields, are all gone — the circle was large enough to cover the whole viewport at the game's aspect ratio rather than read as an edge limb (requirements v1.12). Added a **corner-tap cheat code**: tapping all four screen corners in clockwise order starting top-left grants 100 lives + 1,000,000cr once, and reveals a persistent **Skip Level** HUD button (`sim.cheatSkipLevel()`) that wipes the current combat and jumps straight to the docking approach, same as clearing the level normally. `gamestateSystem`'s life-loss decrement no longer clamps to `MAX_LIVES` before subtracting, so a cheat-granted life count above 5 decrements normally instead of snapping down to 4 on the next death.
+>
 > **Changelog 0.7 → 0.8:** Level 3's mid-boss changes to a **pair of Anacondas** (`midBoss: "anaconda_pair"`, ROC-L3-3). Added a **witchspace interlude between Level 2 and 3**: level3's schema entry becomes `"entry": "witchspace_interlude"`, and the level FSM gains a `WITCHSPACE_COMBAT` state between `HYPERSPACE` and `INFO` — `world.scroll` holds at its fully-stretched hyperspace value (instead of resuming) until a spawned Thargoid wave is cleared, then the jump resolves as usual (§12, §12a). **Level 4 renamed "Alien warzone"**, reverts to a normal `"entry": "launch"` (the misjump framing moved to the new interlude), adds **broken Galactic Navy wrecks** as scenery/hazard, and **drops its `midBoss`** entirely — wave combat runs straight to the end boss, and the level is paced shorter. See requirements v1.10 (ROC-L3-3, ROC-WITCH-1..4, ROC-L4-0,3,4).
 >
 > **Changelog 0.6 → 0.7:** Removed the player's graduated hull damage: `applyDamage` now special-cases `kind === 'player'` to set `hull = 0` outright on any unshielded hit, instantly lethal, while every other entity keeps subtracting damage as before. The player also now flashes white (`flashTtl`) on a shield-absorbed hit, not just an unshielded one. Split blink from i-frames: added `player.respawnBlinkTtl`, set only by `respawnPlayer()` (never by the ramming contact's `invulnTtl` grant), so the ship only blinks in the window right after a fresh respawn. Starting lives raised 3 → 4 to compensate. Dropped the hull segment from the bottom status bar. See §8, §12 Game FSM, and requirements v1.9 (ROC-DMG-2a,6b; ROC-LIFE-1,2c; ROC-HUD-2).
@@ -319,7 +321,6 @@ Pattern, enemy and stats are orthogonal: swap `enemy` to re-skin a pattern; the 
   "dock": "coriolis",
   "entry": "witchspace_interlude", // (v1.10) L2->L3 only: the hyperspace jump lingers, stretched
                                     // starfield held, for a Thargoid wave before arrival [ROC-WITCH-1..4]
-  "hazards": ["star_right", "flare"],   // [ROC-L3-1,2]
   "waves": ["w30","w31","w32"],
   "midBoss": "anaconda_pair",      // (v1.10) two Anacondas fought together [ROC-L3-3]
   "endBoss": "cobra_ace",           // (v1.11) an Elite ace in a fully-kitted Cobra Mk III [ROC-L3-4]
