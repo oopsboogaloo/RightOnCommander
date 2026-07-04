@@ -52,6 +52,13 @@ import python from '../content/meshes/python.json';
 import constrictor from '../content/meshes/constrictor.json';
 import anaconda from '../content/meshes/anaconda.json';
 import thargoid from '../content/meshes/thargoid.json';
+import boa from '../content/meshes/boa.json';
+import cobra_mk1 from '../content/meshes/cobra_mk1.json';
+import moray from '../content/meshes/moray.json';
+import shuttle from '../content/meshes/shuttle.json';
+import worm from '../content/meshes/worm.json';
+import chameleon from '../content/meshes/chameleon.json';
+import iguana from '../content/meshes/iguana.json';
 import coriolis from '../content/meshes/coriolis.json';
 import transporter from '../content/meshes/transporter.json';
 import asteroid from '../content/meshes/asteroid.json';
@@ -93,6 +100,13 @@ const MESHES: Record<string, Mesh> = {
   constrictor,
   anaconda,
   thargoid,
+  boa,
+  cobra_mk1,
+  moray,
+  shuttle,
+  worm,
+  chameleon,
+  iguana,
   coriolis,
   transporter,
   asteroid,

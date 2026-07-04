@@ -28,6 +28,13 @@ KNOWN_COUNTS = {
     "constrictor": (17, 24, 10),
     "python": (11, 26, 13),
     "anaconda": (15, 25, 12),
+    "boa": (13, 24, 13),
+    "cobra_mk1": (11, 18, 10),
+    "moray": (14, 19, 9),
+    "shuttle": (19, 30, 13),
+    "worm": (10, 16, 8),
+    "chameleon": (18, 29, 13),
+    "iguana": (15, 23, 10),
 }
 
 

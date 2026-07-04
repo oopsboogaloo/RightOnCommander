@@ -47,7 +47,7 @@
     {
       "id": "l2a3",
       "pattern": "loop",
-      "enemy": "adder",
+      "enemy": "chameleon",
       "count": 4,
       "spacingMs": 450,
       "delayMs": 4400,
@@ -69,7 +69,7 @@
     {
       "id": "l2a5",
       "pattern": "orbit",
-      "enemy": "gecko",
+      "enemy": "iguana",
       "count": 6,
       "spacingMs": 350,
       "delayMs": 8800,
@@ -113,7 +113,7 @@
     {
       "id": "l2a9",
       "pattern": "pincer",
-      "enemy": "adder",
+      "enemy": "moray",
       "count": 5,
       "spacingMs": 400,
       "delayMs": 17600,
@@ -193,7 +193,7 @@
     {
       "id": "l2b4",
       "pattern": "pincer",
-      "enemy": "adder",
+      "enemy": "boa",
       "count": 5,
       "spacingMs": 400,
       "delayMs": 7200,
@@ -237,7 +237,7 @@
     {
       "id": "l2b8",
       "pattern": "vform",
-      "enemy": "adder",
+      "enemy": "chameleon",
       "count": 6,
       "spacingMs": 400,
       "delayMs": 16000,
@@ -270,7 +270,7 @@
     {
       "id": "l2b11",
       "pattern": "orbit",
-      "enemy": "krait",
+      "enemy": "moray",
       "count": 6,
       "spacingMs": 350,
       "delayMs": 22600,
