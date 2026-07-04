@@ -1,6 +1,6 @@
 # Right on Commander — Tasks
 
-**Version:** 0.3 (draft)
+**Version:** 0.4 (draft)
 **Derives from:** requirements.md v1.7, design.md v0.6
 **Stack:** TypeScript + Canvas 2D + Vite + Vitest/fast-check; Python for the ship-data parser only.
 
@@ -218,9 +218,91 @@ Turns the placeholder bosses into the specified fights and adds the level booken
 
 ## Phase 7 — Levels 2–4, bosses, hazards
 
-- [ ] **T7.1 — Level 2 (Deep space).** Dense asteroid bands; elaborate waves; **Python mid-boss**; **Constrictor end boss** (strong shields). Scenario test reaches both. **Refs:** ROC-L2-1..4.
-- [ ] **T7.1a — Witchspace interlude (L2→3).** *(v1.10, new)* New `WITCHSPACE_COMBAT` level state after `HYPERSPACE`: hold `world.scroll` at its fully-stretched value, spawn a Thargoid wave, only resolve the jump into Level 3 (starfield settles, `INFO` card) once it's cleared. Scenario test: scroll stays stretched until the wave is cleared, then Level 3 starts. **Refs:** ROC-WITCH-1..4.
-- [ ] **T7.2 — Level 3 (Star surface).** Right-side curved star + flare hazard; **pair-of-Anacondas mid** *(v1.10 — was rogue-station + Vipers)*; **generation-ship end**. **Refs:** ROC-L3-1..4.
+Order: **T7.0 → T7.0a → T7.1 → T7.1a → T7.2**. T7.0/T7.0a are new prerequisites — today `createSim`
+loads exactly one hardcoded `LevelDef` (`platform/main.ts` imports `level1.json` directly; `world.levelIndex`
+exists but nothing reads it, and `launch()` in `station.ts` only emits an event) — so Level 2 and 3
+have nowhere to load into until the campaign can actually advance between levels.
+
+- [ ] **T7.0 — Multi-level campaign plumbing.** *(new prerequisite)*
+  **Do:** `SimContent.levels: LevelDef[]` (replacing the single `level` field) in `loadContent.ts`
+  and `sim/index.ts`; `createSim` starts at `world.levelIndex` (default 0) via `startLevel(world,
+  levels[world.levelIndex], ctx)`; on `DOCK` → `launch()` (`systems/station.ts`), increment
+  `levelIndex` and call `startLevel` with `levels[levelIndex]` instead of just emitting `{type:
+  'launch'}`; past the last level, hold at `DOCK` (or hand off to T9.1's Elite-mode replay loop —
+  stub a `{type: 'campaignComplete'}` event for now). `platform/main.ts` imports `level1`, `level2`,
+  `level3` and passes `levels: [level1, level2, level3]`.
+  **Done-when:** **scenario test** — docking after level 1 and confirming launch advances
+  `levelIndex` to 1 and starts level 2's `LAUNCH` state with level 2's own wave/boss content
+  (not level 1's, and not a restart of level 1); snapshot round-trips `levelIndex` correctly
+  (already serialised in `snapshot.ts`, just needs to be *used*).
+  **Refs:** ROC-LVL-1,2; design §12 (levelstate).
+
+- [ ] **T7.0a — Multi-boss mid-fights.** *(new prerequisite, for T7.2's Anaconda pair)*
+  **Do:** `LevelDef.midBoss` accepts `string | string[]`; `enterLevelState`'s `MID_BOSS` case
+  spawns one boss entity per name via the existing `spawnBoss`. No change needed to `bossCleared`/
+  `tickBossFade` — both already check "any entity of kind `boss`" generically, so the fight ends
+  only once *all* spawned bosses are dead. Position the pair via `bossPlacement` params (e.g. two
+  offset `strafe` tracks, or a shared symmetric track pair) so they don't overlap on spawn.
+  **Done-when:** **scenario test** — a two-name `midBoss` spawns two boss entities; killing only
+  one does not clear `MID_BOSS`; killing both does, exactly once, and `WAVES_B` follows.
+  **Refs:** ROC-L3-3.
+
+- [ ] **T7.1 — Level 2 content (Deep space).**
+  **Do:** `content/level2.json` — denser `asteroidWaves`/`combatAsteroids` bands than Level 1
+  (ROC-L2-2); more elaborate `wavesA`/`wavesB` (larger counts, tighter spacing, more aimed fire,
+  mixed enemy pairings across the existing pattern library — no new patterns needed, ROC-ENM-8);
+  **Python mid-boss** and **Constrictor end-boss** stat entries in `enemies.json` (Python: reuse
+  the `hermit`-style parked/launching boss shape or a new stationary turret boss if the hermit
+  framing doesn't fit narratively; Constrictor: `strafe` behavior reused from the FdL boss, with
+  a materially higher `shield` than any Level 1 boss to read as "abnormally strong shields,"
+  ROC-L2-4). New meshes: `python.json`, `constrictor.json` via `tools/bbcelite_to_mesh.py` —
+  **requires adding `SHIP_PYTHON_*`/`SHIP_CONSTRICTOR_*` VERTEX/EDGE/FACE blocks to
+  `tools/blueprints/elite-ships.asm`** (source from bbcelite.com / Ian Bell's archive — neither
+  ship's blueprint data is in the repo yet, unlike Krait/Mamba/Cobra which already are), then
+  regenerate and run `tools/test_meshes.py`.
+  **Done-when:** meshes schema-valid with known vertex/edge counts (Python check, per T1.1's
+  pattern); **scenario test** drives level 2 headless start→dock, asserting both bosses reached
+  and Constrictor's shield count exceeds the FdL boss's.
+  **Refs:** ROC-L2-1..4.
+
+- [ ] **T7.1a — Witchspace interlude (L2→3).** *(v1.10, new)*
+  **Do:** new `LevelState = 'WITCHSPACE_COMBAT'`, entered from `HYPERSPACE` in place of `INFO`
+  when `level.witchspace` is set (only Level 3's `LevelDef` sets it, per ROC-WITCH-4). On entry,
+  freeze `world.scroll` at `HYPER.peak` (don't let it settle) and `startWave(world,
+  level.witchspace, ctx)` (a Thargoid wave, reusing `waves.ts` — no new spawn machinery). While
+  in this state the tick holds `scroll` at `HYPER.peak` every frame (guard against `levelStateSystem`'s
+  normal settle-back) and checks `groupCleared`; once clear, ramp `scroll` back to 1 over
+  `HYPER.settleSec` (reuse `hyperScrollAt`'s settle curve, or a small local ramp) and transition to
+  `INFO` exactly as an ordinary jump would. Guns/missiles/movement stay live throughout — this is a
+  real fight, not a cutscene (ROC-WITCH-2).
+  **Done-when:** **scenario test** — entering `WITCHSPACE_COMBAT` holds `scroll` at peak
+  indefinitely while any Thargoid is alive (advance many frames, assert no drift); killing every
+  Thargoid in the wave lets `scroll` settle and the FSM advance to `INFO` with Level 3's system
+  name/facts; a level *without* `level.witchspace` set (Level 1, Level 2) skips straight to `INFO`
+  unaffected.
+  **Refs:** ROC-WITCH-1..4.
+
+- [ ] **T7.2 — Level 3 content (Star surface).**
+  **Do:** `content/level3.json` — `wavesA`/`wavesB` with the ROC-ENM-12 L3 escalation (homing
+  missiles some enemies carry, shootable per `ROC-MIS-5`/existing `missiles.ts`; check whether
+  enemy-fired homing missiles are already supported by `systems/ai.ts`/`missiles.ts` or need a
+  small extension — they're currently player-only per T4.4); `midBoss: ["anaconda", "anaconda"]`
+  (T7.0a) fought together; `endBoss: "generation_ship"`. New meshes: `anaconda.json`,
+  `generation_ship.json` — same blueprint-sourcing gap as T7.1 (add blueprint blocks to
+  `elite-ships.asm`, regenerate, `test_meshes.py`); the generation ship has no canonical Elite
+  blueprint, so it needs an original hand-authored mesh (large, slow-silhouette, distinct from the
+  saucer/wedge language of the rest of the roster) rather than a parser pass.
+  **Do (star hazard):** a right-side star hazard is primarily a render/backdrop concern (reuse the
+  `showAsteroidBackdrop`-style flag pattern already in `platform/main.ts`/`level1.json`'s
+  `"backdrop"` field — e.g. `"backdrop": "star"`) plus a small new sim-side hazard: periodic
+  "flare" events on a timer (`systems/particles.ts` or a new light `hazards.ts`) that deal damage
+  in a screen-relative danger zone near the star edge, dodgeable like enemy fire (ROC-ENM-11
+  precedent). Keep this scoped — a timer + damage-zone check, not a new system category.
+  **Done-when:** meshes schema-valid; **scenario test** drives level 3 headless start→dock,
+  asserting both Anacondas reached and killed before `WAVES_B`, generation ship reached and
+  killed; **unit test** for the flare hazard's damage timing/zone on a known star position.
+  **Refs:** ROC-L3-1..4.
+
 - [ ] **T7.3 — Level 4 (Alien warzone).** *(v1.10 — renamed; ordinary launch entry, no mid-boss, shorter pacing)* Thargoids + **saucer variants** + Thargon swarms (inert on parent death) + **broken Galactic Navy wrecks** as scenery/hazard; **mothership end**, no mid-boss. **Refs:** ROC-L4-0,1,1a,2,3,4; ROC-ENM-6.
 - [ ] **T7.4 — ECM & Energy Bomb.** ECM clears projectiles+missiles on cooldown; Energy Bomb clears non-boss + projectiles, **boss-safe (non-lethal)**. Property test: bomb never kills a boss. **Refs:** ROC-DEF-1,2,3.
 - [ ] **T7.5 — Contraband interception.** Carrying illegal cargo at level end ⇒ extra Viper fight, no credits, kills count. Scenario test. **Refs:** ROC-LVL-4, ROC-ECO-4.
