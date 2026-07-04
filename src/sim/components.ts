@@ -69,6 +69,7 @@ export interface Entity {
   drops?: string; // power-up dropped on destruction (e.g. a guaranteed laser) [ROC-PWR-6]
   cargoDrops?: number; // random cargo canisters shed on destruction (boss hauls) [ROC-HERM-10, ROC-FDL-5]
   ecm?: boolean; // boss ECM: detonates player missiles harmlessly while alive [ROC-BECM-1..4]
+  missileImmune?: boolean; // player missiles won't lock onto or home toward this entity (Thargoids)
   port?: boolean; // has a centred docking-port rectangle (hermit / stations): rendered, dockable,
   // and worth triple damage on a direct hit [ROC-HERM-1,8, ROC-DCKG-3]
   contraband?: boolean; // different shape [ROC-ECO-4]

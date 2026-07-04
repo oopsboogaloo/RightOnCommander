@@ -36,6 +36,34 @@ describe('missile homing', () => {
     expect(m.vel.x).toBeGreaterThan(0); // steered toward the enemy on the +x side
   });
 
+  it('never homes toward a missile-immune enemy (Thargoids jam the lock)', () => {
+    const w = makeWorld(1);
+    add(w, { kind: 'enemy', pos: vec3(1, 0, 2), vel: vec3(), yaw: 0, bank: 0, hull: 12, hullMax: 12, shield: 0, missileImmune: true });
+    const m = add(w, {
+      kind: 'missile',
+      team: 'player',
+      pos: vec3(0, 0, 0),
+      vel: vec3(0, 0, DEFAULT_MISSILES.speed), // straight up
+      yaw: 0,
+      bank: 0,
+      ttl: 4,
+      hull: 1,
+      hullMax: 1,
+    });
+
+    for (let i = 0; i < 10; i++) missilesSystem(w, 1 / 60);
+    expect(m.vel.x).toBe(0); // no target acquired — flies straight instead of steering toward it
+  });
+
+  it('does not autofire on a missile-immune-only field (no valid target on screen)', () => {
+    const w = makeWorld(1);
+    add(w, { kind: 'enemy', pos: vec3(0, 0, 1), vel: vec3(), yaw: 0, bank: 0, hull: 12, hullMax: 12, shield: 0, missileImmune: true });
+    collectMissile(w);
+    w.player.missileCooldown = 0;
+    missilesSystem(w, 1 / 120);
+    expect([...w.entities.values()].some((e) => e.kind === 'missile')).toBe(false);
+  });
+
   it('collides with an enemy as a player attacker', () => {
     const w = makeWorld(1);
     const enemy = add(w, { kind: 'enemy', pos: vec3(0, 0, 1), vel: vec3(), yaw: 0, bank: 0, hull: 3, hullMax: 3, shield: 0 });

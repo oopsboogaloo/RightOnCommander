@@ -57,11 +57,16 @@ export function collectMissile(world: World, cfg: MissilesConfig = DEFAULT_MISSI
 
 const angleOf = (x: number, z: number): number => Math.atan2(x, z); // matches yaw convention
 
+// Thargoids jam missile lock-on entirely: never a homing target, never counted as "on screen"
+// for the fire-only-with-a-target gate. [ROC-MIS-*, Thargoid tuning]
+const missileTargetable = (e: Entity): boolean =>
+  (e.kind === 'enemy' || e.kind === 'boss') && !e.missileImmune;
+
 function nearestEnemy(world: World, from: Vec3): Entity | undefined {
   let best: Entity | undefined;
   let bestD = Infinity;
   for (const e of world.entities.values()) {
-    if (e.kind !== 'enemy' && e.kind !== 'boss') continue;
+    if (!missileTargetable(e)) continue;
     const d = (e.pos.x - from.x) ** 2 + (e.pos.z - from.z) ** 2;
     if (d < bestD) {
       bestD = d;
@@ -87,7 +92,7 @@ function acquireMissile(world: World): Entity {
 // Is any enemy/boss on screen (within the visible play field)? Missiles only fire if so. [ROC-MIS-7]
 function enemyOnScreen(world: World): boolean {
   for (const e of world.entities.values()) {
-    if (e.kind !== 'enemy' && e.kind !== 'boss') continue;
+    if (!missileTargetable(e)) continue;
     if (e.pos.z >= -1.7 && e.pos.z <= 1.9 && Math.abs(e.pos.x) <= 1.3) return true;
   }
   return false;
