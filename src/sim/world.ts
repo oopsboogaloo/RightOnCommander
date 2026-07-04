@@ -65,6 +65,7 @@ export interface WaveRecord {
   spawn: WaveSpawnState | null;
   open?: boolean; // still accepting members (open-ended boss escorts); never resolves while
   // open, so an empty moment mid-fight doesn't award the bonus early [ROC-HERM-12]
+  defId?: string; // the content-authored WaveDef.id (e.g. "l3a1"), for the cheat-mode wave label
 }
 
 // Pending-spawn schedule for one wave of the level-opening asteroid field (drifting rocks that

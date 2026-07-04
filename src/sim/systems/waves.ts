@@ -66,6 +66,7 @@ export function startWave(world: World, def: WaveDef, ctx: WaveContext): number 
     bountySum: count * enemy.bounty,
     killed: 0,
     escaped: false,
+    defId: def.id,
     spawn: {
       pattern: def.pattern,
       enemy: def.enemy,
