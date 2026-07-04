@@ -23,7 +23,7 @@ const content = {
     hermit: { hull: 12, bounty: 1000, behavior: 'hermit', ecm: true, cargoDrops: 10, colliderRx: 0.35, colliderRz: 0.35 },
     endboss: { hull: 3, bounty: 100, colliderRx: 0.3, colliderRz: 0.3 },
   },
-  level: {
+  levels: [{
     id: 'tiny',
     name: 'Testville',
     launchMs: 20,
@@ -31,7 +31,7 @@ const content = {
     midBoss: 'hermit',
     wavesB: [{ id: 'b', pattern: 'sine_column', enemy: 'grunt', count: 1, spacingMs: 0, durationMs: 200 }],
     endBoss: 'endboss',
-  },
+  }],
 };
 
 // Step until a predicate holds, holding fire the whole time (the player parks at the bottom

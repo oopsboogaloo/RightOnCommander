@@ -39,7 +39,7 @@ export interface LevelDef {
   midAsteroids?: AsteroidFieldDef[]; // a second dense field just before the mid-boss [ROC-L1-1]
   combatAsteroids?: AsteroidFieldDef[]; // a light trickle that drifts through the ship-wave groups
   wavesA: WaveDef[];
-  midBoss: string; // enemy name (spawned as a boss)
+  midBoss: string | string[]; // enemy name(s) spawned as a boss; multiple names fight together (e.g. a pair) [ROC-L3-3]
   wavesB: WaveDef[];
   endBoss: string;
   viper?: WaveDef; // contraband interception wave
@@ -146,10 +146,10 @@ function deleteStations(world: World): void {
   for (const e of [...world.entities.values()]) if (e.kind === 'station') world.entities.delete(e.id);
 }
 
-function spawnBoss(world: World, name: string, ctx: WaveContext, drops?: string): void {
+function spawnBoss(world: World, name: string, ctx: WaveContext, drops?: string, slot = 0): void {
   const def = ctx.enemies[name];
   if (!def) throw new Error(`unknown boss '${name}'`);
-  const place = bossPlacement(def.behavior);
+  const place = bossPlacement(def.behavior, slot);
   const id = world.nextId++;
   world.entities.set(id, {
     id,
@@ -221,10 +221,16 @@ export function enterLevelState(world: World, state: LevelState, level: LevelDef
       // A second dense field drifts through just before the mid-boss. [ROC-L1-1]
       if (level.midAsteroids) startAsteroidWaves(world, level.midAsteroids);
       break;
-    case 'MID_BOSS':
+    case 'MID_BOSS': {
       world.scroll = 0; // the fight is signalled by the scrolling stopping [ROC-BOSS-1]
-      spawnBoss(world, level.midBoss, ctx, 'laser'); // mid-boss always drops a laser [ROC-PWR-6]
+      // A pair (or more) of mid-bosses fight together, side by side; the fight only clears once
+      // every one of them is dead — `bossCleared` already checks for *any* `boss`-kind entity, so
+      // no change is needed there. [ROC-L3-3]
+      const midBosses = Array.isArray(level.midBoss) ? level.midBoss : [level.midBoss];
+      // The guaranteed laser drop is one-per-fight, not one-per-boss, so only the first carries it. [ROC-PWR-6]
+      midBosses.forEach((name, i) => spawnBoss(world, name, ctx, i === 0 ? 'laser' : undefined, i));
       break;
+    }
     case 'WAVES_B':
       startGroup(world, level.wavesB, ctx);
       if (level.combatAsteroids) startAsteroidWaves(world, level.combatAsteroids);

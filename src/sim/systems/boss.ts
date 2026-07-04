@@ -90,8 +90,16 @@ interface EscortAi {
   cooldown: number;
 }
 
-// Spawn placement + ai for a boss with the given behaviour (levelstate calls this).
-export function bossPlacement(behavior: string | undefined): {
+// Side-by-side x-offset for the Nth boss in a multi-boss fight (a pair or more sharing one
+// MID_BOSS state, e.g. the L3 Anacondas). Boss 0 sits centred; further slots alternate out to
+// either side so they don't spawn stacked on top of one another. [ROC-L3-3]
+const SLOT_SPACING = 0.55;
+const slotOffset = (slot: number): number => (slot === 0 ? 0 : (Math.ceil(slot / 2) * SLOT_SPACING) * (slot % 2 === 1 ? 1 : -1));
+
+// Spawn placement + ai for a boss with the given behaviour (levelstate calls this). `slot` is the
+// boss's index within its fight (0 for a solo boss; 0, 1, 2… for a multi-boss pack) — used only to
+// offset placement so several bosses spawned at once don't overlap.
+export function bossPlacement(behavior: string | undefined, slot = 0): {
   pos: { x: number; y: number; z: number };
   yaw: number;
   ai?: HermitAi | StrafeAi;
@@ -108,7 +116,7 @@ export function bossPlacement(behavior: string | undefined): {
   if (behavior === 'strafe') {
     // Spawn off the top of the screen, above the track's x, and glide in. rate 0 => holds fire
     // until it reaches the track. [ROC-FDL-*]
-    const from = { x: trackPoint(FDL_TRACK, 0).x, z: FDL_ENTRY_SPAWN_Z };
+    const from = { x: trackPoint(FDL_TRACK, 0).x + slotOffset(slot), z: FDL_ENTRY_SPAWN_Z };
     return {
       pos: { x: from.x, y: 0, z: from.z },
       yaw: Math.PI,
@@ -116,7 +124,7 @@ export function bossPlacement(behavior: string | undefined): {
     };
   }
   // Legacy static boss: up-screen, facing the player.
-  return { pos: { x: 0, y: 0, z: 0.7 }, yaw: Math.PI };
+  return { pos: { x: slotOffset(slot), y: 0, z: 0.7 }, yaw: Math.PI };
 }
 
 // Arc-length point on the rounded-rectangle track (counterclockwise from the bottom-left

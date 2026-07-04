@@ -21,14 +21,14 @@ const content = {
     midboss: { hull: 2, bounty: 100, colliderRx: 0.3, colliderRz: 0.3 },
     endboss: { hull: 2, bounty: 100, colliderRx: 0.3, colliderRz: 0.3 },
   },
-  level: {
+  levels: [{
     id: 'tiny',
     launchMs: 20,
     wavesA: [{ id: 'a', pattern: 'sine_column', enemy: 'grunt', count: 1, spacingMs: 0, durationMs: 200 }],
     midBoss: 'midboss',
     wavesB: [{ id: 'b', pattern: 'sine_column', enemy: 'grunt', count: 1, spacingMs: 0, durationMs: 200 }],
     endBoss: 'endboss',
-  },
+  }],
 };
 
 const station = (sim: Sim): Entity | undefined =>
@@ -42,8 +42,8 @@ function startDocking(sim: Sim): void {
   for (const e of [...sim.state.entities.values()]) {
     if (e.kind === 'station') sim.state.entities.delete(e.id);
   }
-  const { enemies, level } = loadContent(content);
-  enterLevelState(sim.state, 'DOCKING', level!, { enemies });
+  const { enemies, levels } = loadContent(content);
+  enterLevelState(sim.state, 'DOCKING', levels[0], { enemies });
 }
 
 describe('docking sequence', () => {

@@ -20,7 +20,8 @@ const DT = 1 / 120;
 
 describe('Level 1', () => {
   it('plays through to dock, reaching both bosses and dropping a laser', () => {
-    const { enemies, level } = loadContent({ enemies: enemiesJson, level: level1Json });
+    const { enemies, levels } = loadContent({ enemies: enemiesJson, levels: [level1Json] });
+    const level = levels[0];
     expect(level).toBeDefined();
     const ctx = { enemies };
 

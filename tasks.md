@@ -223,7 +223,7 @@ loads exactly one hardcoded `LevelDef` (`platform/main.ts` imports `level1.json`
 exists but nothing reads it, and `launch()` in `station.ts` only emits an event) — so Level 2 and 3
 have nowhere to load into until the campaign can actually advance between levels.
 
-- [ ] **T7.0 — Multi-level campaign plumbing.** *(new prerequisite)*
+- [x] **T7.0 — Multi-level campaign plumbing.** *(new prerequisite)*
   **Do:** `SimContent.levels: LevelDef[]` (replacing the single `level` field) in `loadContent.ts`
   and `sim/index.ts`; `createSim` starts at `world.levelIndex` (default 0) via `startLevel(world,
   levels[world.levelIndex], ctx)`; on `DOCK` → `launch()` (`systems/station.ts`), increment
@@ -237,7 +237,7 @@ have nowhere to load into until the campaign can actually advance between levels
   (already serialised in `snapshot.ts`, just needs to be *used*).
   **Refs:** ROC-LVL-1,2; design §12 (levelstate).
 
-- [ ] **T7.0a — Multi-boss mid-fights.** *(new prerequisite, for T7.2's Anaconda pair)*
+- [x] **T7.0a — Multi-boss mid-fights.** *(new prerequisite, for T7.2's Anaconda pair)*
   **Do:** `LevelDef.midBoss` accepts `string | string[]`; `enterLevelState`'s `MID_BOSS` case
   spawns one boss entity per name via the existing `spawnBoss`. No change needed to `bossCleared`/
   `tickBossFade` — both already check "any entity of kind `boss`" generically, so the fight ends

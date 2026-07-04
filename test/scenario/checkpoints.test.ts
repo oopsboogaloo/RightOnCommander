@@ -21,14 +21,14 @@ const content = {
     midboss: { hull: 60, bounty: 100, colliderRx: 0.3, colliderRz: 0.3 }, // tanky: survives the test
     endboss: { hull: 60, bounty: 100, colliderRx: 0.3, colliderRz: 0.3 },
   },
-  level: {
+  levels: [{
     id: 'tiny',
     launchMs: 20,
     wavesA: [{ id: 'a', pattern: 'sine_column', enemy: 'grunt', count: 1, spacingMs: 0, durationMs: 200 }],
     midBoss: 'midboss',
     wavesB: [{ id: 'b', pattern: 'sine_column', enemy: 'grunt', count: 1, spacingMs: 0, durationMs: 60000 }],
     endBoss: 'endboss',
-  },
+  }],
 };
 
 function runUntil(sim: Sim, pred: () => boolean, maxFrames = 30000, fire = false): void {

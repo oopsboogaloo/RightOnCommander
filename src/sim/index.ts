@@ -70,11 +70,12 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
   const world = makeWorld(seed);
   const rng: Rng = createRng(world.rngState);
 
-  // Parse + validate injected content; start the level if one is provided.
+  // Parse + validate injected content; start the campaign's first level, if any is provided.
   const loaded = loadContent(content ?? {});
   const waveCtx: WaveContext = { enemies: loaded.enemies };
-  const level: LevelDef | undefined = loaded.level;
-  if (level) startLevel(world, level, waveCtx);
+  const levels: LevelDef[] = loaded.levels;
+  const currentLevel = (): LevelDef | undefined => levels[world.levelIndex];
+  if (currentLevel()) startLevel(world, currentLevel()!, waveCtx);
 
   // Pre-project each mesh's edges to the play plane at the rendered hull size, so a destroyed
   // ship can shatter into its own wireframe deterministically. [ROC-DMG-6]
@@ -135,13 +136,14 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     world.ecm = { fuse: -1, cooldown: 0 };
   }
 
-  // Re-run the level's opening. Deaths never call this any more (they respawn in place,
+  // Re-run the current level's opening. Deaths never call this any more (they respawn in place,
   // preserving whatever waves/asteroids/boss fight was underway); only relaunch() (leaving the
   // station after docking, to fly the next level fresh) uses it. [ROC-LIFE-2]
   function restartLevel(): void {
-    if (!level) return;
+    const lvl = currentLevel();
+    if (!lvl) return;
     clearCombat();
-    startLevel(world, level, waveCtx);
+    startLevel(world, lvl, waveCtx);
   }
 
   function step(input: InputFrame): SimEvent[] {
@@ -156,7 +158,8 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     asteroidFieldSystem(world, rng, SIM_DT);
     aiSystem(world, SIM_DT);
     bossSystem(world, rng, SIM_DT, waveCtx); // hermit spin/escorts + FdL strafe track [ROC-HERM-*, ROC-FDL-*]
-    if (level) levelStateSystem(world, SIM_DT, level, waveCtx);
+    const activeLevel = currentLevel();
+    if (activeLevel) levelStateSystem(world, SIM_DT, activeLevel, waveCtx);
     const hits = collisionSystem(world, {
       dt: SIM_DT,
       cellSize: COLLISION_CELL,
@@ -194,7 +197,10 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
       rng.setState(world.rngState);
     },
     relaunch: (): void => {
-      // Undock: wipe the old run, repair the hull and re-fly the level with progress intact.
+      // Undock: advance to the next level in the campaign (holding at the last one once the
+      // campaign is out of levels — full campaign-complete handling lands with Elite mode,
+      // T9.1), wipe the old run, repair the hull and re-fly it with progress intact. [ROC-LVL-1,2]
+      if (world.levelIndex + 1 < levels.length) world.levelIndex += 1;
       restartLevel();
       const p = world.entities.get(PLAYER_ID);
       if (p) {

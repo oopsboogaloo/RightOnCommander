@@ -98,7 +98,8 @@ for (const [id, m] of Object.entries(MESHES)) {
   HULL_RADII[id] = hullRadius(meshSilhouette(m), SHIP_SCALE);
 }
 
-const sim = createSim({ seed: 1, content: { enemies, level: level1, meshes: MESHES } });
+// The campaign, in play order. Level 2/3 join this array as their content lands (tasks T7.1/T7.2).
+const sim = createSim({ seed: 1, content: { enemies, levels: [level1], meshes: MESHES } });
 const renderer = new Renderer2D(ctx);
 renderer.showAsteroidBackdrop = (level1 as { backdrop?: string }).backdrop === 'asteroids'; // dense-belt levels
 const input = new DomInput({ canvas, storage: createLocalStorage() });

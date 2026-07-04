@@ -84,6 +84,27 @@ function spawnStrafe(w: World): Entity {
 const escorts = (w: World): Entity[] =>
   [...w.entities.values()].filter((e) => e.kind === 'enemy' && (e.ai as { kind?: string })?.kind === 'escort');
 
+describe('bossPlacement slots', () => {
+  it('offsets each boss in a multi-boss fight so they do not spawn stacked together', () => {
+    const solo = bossPlacement(undefined); // legacy static boss, slot defaults to 0
+    expect(solo.pos.x).toBe(0);
+    const a = bossPlacement(undefined, 0);
+    const b = bossPlacement(undefined, 1);
+    const c = bossPlacement(undefined, 2);
+    expect(a.pos.x).toBe(0);
+    expect(b.pos.x).not.toBe(0);
+    expect(c.pos.x).not.toBe(0);
+    expect(c.pos.x).not.toBe(b.pos.x); // slot 1 and 2 land on opposite sides
+    expect(Math.sign(b.pos.x)).not.toBe(Math.sign(c.pos.x));
+  });
+
+  it('offsets the strafe entry point too, so a pair of strafing bosses fly in apart', () => {
+    const a = bossPlacement('strafe', 0);
+    const b = bossPlacement('strafe', 1);
+    expect(a.pos.x).not.toBe(b.pos.x);
+  });
+});
+
 describe('strafe track', () => {
   it('is continuous and wraps the perimeter', () => {
     const P = trackPerimeter(FDL_TRACK);

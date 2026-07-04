@@ -7,7 +7,8 @@ import { loadContent } from '../../src/sim/content/loadContent.js';
 
 describe('loadContent', () => {
   it('loads the bundled Level 1 content', () => {
-    const { enemies, level } = loadContent({ enemies: enemiesJson, level: level1Json });
+    const { enemies, levels } = loadContent({ enemies: enemiesJson, levels: [level1Json] });
+    const level = levels[0];
     expect(enemies.fer_de_lance.bounty).toBe(250);
     expect(enemies.fer_de_lance.scale).toBe(1.5); // FdL rescaled everywhere [ROC-FDL-1]
     expect(enemies.fer_de_lance_boss.scale).toBe(2); // boss FdL is 2.0x [ROC-FDL-1]
@@ -33,13 +34,13 @@ describe('loadContent', () => {
     expect(() =>
       loadContent({
         enemies: { grunt: { hull: 1, bounty: 1 } },
-        level: { id: 'x', asteroidWaves: 'nope', wavesA: [], midBoss: 'grunt', wavesB: [], endBoss: 'grunt' },
+        levels: [{ id: 'x', asteroidWaves: 'nope', wavesA: [], midBoss: 'grunt', wavesB: [], endBoss: 'grunt' }],
       }),
     ).toThrow();
     expect(() =>
       loadContent({
         enemies: { grunt: { hull: 1, bounty: 1 } },
-        level: { id: 'x', asteroidWaves: ['nope'], wavesA: [], midBoss: 'grunt', wavesB: [], endBoss: 'grunt' },
+        levels: [{ id: 'x', asteroidWaves: ['nope'], wavesA: [], midBoss: 'grunt', wavesB: [], endBoss: 'grunt' }],
       }),
     ).toThrow();
   });
@@ -48,7 +49,7 @@ describe('loadContent', () => {
     expect(() =>
       loadContent({
         enemies: { grunt: { hull: 1, bounty: 1 } },
-        level: { id: 'x', wavesA: [{ pattern: 'vform', enemy: 'ghost', count: 1, spacingMs: 0 }], midBoss: 'grunt', wavesB: [], endBoss: 'grunt' },
+        levels: [{ id: 'x', wavesA: [{ pattern: 'vform', enemy: 'ghost', count: 1, spacingMs: 0 }], midBoss: 'grunt', wavesB: [], endBoss: 'grunt' }],
       }),
     ).toThrow();
   });
@@ -57,14 +58,14 @@ describe('loadContent', () => {
     expect(() =>
       loadContent({
         enemies: { grunt: { hull: 1, bounty: 1 } },
-        level: { id: 'x', wavesA: [{ pattern: 'spiral', enemy: 'grunt', count: 1, spacingMs: 0 }], midBoss: 'grunt', wavesB: [], endBoss: 'grunt' },
+        levels: [{ id: 'x', wavesA: [{ pattern: 'spiral', enemy: 'grunt', count: 1, spacingMs: 0 }], midBoss: 'grunt', wavesB: [], endBoss: 'grunt' }],
       }),
     ).toThrow();
   });
 
   it('rejects a boss referencing an unknown enemy', () => {
     expect(() =>
-      loadContent({ enemies: { grunt: { hull: 1, bounty: 1 } }, level: { id: 'x', wavesA: [], midBoss: 'nope', wavesB: [], endBoss: 'grunt' } }),
+      loadContent({ enemies: { grunt: { hull: 1, bounty: 1 } }, levels: [{ id: 'x', wavesA: [], midBoss: 'nope', wavesB: [], endBoss: 'grunt' }] }),
     ).toThrow();
   });
 });
