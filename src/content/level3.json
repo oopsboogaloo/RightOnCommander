@@ -13,8 +13,9 @@
     "pattern": "sine_column",
     "enemy": "thargoid",
     "count": 3,
-    "spacingMs": 1400,
+    "spacingMs": 3000,
     "durationMs": 60000,
+    "speed": 3,
     "params": { "amplitude": 0.6, "cycles": 2 },
     "fire": { "rate": 2, "aimed": true }
   },
