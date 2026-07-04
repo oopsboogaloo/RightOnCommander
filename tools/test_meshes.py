@@ -27,6 +27,7 @@ KNOWN_COUNTS = {
     "canister": (10, 15, 7),
     "constrictor": (17, 24, 10),
     "python": (11, 26, 13),
+    "anaconda": (15, 25, 12),
 }
 
 
