@@ -2,7 +2,7 @@
 // the Cobra-ace end boss (an Elite-rated pilot in a fully-kitted Cobra Mk III, v1.11 — replacing
 // the originally-planned generation ship so every boss stays a real Elite hull). Drives the real
 // content + systems headless, same technique as the Level 1/2 scenario tests.
-// [ROC-L3-1..4]
+// [ROC-L3-3,4]
 
 import { describe, it, expect } from 'vitest';
 import enemiesJson from '../../src/content/enemies.json';
@@ -14,7 +14,6 @@ import { waveSystem } from '../../src/sim/systems/waves.js';
 import { asteroidFieldSystem, asteroidSplitSystem } from '../../src/sim/systems/asteroids.js';
 import { startLevel, levelStateSystem } from '../../src/sim/systems/levelstate.js';
 import { bossSystem } from '../../src/sim/systems/boss.js';
-import { hazardsSystem } from '../../src/sim/systems/hazards.js';
 import { applyDamage } from '../../src/sim/systems/damage.js';
 import { dropsSystem } from '../../src/sim/systems/drops.js';
 
@@ -44,7 +43,6 @@ describe('Level 3', () => {
       asteroidFieldSystem(w, rng, DT);
       bossSystem(w, rng, DT, ctx);
       levelStateSystem(w, DT, level, ctx);
-      hazardsSystem(w, DT, level.starFlare);
       for (const e of [...w.entities.values()]) {
         if (e.kind === 'enemy' || e.kind === 'asteroid') applyDamage(w, e, 999); // player destroys it
       }

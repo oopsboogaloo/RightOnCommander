@@ -204,7 +204,7 @@ export function gamestateSystem(
     spawnCargoWreck(world, dx, dz, Math.min(CARGO_WRECK_MAX, tons), player.vel.x, player.vel.z);
     world.cargo = {};
 
-    world.player.lives = Math.max(0, Math.min(MAX_LIVES, world.player.lives) - 1);
+    world.player.lives = Math.max(0, world.player.lives - 1); // buyLife enforces MAX_LIVES; a cheat grant may run higher
     world.events.push({ type: 'lifeLost', lives: world.player.lives });
 
     // The dramatic, in-place explosion (already triggered by damageSystem's 'destroyed' event)

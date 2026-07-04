@@ -112,19 +112,19 @@ describe('weaponsSystem', () => {
     expect(p.damage).toBe(DEFAULT_WEAPONS.militaryDamage); // 2x pulse damage [ROC-LAS-5]
   });
 
-  it('a beam is an instant hitscan that burns 1 damage per 300ms into the first target', () => {
+  it('a beam is an instant hitscan that burns beamDamage per 300ms into the first target', () => {
     const w = makeWorld(1);
     w.player.lasers.front = ['beam'];
-    const enemy: Entity = { id: w.nextId++, kind: 'enemy', pos: vec3(0, 0, 1), vel: vec3(), yaw: 0, bank: 0, hull: 3, hullMax: 3, shield: 0, colliderRx: 0.2, colliderRz: 0.2 };
+    const enemy: Entity = { id: w.nextId++, kind: 'enemy', pos: vec3(0, 0, 1), vel: vec3(), yaw: 0, bank: 0, hull: 30, hullMax: 30, shield: 0, colliderRx: 0.2, colliderRz: 0.2 };
     w.entities.set(enemy.id, enemy);
 
     for (let i = 0; i < Math.round(0.35 / DT); i++) weaponsSystem(w, frame({ firing: true }), DT);
-    expect(enemy.hull).toBe(2); // one 300ms window of contact = 1 damage [ROC-LAS-6]
+    expect(enemy.hull).toBeCloseTo(30 - DEFAULT_WEAPONS.beamDamage, 6); // one 300ms window of contact [ROC-LAS-6]
     expect(w.beams).toHaveLength(1); // a live beam segment while firing
     expect(projectiles(w).length).toBe(0); // instant — no travelling bolt
 
     for (let i = 0; i < Math.round(0.3 / DT); i++) weaponsSystem(w, frame({ firing: true }), DT);
-    expect(enemy.hull).toBe(1); // a second window = a second point of damage
+    expect(enemy.hull).toBeCloseTo(30 - DEFAULT_WEAPONS.beamDamage * 2, 6); // a second window = a second hit
   });
 
   it('emits a beamHit event at the impact point while it holds contact, for sparks', () => {

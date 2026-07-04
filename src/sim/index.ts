@@ -25,12 +25,11 @@ import { aiSystem } from './systems/ai.js';
 import { missilesSystem } from './systems/missiles.js';
 import { dropsSystem } from './systems/drops.js';
 import { pickupsSystem } from './systems/pickups.js';
-import { startLevel, levelStateSystem, type LevelDef } from './systems/levelstate.js';
+import { startLevel, enterLevelState, levelStateSystem, type LevelDef } from './systems/levelstate.js';
 import { gamestateSystem, DEFAULT_GAMESTATE } from './systems/gamestate.js';
 import { bossSystem } from './systems/boss.js';
 import { ecmSystem } from './systems/ecm.js';
 import { energyBankSystem } from './systems/energyBank.js';
-import { hazardsSystem } from './systems/hazards.js';
 import { loadContent } from './content/loadContent.js';
 
 // Fixed sim tick, in seconds. Must match the shell loop's DT (platform/loop.ts). [design §3]
@@ -65,6 +64,7 @@ export interface Sim {
   snapshot(): WorldSnapshot;
   restore(snap: WorldSnapshot): void;
   relaunch(): void; // leave the station for a fresh level run, keeping ship/wallet/lives [ROC-STN-6]
+  cheatSkipLevel(): void; // dev cheat: wipe the current combat and jump straight to docking
 }
 
 export function createSim({ seed, content }: CreateSimArgs): Sim {
@@ -169,7 +169,6 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
       colliderScale: SHIP_SCALE,
     });
     damageSystem(world, hits, SIM_DT);
-    hazardsSystem(world, SIM_DT, activeLevel?.starFlare); // Level 3's star flare, where present [ROC-L3-1,2]
     gamestateSystem(world, SIM_DT, {
       ...DEFAULT_GAMESTATE,
       colliderScale: SHIP_SCALE,
@@ -213,6 +212,14 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
       }
       world.player.invulnTtl = 0;
       world.mode = '';
+    },
+    cheatSkipLevel: (): void => {
+      // Skip past whatever combat is underway straight to the docking approach — the level ends
+      // exactly as an ordinary clear would, just without playing it out.
+      const lvl = currentLevel();
+      if (!lvl) return;
+      clearCombat();
+      enterLevelState(world, 'DOCKING', lvl, waveCtx);
     },
   };
 }
