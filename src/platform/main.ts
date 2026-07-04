@@ -252,6 +252,7 @@ function readPlayerPose(): Pose {
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const PULSE_LEN = 0.18;
 const PICKUP_SCALE = 1 / 9; // canister/gem read as small props, not ship-sized [was 1/3]
+const GEM_SCALE = PICKUP_SCALE * 0.5; // -50% [tuning]
 const MINI_ASTEROID_SCALE = SPLINTER_HIT_SCALE; // matches the sim's splinter collision scale exactly
 
 // Asteroid-mined loot (alloys/gems power-ups and their Metals/Crystals cargo, ROC-L1-3) reads as
@@ -392,10 +393,12 @@ startGameLoop({
           // Tumbles in place — cosmetic only (wall-clock driven, like the starfield), doesn't
           // touch sim state or collision. [ROC-PWR-*]
           if (!e.pickup) break;
-          const m = MESHES[pickupMeshId(e.pickup)];
+          const meshId = pickupMeshId(e.pickup);
+          const m = MESHES[meshId];
           if (!m) break;
           const phase = e.id * 0.7; // per-entity offset so pickups don't spin in lockstep
-          renderer.drawMesh(m, modelMatrix(e.pos, now * 1.1 + phase, now * 0.8 + phase * 1.3, PICKUP_SCALE));
+          const scale = meshId === 'gem' ? GEM_SCALE : PICKUP_SCALE;
+          renderer.drawMesh(m, modelMatrix(e.pos, now * 1.1 + phase, now * 0.8 + phase * 1.3, scale));
           break;
         }
         case 'cargo': {

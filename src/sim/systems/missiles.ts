@@ -25,7 +25,7 @@ export interface MissilesConfig {
 }
 
 export const DEFAULT_MISSILES: MissilesConfig = {
-  durationSec: 60,
+  durationSec: 30, // [tuning]
   maxGrade: 4,
   launchDelay: 0.35,
   aliveCap: 4,

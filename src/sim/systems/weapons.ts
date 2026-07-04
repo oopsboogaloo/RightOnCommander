@@ -47,7 +47,7 @@ export interface HullExtent {
 
 export const DEFAULT_WEAPONS: WeaponsConfig = {
   pulseRate: 6,
-  pulseSpeed: 6,
+  pulseSpeed: 4.2, // -30% [tuning]
   pulseTtl: 1.2,
   pulseDamage: 1,
   militaryRate: 12,
@@ -56,7 +56,7 @@ export const DEFAULT_WEAPONS: WeaponsConfig = {
   militaryDamage: 2,
   beamRange: 3,
   beamPeriod: 0.3,
-  beamDamage: 1,
+  beamDamage: 1.4, // +40% [tuning]
   muzzleOffset: 0.25,
   muzzleGap: 0.03, // just clear of the hull silhouette, not floating off the nose
   muzzleSpread: 0.04, // half the previous gap: multi-laser mounts read as one fatter weapon, not two separate guns
