@@ -33,6 +33,7 @@ export interface WorldSnapshot {
       escaped: boolean;
       spawn: WaveSpawnState | null;
       open?: boolean;
+      defId?: string;
     }[];
   };
   unlocks: { eliteMode: boolean; thargoidShip: boolean };
@@ -68,6 +69,7 @@ export function snapshot(world: World): WorldSnapshot {
         escaped: rec.escaped,
         spawn: rec.spawn ? { ...rec.spawn, params: { ...rec.spawn.params } } : null,
         open: rec.open,
+        defId: rec.defId,
       })),
     },
     unlocks: { ...world.unlocks },
@@ -108,6 +110,7 @@ export function restore(world: World, snap: WorldSnapshot): void {
           escaped: rec.escaped,
           spawn: rec.spawn ? { ...rec.spawn, params: { ...rec.spawn.params } } : null,
           open: rec.open,
+          defId: rec.defId,
         },
       ]),
     ),

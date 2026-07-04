@@ -478,6 +478,21 @@ startGameLoop({
       renderer.drawWorldText(vec3(f.x, 0, f.z), f.text, { fill: col, font: '13px monospace', align: 'center', dy: -18 - u * 34 });
     }
 
+    // Cheat mode: label the lead ship of each active content-authored wave with its WaveDef.id,
+    // so the wave being pointed at can be named precisely. [dev cheat]
+    if (cheatUnlocked) {
+      for (const rec of sim.state.waves.active.values()) {
+        if (!rec.defId) continue;
+        let lead: Entity | undefined;
+        for (const id of rec.members) {
+          const e = sim.state.entities.get(id);
+          if (e && (!lead || e.id < lead.id)) lead = e;
+        }
+        if (!lead) continue;
+        renderer.drawWorldText(lead.pos, rec.defId, { fill: 'rgba(255,215,107,0.9)', font: '10px monospace', align: 'center', dy: -22 });
+      }
+    }
+
     // --- full-screen overlays -------------------------------------------------
     const w = canvas!.clientWidth || canvas!.width;
     const h = canvas!.clientHeight || canvas!.height;
