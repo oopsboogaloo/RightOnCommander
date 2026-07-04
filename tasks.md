@@ -247,7 +247,7 @@ have nowhere to load into until the campaign can actually advance between levels
   one does not clear `MID_BOSS`; killing both does, exactly once, and `WAVES_B` follows.
   **Refs:** ROC-L3-3.
 
-- [ ] **T7.1 — Level 2 content (Deep space).**
+- [x] **T7.1 — Level 2 content (Deep space).**
   **Do:** `content/level2.json` — denser `asteroidWaves`/`combatAsteroids` bands than Level 1
   (ROC-L2-2); more elaborate `wavesA`/`wavesB` (larger counts, tighter spacing, more aimed fire,
   mixed enemy pairings across the existing pattern library — no new patterns needed, ROC-ENM-8);

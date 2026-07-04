@@ -35,6 +35,7 @@ import { stationButtons, buttonAt, drawStation, type StationAction } from '../re
 
 import enemies from '../content/enemies.json';
 import level1 from '../content/level1.json';
+import level2 from '../content/level2.json';
 import shipsJson from '../content/ships.json';
 import economyJson from '../content/economy.json';
 import cobra_mk3 from '../content/meshes/cobra_mk3.json';
@@ -44,7 +45,10 @@ import krait from '../content/meshes/krait.json';
 import gecko from '../content/meshes/gecko.json';
 import adder from '../content/meshes/adder.json';
 import viper from '../content/meshes/viper.json';
+import mamba from '../content/meshes/mamba.json';
 import fer_de_lance from '../content/meshes/fer_de_lance.json';
+import python from '../content/meshes/python.json';
+import constrictor from '../content/meshes/constrictor.json';
 import coriolis from '../content/meshes/coriolis.json';
 import transporter from '../content/meshes/transporter.json';
 import asteroid from '../content/meshes/asteroid.json';
@@ -80,7 +84,10 @@ const MESHES: Record<string, Mesh> = {
   gecko,
   adder,
   viper,
+  mamba,
   fer_de_lance,
+  python,
+  constrictor,
   coriolis,
   transporter,
   asteroid,
@@ -98,10 +105,11 @@ for (const [id, m] of Object.entries(MESHES)) {
   HULL_RADII[id] = hullRadius(meshSilhouette(m), SHIP_SCALE);
 }
 
-// The campaign, in play order. Level 2/3 join this array as their content lands (tasks T7.1/T7.2).
-const sim = createSim({ seed: 1, content: { enemies, levels: [level1], meshes: MESHES } });
+// The campaign, in play order. Level 3 joins this array once its content lands (task T7.2).
+const LEVELS = [level1, level2];
+const currentLevel = (): (typeof LEVELS)[number] => LEVELS[sim.state.levelIndex] ?? level1;
+const sim = createSim({ seed: 1, content: { enemies, levels: LEVELS, meshes: MESHES } });
 const renderer = new Renderer2D(ctx);
-renderer.showAsteroidBackdrop = (level1 as { backdrop?: string }).backdrop === 'asteroids'; // dense-belt levels
 const input = new DomInput({ canvas, storage: createLocalStorage() });
 
 // Station shop wiring: the dock screen shows when the level reaches DOCK; taps route to intents.
@@ -237,6 +245,9 @@ startGameLoop({
   step: () => {
     prev = curr;
     const events = sim.step(input.sample(DT));
+    // Dense-belt levels show the drifting asteroid backdrop; follows whichever level is active,
+    // not just the first. [ROC-L1-1]
+    renderer.showAsteroidBackdrop = (currentLevel() as { backdrop?: string }).backdrop === 'asteroids';
     // Reveal the asteroid belt as we drop out of hyperspace, so it drifts into view — arriving
     // at the field. Idempotent. [ROC-L1-1]
     const ls = sim.state.levelState;
@@ -436,7 +447,7 @@ startGameLoop({
     if (sim.state.levelState === 'HYPERSPACE') {
       const n = hyperCountdown(sim.state.levelTimer);
       if (n !== null) {
-        renderer.drawText(`Hyperspace ${level1.name} ${n}`, { x: w / 2, y: h * 0.3 }, {
+        renderer.drawText(`Hyperspace ${currentLevel().name} ${n}`, { x: w / 2, y: h * 0.3 }, {
           fill: '#fff',
           font: '22px monospace',
           align: 'center',
@@ -446,8 +457,8 @@ startGameLoop({
 
     // Post-jump system info card: a few classic-Elite facts. [ROC-HYP-5]
     if (sim.state.levelState === 'INFO') {
-      renderer.drawText(level1.name.toUpperCase(), { x: w / 2, y: h * 0.3 }, { fill: '#fff', font: '26px monospace', align: 'center' });
-      (level1.facts ?? []).forEach((line, i) => {
+      renderer.drawText(currentLevel().name.toUpperCase(), { x: w / 2, y: h * 0.3 }, { fill: '#fff', font: '26px monospace', align: 'center' });
+      (currentLevel().facts ?? []).forEach((line, i) => {
         renderer.drawText(line, { x: w / 2, y: h * 0.3 + 34 + i * 22 }, { fill: 'rgba(255,255,255,0.85)', font: '14px monospace', align: 'center' });
       });
     }
