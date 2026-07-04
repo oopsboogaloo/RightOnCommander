@@ -85,6 +85,9 @@ function resize(): void {
 }
 resize();
 window.addEventListener('resize', resize);
+// Mobile browsers resize the address bar in/out without always firing a window 'resize' —
+// visualViewport catches those so the canvas doesn't stay sized for a since-changed viewport.
+window.visualViewport?.addEventListener('resize', resize);
 
 const MESHES: Record<string, Mesh> = {
   cobra_mk3,
