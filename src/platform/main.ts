@@ -35,6 +35,8 @@ import { stationButtons, buttonAt, drawStation, type StationAction } from '../re
 
 import enemies from '../content/enemies.json';
 import level1 from '../content/level1.json';
+import level2 from '../content/level2.json';
+import level3 from '../content/level3.json';
 import shipsJson from '../content/ships.json';
 import economyJson from '../content/economy.json';
 import cobra_mk3 from '../content/meshes/cobra_mk3.json';
@@ -44,7 +46,12 @@ import krait from '../content/meshes/krait.json';
 import gecko from '../content/meshes/gecko.json';
 import adder from '../content/meshes/adder.json';
 import viper from '../content/meshes/viper.json';
+import mamba from '../content/meshes/mamba.json';
 import fer_de_lance from '../content/meshes/fer_de_lance.json';
+import python from '../content/meshes/python.json';
+import constrictor from '../content/meshes/constrictor.json';
+import anaconda from '../content/meshes/anaconda.json';
+import thargoid from '../content/meshes/thargoid.json';
 import coriolis from '../content/meshes/coriolis.json';
 import transporter from '../content/meshes/transporter.json';
 import asteroid from '../content/meshes/asteroid.json';
@@ -80,7 +87,12 @@ const MESHES: Record<string, Mesh> = {
   gecko,
   adder,
   viper,
+  mamba,
   fer_de_lance,
+  python,
+  constrictor,
+  anaconda,
+  thargoid,
   coriolis,
   transporter,
   asteroid,
@@ -98,9 +110,11 @@ for (const [id, m] of Object.entries(MESHES)) {
   HULL_RADII[id] = hullRadius(meshSilhouette(m), SHIP_SCALE);
 }
 
-const sim = createSim({ seed: 1, content: { enemies, level: level1, meshes: MESHES } });
+// The campaign, in play order. Level 4 joins this array once its content lands (task T7.3).
+const LEVELS = [level1, level2, level3];
+const currentLevel = (): (typeof LEVELS)[number] => LEVELS[sim.state.levelIndex] ?? level1;
+const sim = createSim({ seed: 1, content: { enemies, levels: LEVELS, meshes: MESHES } });
 const renderer = new Renderer2D(ctx);
-renderer.showAsteroidBackdrop = (level1 as { backdrop?: string }).backdrop === 'asteroids'; // dense-belt levels
 const input = new DomInput({ canvas, storage: createLocalStorage() });
 
 // Station shop wiring: the dock screen shows when the level reaches DOCK; taps route to intents.
@@ -236,6 +250,13 @@ startGameLoop({
   step: () => {
     prev = curr;
     const events = sim.step(input.sample(DT));
+    // Dense-belt levels show the drifting asteroid backdrop; star-surface levels show the star.
+    // Follows whichever level is active, not just the first. [ROC-L1-1, ROC-L3-1]
+    const lvl = currentLevel() as { backdrop?: string; starFlare?: { warnSec: number } };
+    renderer.showAsteroidBackdrop = lvl.backdrop === 'asteroids';
+    renderer.showStarBackdrop = lvl.backdrop === 'star';
+    const hazard = sim.state.hazard;
+    renderer.starFlareAlpha = lvl.starFlare && hazard && hazard.warnTtl > 0 ? hazard.warnTtl / lvl.starFlare.warnSec : 0;
     // Reveal the asteroid belt as we drop out of hyperspace, so it drifts into view — arriving
     // at the field. Idempotent. [ROC-L1-1]
     const ls = sim.state.levelState;
@@ -435,7 +456,7 @@ startGameLoop({
     if (sim.state.levelState === 'HYPERSPACE') {
       const n = hyperCountdown(sim.state.levelTimer);
       if (n !== null) {
-        renderer.drawText(`Hyperspace ${level1.name} ${n}`, { x: w / 2, y: h * 0.3 }, {
+        renderer.drawText(`Hyperspace ${currentLevel().name} ${n}`, { x: w / 2, y: h * 0.3 }, {
           fill: '#fff',
           font: '22px monospace',
           align: 'center',
@@ -445,8 +466,8 @@ startGameLoop({
 
     // Post-jump system info card: a few classic-Elite facts. [ROC-HYP-5]
     if (sim.state.levelState === 'INFO') {
-      renderer.drawText(level1.name.toUpperCase(), { x: w / 2, y: h * 0.3 }, { fill: '#fff', font: '26px monospace', align: 'center' });
-      (level1.facts ?? []).forEach((line, i) => {
+      renderer.drawText(currentLevel().name.toUpperCase(), { x: w / 2, y: h * 0.3 }, { fill: '#fff', font: '26px monospace', align: 'center' });
+      (currentLevel().facts ?? []).forEach((line, i) => {
         renderer.drawText(line, { x: w / 2, y: h * 0.3 + 34 + i * 22 }, { fill: 'rgba(255,255,255,0.85)', font: '14px monospace', align: 'center' });
       });
     }

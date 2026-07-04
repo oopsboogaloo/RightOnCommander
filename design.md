@@ -322,7 +322,7 @@ Pattern, enemy and stats are orthogonal: swap `enemy` to re-skin a pattern; the 
   "hazards": ["star_right", "flare"],   // [ROC-L3-1,2]
   "waves": ["w30","w31","w32"],
   "midBoss": "anaconda_pair",      // (v1.10) two Anacondas fought together [ROC-L3-3]
-  "endBoss": "generation_ship",
+  "endBoss": "cobra_ace",           // (v1.11) an Elite ace in a fully-kitted Cobra Mk III [ROC-L3-4]
   "difficultyBase": 3
 }
 ```

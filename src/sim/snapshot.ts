@@ -4,6 +4,7 @@
 
 import type { Entity } from './components.js';
 import type { AsteroidFieldState, PlayerState, WaveSpawnState, World } from './world.js';
+import type { HazardState } from './systems/hazards.js';
 
 export interface WorldSnapshot {
   frame: number;
@@ -37,6 +38,7 @@ export interface WorldSnapshot {
   };
   unlocks: { eliteMode: boolean; thargoidShip: boolean };
   asteroidWaves: AsteroidFieldState[];
+  hazard: HazardState | null;
 }
 
 export function snapshot(world: World): WorldSnapshot {
@@ -72,6 +74,7 @@ export function snapshot(world: World): WorldSnapshot {
     },
     unlocks: { ...world.unlocks },
     asteroidWaves: world.asteroidWaves.map((w) => ({ ...w })),
+    hazard: world.hazard ? { ...world.hazard } : null,
   };
 }
 
@@ -114,6 +117,7 @@ export function restore(world: World, snap: WorldSnapshot): void {
   };
   world.unlocks = { ...snap.unlocks };
   world.asteroidWaves = snap.asteroidWaves.map((w) => ({ ...w }));
+  world.hazard = snap.hazard ? { ...snap.hazard } : null;
   world.events = [];
   world.pool = { projectiles: [], particles: [], missiles: [] }; // allocation cache; safe to drop on restore
 }

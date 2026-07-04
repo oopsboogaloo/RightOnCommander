@@ -1,0 +1,263 @@
+{
+  "id": "level3",
+  "name": "Leesti",
+  "facts": [
+    "Leesti is famous for its exclusive casinos",
+    "and its production of the Leestian Evil Juice.",
+    "Corporate state. Tech level 10.",
+    "The system's star is a source of frequent flare activity."
+  ],
+  "launchMs": 2500,
+  "backdrop": "star",
+  "starFlare": { "intervalSec": 7, "warnSec": 1.5, "zoneX": 0.9, "damage": 1 },
+  "witchspace": {
+    "id": "l3w",
+    "pattern": "sine_column",
+    "enemy": "thargoid",
+    "count": 3,
+    "spacingMs": 1400,
+    "durationMs": 60000,
+    "params": { "amplitude": 0.6, "cycles": 2 },
+    "fire": { "rate": 0.3, "aimed": true }
+  },
+  "combatAsteroids": [
+    { "count": 5, "spacingMs": 3200, "delayMs": 2000, "speed": 0.3, "xSpread": 0.8 }
+  ],
+  "wavesA": [
+    {
+      "id": "l3a1",
+      "pattern": "sine_column",
+      "enemy": "viper",
+      "count": 6,
+      "spacingMs": 380,
+      "delayMs": 0,
+      "durationMs": 6500,
+      "params": { "amplitude": 0.8, "cycles": 3 },
+      "fire": { "rate": 0.45, "aimed": true }
+    },
+    {
+      "id": "l3a2",
+      "pattern": "pincer",
+      "enemy": "mamba",
+      "count": 6,
+      "spacingMs": 380,
+      "delayMs": 2300,
+      "durationMs": 6500,
+      "params": { "x0": -1.3 },
+      "fire": { "rate": 0.4, "aimed": true }
+    },
+    {
+      "id": "l3a3",
+      "pattern": "orbit",
+      "enemy": "adder",
+      "count": 6,
+      "spacingMs": 320,
+      "delayMs": 4600,
+      "durationMs": 7000,
+      "params": { "cx": 0.2, "cz": 0.55, "r": 0.55, "turns": 1.5 },
+      "fire": { "rate": 0.35, "aimed": true }
+    },
+    {
+      "id": "l3a4",
+      "pattern": "side_stream",
+      "enemy": "fer_de_lance",
+      "count": 2,
+      "spacingMs": 900,
+      "delayMs": 6900,
+      "durationMs": 7000,
+      "speed": 0.7,
+      "params": { "x0": -1.4, "x1": 1.4, "arc": 0.3 },
+      "fire": { "rate": 0.45, "aimed": true }
+    },
+    {
+      "id": "l3a5",
+      "pattern": "loop",
+      "enemy": "viper",
+      "count": 6,
+      "spacingMs": 380,
+      "delayMs": 9200,
+      "durationMs": 6500,
+      "params": { "radius": 0.5, "loops": 1 },
+      "fire": { "rate": 0.45, "aimed": true }
+    },
+    {
+      "id": "l3a6",
+      "pattern": "vform",
+      "enemy": "mamba",
+      "count": 7,
+      "spacingMs": 380,
+      "delayMs": 11500,
+      "durationMs": 6500,
+      "params": { "x0": -0.9, "x1": 0.3 },
+      "fire": { "rate": 0.4, "aimed": true }
+    },
+    {
+      "id": "l3a7",
+      "pattern": "drop_hold",
+      "enemy": "krait",
+      "count": 5,
+      "spacingMs": 450,
+      "delayMs": 13800,
+      "durationMs": 7200,
+      "params": { "x0": 0.6, "zHold": 0.75, "dropFraction": 0.3 },
+      "fire": { "rate": 0.4, "aimed": true }
+    },
+    {
+      "id": "l3a8",
+      "pattern": "pincer",
+      "enemy": "adder",
+      "count": 6,
+      "spacingMs": 380,
+      "delayMs": 16100,
+      "durationMs": 6500,
+      "params": { "x0": 1.3 },
+      "fire": { "rate": 0.35, "aimed": true }
+    },
+    {
+      "id": "l3a9",
+      "pattern": "side_stream",
+      "enemy": "viper",
+      "count": 6,
+      "spacingMs": 380,
+      "delayMs": 18400,
+      "durationMs": 6500,
+      "params": { "x0": 1.4, "x1": -1.4, "arc": 0.4 },
+      "fire": { "rate": 0.45, "aimed": true }
+    },
+    {
+      "id": "l3aT",
+      "pattern": "side_stream",
+      "enemy": "transporter",
+      "count": 1,
+      "spacingMs": 0,
+      "delayMs": 12000,
+      "durationMs": 8000,
+      "speed": 0.45,
+      "params": { "x0": -1.05, "x1": 1.05, "z0": 1, "z1": 0.7, "arc": 0.2 }
+    }
+  ],
+  "midBoss": ["anaconda", "anaconda"],
+  "wavesB": [
+    {
+      "id": "l3b1",
+      "pattern": "vform",
+      "enemy": "mamba",
+      "count": 7,
+      "spacingMs": 380,
+      "delayMs": 0,
+      "durationMs": 6500,
+      "params": { "x0": 0.8, "x1": -0.2 },
+      "fire": { "rate": 0.4, "aimed": true }
+    },
+    {
+      "id": "l3b2",
+      "pattern": "orbit",
+      "enemy": "viper",
+      "count": 7,
+      "spacingMs": 320,
+      "delayMs": 2400,
+      "durationMs": 7200,
+      "params": { "cx": -0.1, "cz": 0.55, "r": 0.55, "turns": 1.5 },
+      "fire": { "rate": 0.45, "aimed": true }
+    },
+    {
+      "id": "l3b3",
+      "pattern": "sine_column",
+      "enemy": "krait",
+      "count": 7,
+      "spacingMs": 380,
+      "delayMs": 4900,
+      "durationMs": 6500,
+      "params": { "amplitude": 0.9, "cycles": 3 },
+      "fire": { "rate": 0.4, "aimed": true }
+    },
+    {
+      "id": "l3b4",
+      "pattern": "side_stream",
+      "enemy": "fer_de_lance",
+      "count": 2,
+      "spacingMs": 900,
+      "delayMs": 7200,
+      "durationMs": 7000,
+      "speed": 0.7,
+      "params": { "x0": 1.4, "x1": -1.4, "arc": 0.3 },
+      "fire": { "rate": 0.45, "aimed": true }
+    },
+    {
+      "id": "l3b5",
+      "pattern": "loop",
+      "enemy": "mamba",
+      "count": 6,
+      "spacingMs": 380,
+      "delayMs": 9500,
+      "durationMs": 6500,
+      "params": { "radius": 0.5, "loops": 1, "x0": -0.3 },
+      "fire": { "rate": 0.4, "aimed": true }
+    },
+    {
+      "id": "l3b6",
+      "pattern": "drop_hold",
+      "enemy": "adder",
+      "count": 6,
+      "spacingMs": 400,
+      "delayMs": 11800,
+      "durationMs": 7200,
+      "params": { "x0": -0.6, "zHold": 0.7, "dropFraction": 0.3 },
+      "fire": { "rate": 0.35, "aimed": true }
+    },
+    {
+      "id": "l3b7",
+      "pattern": "pincer",
+      "enemy": "viper",
+      "count": 7,
+      "spacingMs": 380,
+      "delayMs": 14100,
+      "durationMs": 6500,
+      "params": { "x0": -1.3 },
+      "fire": { "rate": 0.45, "aimed": true }
+    },
+    {
+      "id": "l3b8",
+      "pattern": "sine_column",
+      "enemy": "mamba",
+      "count": 7,
+      "spacingMs": 380,
+      "delayMs": 16400,
+      "durationMs": 6500,
+      "params": { "amplitude": 0.8, "cycles": 3 },
+      "fire": { "rate": 0.4, "aimed": true }
+    },
+    {
+      "id": "l3b9",
+      "pattern": "vform",
+      "enemy": "krait",
+      "count": 7,
+      "spacingMs": 380,
+      "delayMs": 18700,
+      "durationMs": 6500,
+      "params": { "x0": -0.9, "x1": 0.3 },
+      "fire": { "rate": 0.4, "aimed": true }
+    },
+    {
+      "id": "l3bT",
+      "pattern": "side_stream",
+      "enemy": "transporter",
+      "count": 1,
+      "spacingMs": 0,
+      "delayMs": 13000,
+      "durationMs": 8000,
+      "speed": 0.45,
+      "params": { "x0": 1.05, "x1": -1.05, "z0": 1, "z1": 0.7, "arc": 0.2 }
+    }
+  ],
+  "endBoss": "cobra_ace",
+  "viper": {
+    "id": "l3v",
+    "pattern": "side_stream",
+    "enemy": "viper",
+    "count": 5,
+    "spacingMs": 300,
+    "durationMs": 6000,
+    "fire": { "rate": 0.7, "aimed": true }
+  }
+}

@@ -4,11 +4,12 @@
 import type { EnemyDef, WaveDef } from '../systems/waves.js';
 import type { LevelDef } from '../systems/levelstate.js';
 import type { AsteroidFieldDef } from '../systems/asteroids.js';
+import type { StarFlareDef } from '../systems/hazards.js';
 import { PATTERNS } from '../systems/paths.js';
 
 export interface Content {
   enemies: Record<string, EnemyDef>;
-  level?: LevelDef;
+  levels: LevelDef[]; // the campaign, in play order; `world.levelIndex` selects the active one [ROC-LVL-1,2]
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -83,12 +84,17 @@ function parseAsteroidWave(raw: unknown, where: string): AsteroidFieldDef {
 
 function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
   if (!isObj(raw)) throw new Error('content: "level" must be an object');
-  const boss = (key: string): string => {
-    const name = raw[key];
+  const oneBoss = (key: string, name: unknown): string => {
     if (typeof name !== 'string' || !(name in enemies)) {
       throw new Error(`content: level.${key} references unknown enemy '${String(name)}'`);
     }
     return name;
+  };
+  const boss = (key: string): string => oneBoss(key, raw[key]);
+  // midBoss alone may be a pack fought together (e.g. a pair). [ROC-L3-3]
+  const bossOrPack = (key: string): string | string[] => {
+    const v = raw[key];
+    return Array.isArray(v) ? v.map((n, i) => oneBoss(`${key}[${i}]`, n)) : oneBoss(key, v);
   };
   const group = (key: string): WaveDef[] => {
     const arr = raw[key];
@@ -105,6 +111,18 @@ function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
   if (facts !== undefined && (!Array.isArray(facts) || facts.some((f) => typeof f !== 'string'))) {
     throw new Error('content: "level.facts" must be an array of strings');
   }
+  const starFlareRaw = raw.starFlare;
+  const starFlare: StarFlareDef | undefined = starFlareRaw === undefined
+    ? undefined
+    : (() => {
+        if (!isObj(starFlareRaw)) throw new Error('content: "level.starFlare" must be an object');
+        return {
+          intervalSec: num(starFlareRaw.intervalSec, 'level.starFlare.intervalSec'),
+          warnSec: num(starFlareRaw.warnSec, 'level.starFlare.warnSec'),
+          zoneX: num(starFlareRaw.zoneX, 'level.starFlare.zoneX'),
+          damage: num(starFlareRaw.damage, 'level.starFlare.damage'),
+        };
+      })();
   return {
     id: typeof raw.id === 'string' ? raw.id : 'level',
     name: typeof raw.name === 'string' ? raw.name : undefined,
@@ -114,16 +132,20 @@ function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
     midAsteroids: asteroidGroup('midAsteroids'),
     combatAsteroids: asteroidGroup('combatAsteroids'),
     wavesA: group('wavesA'),
-    midBoss: boss('midBoss'),
+    midBoss: bossOrPack('midBoss'),
     wavesB: group('wavesB'),
     endBoss: boss('endBoss'),
     viper: raw.viper === undefined ? undefined : parseWave(raw.viper, enemies, 'level.viper'),
+    starFlare,
+    witchspace: raw.witchspace === undefined ? undefined : parseWave(raw.witchspace, enemies, 'level.witchspace'),
   };
 }
 
 export function loadContent(raw: unknown): Content {
-  if (!isObj(raw)) return { enemies: {} };
+  if (!isObj(raw)) return { enemies: {}, levels: [] };
   const enemies = parseEnemies(raw.enemies ?? {});
-  const level = raw.level === undefined ? undefined : parseLevel(raw.level, enemies);
-  return { enemies, level };
+  const levelsRaw = raw.levels;
+  if (levelsRaw !== undefined && !Array.isArray(levelsRaw)) throw new Error('content: "levels" must be an array');
+  const levels = Array.isArray(levelsRaw) ? levelsRaw.map((l) => parseLevel(l, enemies)) : [];
+  return { enemies, levels };
 }

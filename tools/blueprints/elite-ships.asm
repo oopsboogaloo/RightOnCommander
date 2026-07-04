@@ -961,3 +961,192 @@
  FACE    0,   41,  -30,   31
  FACE  -96,    0,    0,   31
 
+.SHIP_CONSTRICTOR_VERTICES
+
+      \    x,    y,    z, face1, face2, face3, face4, visibility
+ VERTEX   20,   -7,   80,     2,      0,    9,     9,         31    \ Vertex 0
+ VERTEX  -20,   -7,   80,     1,      0,    9,     9,         31    \ Vertex 1
+ VERTEX  -54,   -7,   40,     4,      1,    9,     9,         31    \ Vertex 2
+ VERTEX  -54,   -7,  -40,     5,      4,    9,     8,         31    \ Vertex 3
+ VERTEX  -20,   13,  -40,     6,      5,    8,     8,         31    \ Vertex 4
+ VERTEX   20,   13,  -40,     7,      6,    8,     8,         31    \ Vertex 5
+ VERTEX   54,   -7,  -40,     7,      3,    9,     8,         31    \ Vertex 6
+ VERTEX   54,   -7,   40,     3,      2,    9,     9,         31    \ Vertex 7
+ VERTEX   20,   13,    5,    15,     15,   15,    15,         31    \ Vertex 8
+ VERTEX  -20,   13,    5,    15,     15,   15,    15,         31    \ Vertex 9
+ VERTEX   20,   -7,   62,     9,      9,    9,     9,         18    \ Vertex 10
+ VERTEX  -20,   -7,   62,     9,      9,    9,     9,         18    \ Vertex 11
+ VERTEX   25,   -7,  -25,     9,      9,    9,     9,         18    \ Vertex 12
+ VERTEX  -25,   -7,  -25,     9,      9,    9,     9,         18    \ Vertex 13
+ VERTEX   15,   -7,  -15,     9,      9,    9,     9,         10    \ Vertex 14
+ VERTEX  -15,   -7,  -15,     9,      9,    9,     9,         10    \ Vertex 15
+ VERTEX    0,   -7,    0,    15,      9,    1,     0,          0    \ Vertex 16
+
+.SHIP_CONSTRICTOR_EDGES
+
+    \ vertex1, vertex2, face1, face2, visibility
+ EDGE       0,       1,     9,     0,         31    \ Edge 0
+ EDGE       1,       2,     9,     1,         31    \ Edge 1
+ EDGE       1,       9,     1,     0,         31    \ Edge 2
+ EDGE       0,       8,     2,     0,         31    \ Edge 3
+ EDGE       0,       7,     9,     2,         31    \ Edge 4
+ EDGE       7,       8,     3,     2,         31    \ Edge 5
+ EDGE       2,       9,     4,     1,         31    \ Edge 6
+ EDGE       2,       3,     9,     4,         31    \ Edge 7
+ EDGE       6,       7,     9,     3,         31    \ Edge 8
+ EDGE       6,       8,     7,     3,         31    \ Edge 9
+ EDGE       5,       8,     7,     6,         31    \ Edge 10
+ EDGE       4,       9,     6,     5,         31    \ Edge 11
+ EDGE       3,       9,     5,     4,         31    \ Edge 12
+ EDGE       3,       4,     8,     5,         31    \ Edge 13
+ EDGE       4,       5,     8,     6,         31    \ Edge 14
+ EDGE       5,       6,     8,     7,         31    \ Edge 15
+ EDGE       3,       6,     9,     8,         31    \ Edge 16
+ EDGE       8,       9,     6,     0,         31    \ Edge 17
+ EDGE      10,      12,     9,     9,         18    \ Edge 18
+ EDGE      12,      14,     9,     9,          5    \ Edge 19
+ EDGE      14,      10,     9,     9,         10    \ Edge 20
+ EDGE      11,      15,     9,     9,         10    \ Edge 21
+ EDGE      13,      15,     9,     9,          5    \ Edge 22
+ EDGE      11,      13,     9,     9,         18    \ Edge 23
+
+.SHIP_CONSTRICTOR_FACES
+
+    \ normal_x, normal_y, normal_z, visibility
+ FACE        0,       55,       15,         31      \ Face 0
+ FACE      -24,       75,       20,         31      \ Face 1
+ FACE       24,       75,       20,         31      \ Face 2
+ FACE       44,       75,        0,         31      \ Face 3
+ FACE      -44,       75,        0,         31      \ Face 4
+ FACE      -44,       75,        0,         31      \ Face 5
+ FACE        0,       53,        0,         31      \ Face 6
+ FACE       44,       75,        0,         31      \ Face 7
+ FACE        0,        0,     -160,         31      \ Face 8
+ FACE        0,      -27,        0,         31      \ Face 9
+
+.SHIP_PYTHON_VERTICES
+
+      \    x,    y,    z, face1, face2, face3, face4, visibility
+ VERTEX    0,    0,  224,     0,      1,    2,     3,         31    \ Vertex 0
+ VERTEX    0,   48,   48,     0,      1,    4,     5,         31    \ Vertex 1
+ VERTEX   96,    0,  -16,    15,     15,   15,    15,         31    \ Vertex 2
+ VERTEX  -96,    0,  -16,    15,     15,   15,    15,         31    \ Vertex 3
+ VERTEX    0,   48,  -32,     4,      5,    8,     9,         31    \ Vertex 4
+ VERTEX    0,   24, -112,     9,      8,   12,    12,         31    \ Vertex 5
+ VERTEX  -48,    0, -112,     8,     11,   12,    12,         31    \ Vertex 6
+ VERTEX   48,    0, -112,     9,     10,   12,    12,         31    \ Vertex 7
+ VERTEX    0,  -48,   48,     2,      3,    6,     7,         31    \ Vertex 8
+ VERTEX    0,  -48,  -32,     6,      7,   10,    11,         31    \ Vertex 9
+ VERTEX    0,  -24, -112,    10,     11,   12,    12,         31    \ Vertex 10
+
+.SHIP_PYTHON_EDGES
+
+    \ vertex1, vertex2, face1, face2, visibility
+ EDGE       0,       8,     2,     3,         31    \ Edge 0
+ EDGE       0,       3,     0,     2,         31    \ Edge 1
+ EDGE       0,       2,     1,     3,         31    \ Edge 2
+ EDGE       0,       1,     0,     1,         31    \ Edge 3
+ EDGE       2,       4,     9,     5,         31    \ Edge 4
+ EDGE       1,       2,     1,     5,         31    \ Edge 5
+ EDGE       2,       8,     7,     3,         31    \ Edge 6
+ EDGE       1,       3,     0,     4,         31    \ Edge 7
+ EDGE       3,       8,     2,     6,         31    \ Edge 8
+ EDGE       2,       9,     7,    10,         31    \ Edge 9
+ EDGE       3,       4,     4,     8,         31    \ Edge 10
+ EDGE       3,       9,     6,    11,         31    \ Edge 11
+ EDGE       3,       5,     8,     8,          7    \ Edge 12
+ EDGE       3,      10,    11,    11,          7    \ Edge 13
+ EDGE       2,       5,     9,     9,          7    \ Edge 14
+ EDGE       2,      10,    10,    10,          7    \ Edge 15
+ EDGE       2,       7,     9,    10,         31    \ Edge 16
+ EDGE       3,       6,     8,    11,         31    \ Edge 17
+ EDGE       5,       6,     8,    12,         31    \ Edge 18
+ EDGE       5,       7,     9,    12,         31    \ Edge 19
+ EDGE       7,      10,    12,    10,         31    \ Edge 20
+ EDGE       6,      10,    11,    12,         31    \ Edge 21
+ EDGE       4,       5,     8,     9,         31    \ Edge 22
+ EDGE       9,      10,    10,    11,         31    \ Edge 23
+ EDGE       1,       4,     4,     5,         31    \ Edge 24
+ EDGE       8,       9,     6,     7,         31    \ Edge 25
+
+.SHIP_PYTHON_FACES
+
+    \ normal_x, normal_y, normal_z, visibility
+ FACE      -27,       40,       11,        31    \ Face 0
+ FACE       27,       40,       11,        31    \ Face 1
+ FACE      -27,      -40,       11,        31    \ Face 2
+ FACE       27,      -40,       11,        31    \ Face 3
+ FACE      -19,       38,        0,        31    \ Face 4
+ FACE       19,       38,        0,        31    \ Face 5
+ FACE      -19,      -38,        0,        31    \ Face 6
+ FACE       19,      -38,        0,        31    \ Face 7
+ FACE      -25,       37,      -11,        31    \ Face 8
+ FACE       25,       37,      -11,        31    \ Face 9
+ FACE       25,      -37,      -11,        31    \ Face 10
+ FACE      -25,      -37,      -11,        31    \ Face 11
+ FACE        0,        0,     -112,        31    \ Face 12
+
+.SHIP_ANACONDA_VERTICES
+
+      \    x,    y,    z, face1, face2, face3, face4, visibility
+ VERTEX    0,    7,  -58,     1,      0,    5,     5,         30    \ Vertex 0
+ VERTEX  -43,  -13,  -37,     1,      0,    2,     2,         30    \ Vertex 1
+ VERTEX  -26,  -47,   -3,     2,      0,    3,     3,         30    \ Vertex 2
+ VERTEX   26,  -47,   -3,     3,      0,    4,     4,         30    \ Vertex 3
+ VERTEX   43,  -13,  -37,     4,      0,    5,     5,         30    \ Vertex 4
+ VERTEX    0,   48,  -49,     5,      1,    6,     6,         30    \ Vertex 5
+ VERTEX  -69,   15,  -15,     2,      1,    7,     7,         30    \ Vertex 6
+ VERTEX  -43,  -39,   40,     3,      2,    8,     8,         31    \ Vertex 7
+ VERTEX   43,  -39,   40,     4,      3,    9,     9,         31    \ Vertex 8
+ VERTEX   69,   15,  -15,     5,      4,   10,    10,         30    \ Vertex 9
+ VERTEX  -43,   53,  -23,    15,     15,   15,    15,         31    \ Vertex 10
+ VERTEX  -69,   -1,   32,     7,      2,    8,     8,         31    \ Vertex 11
+ VERTEX    0,    0,  254,    15,     15,   15,    15,         31    \ Vertex 12
+ VERTEX   69,   -1,   32,     9,      4,   10,    10,         31    \ Vertex 13
+ VERTEX   43,   53,  -23,    15,     15,   15,    15,         31    \ Vertex 14
+
+.SHIP_ANACONDA_EDGES
+
+    \ vertex1, vertex2, face1, face2, visibility
+ EDGE       0,       1,     1,     0,         30    \ Edge 0
+ EDGE       1,       2,     2,     0,         30    \ Edge 1
+ EDGE       2,       3,     3,     0,         30    \ Edge 2
+ EDGE       3,       4,     4,     0,         30    \ Edge 3
+ EDGE       0,       4,     5,     0,         30    \ Edge 4
+ EDGE       0,       5,     5,     1,         29    \ Edge 5
+ EDGE       1,       6,     2,     1,         29    \ Edge 6
+ EDGE       2,       7,     3,     2,         29    \ Edge 7
+ EDGE       3,       8,     4,     3,         29    \ Edge 8
+ EDGE       4,       9,     5,     4,         29    \ Edge 9
+ EDGE       5,      10,     6,     1,         30    \ Edge 10
+ EDGE       6,      10,     7,     1,         30    \ Edge 11
+ EDGE       6,      11,     7,     2,         30    \ Edge 12
+ EDGE       7,      11,     8,     2,         30    \ Edge 13
+ EDGE       7,      12,     8,     3,         31    \ Edge 14
+ EDGE       8,      12,     9,     3,         31    \ Edge 15
+ EDGE       8,      13,     9,     4,         30    \ Edge 16
+ EDGE       9,      13,    10,     4,         30    \ Edge 17
+ EDGE       9,      14,    10,     5,         30    \ Edge 18
+ EDGE       5,      14,     6,     5,         30    \ Edge 19
+ EDGE      10,      14,    11,     6,         30    \ Edge 20
+ EDGE      10,      12,    11,     7,         31    \ Edge 21
+ EDGE      11,      12,     8,     7,         31    \ Edge 22
+ EDGE      12,      13,    10,     9,         31    \ Edge 23
+ EDGE      12,      14,    11,    10,         31    \ Edge 24
+
+.SHIP_ANACONDA_FACES
+
+    \ normal_x, normal_y, normal_z, visibility
+ FACE        0,      -51,      -49,         30      \ Face 0
+ FACE      -51,       18,      -87,         30      \ Face 1
+ FACE      -77,      -57,      -19,         30      \ Face 2
+ FACE        0,      -90,       16,         31      \ Face 3
+ FACE       77,      -57,      -19,         30      \ Face 4
+ FACE       51,       18,      -87,         30      \ Face 5
+ FACE        0,      111,      -20,         30      \ Face 6
+ FACE      -97,       72,       24,         31      \ Face 7
+ FACE     -108,      -68,       34,         31      \ Face 8
+ FACE      108,      -68,       34,         31      \ Face 9
+ FACE       97,       72,       24,         31      \ Face 10
+ FACE        0,       94,       18,         31      \ Face 11
+

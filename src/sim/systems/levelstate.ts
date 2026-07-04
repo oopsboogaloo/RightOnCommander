@@ -3,11 +3,14 @@
 // shows a system info card, drifts through an opening asteroid field, plays wave combat around
 // a mid-boss and an end-boss (starfield scroll stops for each fight; "RIGHT ON COMMANDER" fades
 // after each kill), optionally fights a Viper interception if the player is carrying contraband,
-// then docks at a rotating Coriolis by flying into its port. [tasks T5.1/T5a.*, design §12/§12a,
-// ROC-LVL-1,2, ROC-L1-1, ROC-BOSS-1..4, ROC-HYP-1..5, ROC-DCKG-1..4]
+// then docks at a rotating Coriolis by flying into its port. A level whose jump lingers in
+// witchspace (only Level 3's, for the L2->3 transition) skips the settle-back at the end of
+// HYPERSPACE and instead holds the stretched starfield for a Thargoid wave, only settling and
+// proceeding to INFO once it's cleared. [tasks T5.1/T5a.*/T7.1a, design §12/§12a, ROC-LVL-1,2,
+// ROC-L1-1, ROC-BOSS-1..4, ROC-HYP-1..5, ROC-DCKG-1..4, ROC-WITCH-1..4]
 //
-//   LAUNCH -> HYPERSPACE -> INFO -> [ASTEROIDS] -> WAVES_A -> MID_BOSS -> WAVES_B
-//     -> END_BOSS -> [VIPER_INTERCEPT] -> DOCKING -> DOCK
+//   LAUNCH -> HYPERSPACE -> [WITCHSPACE_COMBAT] -> INFO -> [ASTEROIDS] -> WAVES_A -> MID_BOSS
+//     -> WAVES_B -> END_BOSS -> [VIPER_INTERCEPT] -> DOCKING -> DOCK
 
 import { vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
@@ -15,10 +18,12 @@ import { type World } from '../world.js';
 import { startWave, type WaveDef, type WaveContext } from './waves.js';
 import { startAsteroidWaves, type AsteroidFieldDef } from './asteroids.js';
 import { bossPlacement } from './boss.js';
+import { initHazard, type StarFlareDef } from './hazards.js';
 
 export type LevelState =
   | 'LAUNCH'
   | 'HYPERSPACE'
+  | 'WITCHSPACE_COMBAT'
   | 'INFO'
   | 'ASTEROIDS'
   | 'WAVES_A'
@@ -39,10 +44,13 @@ export interface LevelDef {
   midAsteroids?: AsteroidFieldDef[]; // a second dense field just before the mid-boss [ROC-L1-1]
   combatAsteroids?: AsteroidFieldDef[]; // a light trickle that drifts through the ship-wave groups
   wavesA: WaveDef[];
-  midBoss: string; // enemy name (spawned as a boss)
+  midBoss: string | string[]; // enemy name(s) spawned as a boss; multiple names fight together (e.g. a pair) [ROC-L3-3]
   wavesB: WaveDef[];
   endBoss: string;
   viper?: WaveDef; // contraband interception wave
+  starFlare?: StarFlareDef; // Level 3's environmental star hazard [ROC-L3-1,2]
+  witchspace?: WaveDef; // a Thargoid wave that must be cleared before the jump resolves; set only
+  // on the level entered via the witchspace interlude (Level 3, L2->3) [ROC-WITCH-1..4]
 }
 
 // ---- timings & tuning ------------------------------------------------------
@@ -146,10 +154,10 @@ function deleteStations(world: World): void {
   for (const e of [...world.entities.values()]) if (e.kind === 'station') world.entities.delete(e.id);
 }
 
-function spawnBoss(world: World, name: string, ctx: WaveContext, drops?: string): void {
+function spawnBoss(world: World, name: string, ctx: WaveContext, drops?: string, slot = 0): void {
   const def = ctx.enemies[name];
   if (!def) throw new Error(`unknown boss '${name}'`);
-  const place = bossPlacement(def.behavior);
+  const place = bossPlacement(def.behavior, slot);
   const id = world.nextId++;
   world.entities.set(id, {
     id,
@@ -207,6 +215,15 @@ export function enterLevelState(world: World, state: LevelState, level: LevelDef
       world.levelTimer = HYPER_TOTAL_SEC;
       world.events.push({ type: 'hyperCountdown', n: HYPER.countdownSec, system: level.name ?? level.id });
       break;
+    case 'WITCHSPACE_COMBAT':
+      // The jump lingers: the starfield holds at full stretch instead of settling, for a Thargoid
+      // wave the player must clear before it resolves. `levelTimer` doubles as a sentinel here:
+      // negative while the wave is still up, then the settle countdown once it's cleared. [ROC-WITCH-1,2]
+      world.scroll = HYPER.peak;
+      world.levelTimer = -1;
+      if (level.witchspace) startWave(world, level.witchspace, ctx);
+      world.events.push({ type: 'sfx', id: 'witchspace' });
+      break;
     case 'INFO':
       world.levelTimer = INFO_SEC;
       break;
@@ -221,10 +238,16 @@ export function enterLevelState(world: World, state: LevelState, level: LevelDef
       // A second dense field drifts through just before the mid-boss. [ROC-L1-1]
       if (level.midAsteroids) startAsteroidWaves(world, level.midAsteroids);
       break;
-    case 'MID_BOSS':
+    case 'MID_BOSS': {
       world.scroll = 0; // the fight is signalled by the scrolling stopping [ROC-BOSS-1]
-      spawnBoss(world, level.midBoss, ctx, 'laser'); // mid-boss always drops a laser [ROC-PWR-6]
+      // A pair (or more) of mid-bosses fight together, side by side; the fight only clears once
+      // every one of them is dead — `bossCleared` already checks for *any* `boss`-kind entity, so
+      // no change is needed there. [ROC-L3-3]
+      const midBosses = Array.isArray(level.midBoss) ? level.midBoss : [level.midBoss];
+      // The guaranteed laser drop is one-per-fight, not one-per-boss, so only the first carries it. [ROC-PWR-6]
+      midBosses.forEach((name, i) => spawnBoss(world, name, ctx, i === 0 ? 'laser' : undefined, i));
       break;
+    }
     case 'WAVES_B':
       startGroup(world, level.wavesB, ctx);
       if (level.combatAsteroids) startAsteroidWaves(world, level.combatAsteroids);
@@ -264,6 +287,7 @@ export function startLevel(world: World, level: LevelDef, ctx: WaveContext): voi
   world.bossFadeTtl = 0;
   world.ecm = { fuse: -1, cooldown: 0 };
   world.hermitWaveId = null;
+  world.hazard = initHazard(level.starFlare); // Level 3's star flare, where the level has one [ROC-L3-1,2]
   enterLevelState(world, 'LAUNCH', level, ctx);
 }
 
@@ -331,11 +355,36 @@ export function levelStateSystem(world: World, dt: number, level: LevelDef, ctx:
       const prevElapsed = HYPER_TOTAL_SEC - world.levelTimer;
       world.levelTimer -= dt;
       const elapsed = HYPER_TOTAL_SEC - world.levelTimer;
-      world.scroll = hyperScrollAt(elapsed);
+      // A witchspace-interlude level (Level 3) never settles here — it lingers at full stretch
+      // instead, so cap the scroll ramp at the end of the hold phase and hand off to
+      // WITCHSPACE_COMBAT rather than running the settle-back. [ROC-WITCH-1]
+      const holdEnd = HYPER.countdownSec + HYPER.rampSec + HYPER.holdSec;
+      const scrollElapsed = level.witchspace ? Math.min(elapsed, holdEnd) : elapsed;
+      world.scroll = hyperScrollAt(scrollElapsed);
       // Emit each countdown second once as it is crossed ("Hyperspace Lave 4 ... 1"). [ROC-HYP-2]
       const nPrev = Math.ceil(HYPER.countdownSec - prevElapsed - 1e-9);
       const n = Math.ceil(HYPER.countdownSec - elapsed - 1e-9);
       if (n !== nPrev && n >= 1) world.events.push({ type: 'hyperCountdown', n, system: level.name ?? level.id });
+      if (level.witchspace) {
+        if (elapsed >= holdEnd) enterLevelState(world, 'WITCHSPACE_COMBAT', level, ctx);
+      } else if (world.levelTimer <= 0) {
+        world.scroll = 1;
+        enterLevelState(world, 'INFO', level, ctx);
+      }
+      break;
+    }
+    case 'WITCHSPACE_COMBAT': {
+      if (world.levelTimer < 0) {
+        // Still fighting: the stretched starfield holds exactly at peak. [ROC-WITCH-1,2]
+        world.scroll = HYPER.peak;
+        if (groupCleared(world)) world.levelTimer = HYPER.settleSec; // cleared — begin the settle ramp [ROC-WITCH-3]
+        break;
+      }
+      // Settling: the stretched lines shrink back into the normal scrolling starfield, exactly as
+      // an ordinary hyperspace arrival, then the level proceeds as any other jump would. [ROC-WITCH-3]
+      world.levelTimer -= dt;
+      const u = smoothstep(Math.min(1, 1 - Math.max(0, world.levelTimer) / HYPER.settleSec));
+      world.scroll = HYPER.peak - (HYPER.peak - 1) * u;
       if (world.levelTimer <= 0) {
         world.scroll = 1;
         enterLevelState(world, 'INFO', level, ctx);

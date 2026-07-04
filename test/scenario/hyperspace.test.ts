@@ -15,7 +15,7 @@ const content = {
     midboss: { hull: 2, bounty: 100, colliderRx: 0.3, colliderRz: 0.3 },
     endboss: { hull: 2, bounty: 100, colliderRx: 0.3, colliderRz: 0.3 },
   },
-  level: {
+  levels: [{
     id: 'tiny',
     name: 'Lave',
     facts: ['Lave is most famous for its vast rain forests', 'and the Laveian tree grub.'],
@@ -24,7 +24,7 @@ const content = {
     midBoss: 'midboss',
     wavesB: [{ id: 'b', pattern: 'sine_column', enemy: 'grunt', count: 1, spacingMs: 0, durationMs: 200 }],
     endBoss: 'endboss',
-  },
+  }],
 };
 
 describe('launch & hyperspace', () => {

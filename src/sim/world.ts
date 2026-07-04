@@ -4,6 +4,7 @@
 import { vec3 } from './math/vec3.js';
 import type { Entity, SimEvent } from './components.js';
 import type { PathParams } from './systems/paths.js';
+import type { HazardState } from './systems/hazards.js';
 
 export const PLAYER_ID = 1;
 
@@ -102,6 +103,7 @@ export interface World {
   waves: { active: Map<number, WaveRecord> }; // [ROC-ECO-1a]
   asteroidWaves: AsteroidFieldState[]; // active/pending level-opening asteroid waves [ROC-L1-1]
   unlocks: { eliteMode: boolean; thargoidShip: boolean }; // [ROC-PROG-1,2]
+  hazard: HazardState | null; // level environmental hazard (Level 3's star flare); null where unused [ROC-L3-1,2]
   events: SimEvent[]; // drained by shell each step
   pool: { projectiles: Entity[]; particles: Entity[]; missiles: Entity[] }; // recycled; not serialised
 }
@@ -167,6 +169,7 @@ export function makeWorld(seed: number): World {
     waves: { active: new Map<number, WaveRecord>() },
     asteroidWaves: [],
     unlocks: { eliteMode: false, thargoidShip: false },
+    hazard: null,
     events: [],
     pool: { projectiles: [], particles: [], missiles: [] },
   };
