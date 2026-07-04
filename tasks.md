@@ -219,8 +219,9 @@ Turns the placeholder bosses into the specified fights and adds the level booken
 ## Phase 7 — Levels 2–4, bosses, hazards
 
 - [ ] **T7.1 — Level 2 (Deep space).** Dense asteroid bands; elaborate waves; **Python mid-boss**; **Constrictor end boss** (strong shields). Scenario test reaches both. **Refs:** ROC-L2-1..4.
-- [ ] **T7.2 — Level 3 (Star surface).** Right-side curved star + flare hazard; **rogue-station + Vipers mid**; **generation-ship end**. **Refs:** ROC-L3-1..4.
-- [ ] **T7.3 — Level 4 (Alien space).** **Witchspace entry**; Thargoids + **saucer variants** + Thargon swarms (inert on parent death); **mothership end**. **Refs:** ROC-L4-0,1,1a,2; ROC-ENM-6.
+- [ ] **T7.1a — Witchspace interlude (L2→3).** *(v1.10, new)* New `WITCHSPACE_COMBAT` level state after `HYPERSPACE`: hold `world.scroll` at its fully-stretched value, spawn a Thargoid wave, only resolve the jump into Level 3 (starfield settles, `INFO` card) once it's cleared. Scenario test: scroll stays stretched until the wave is cleared, then Level 3 starts. **Refs:** ROC-WITCH-1..4.
+- [ ] **T7.2 — Level 3 (Star surface).** Right-side curved star + flare hazard; **pair-of-Anacondas mid** *(v1.10 — was rogue-station + Vipers)*; **generation-ship end**. **Refs:** ROC-L3-1..4.
+- [ ] **T7.3 — Level 4 (Alien warzone).** *(v1.10 — renamed; ordinary launch entry, no mid-boss, shorter pacing)* Thargoids + **saucer variants** + Thargon swarms (inert on parent death) + **broken Galactic Navy wrecks** as scenery/hazard; **mothership end**, no mid-boss. **Refs:** ROC-L4-0,1,1a,2,3,4; ROC-ENM-6.
 - [ ] **T7.4 — ECM & Energy Bomb.** ECM clears projectiles+missiles on cooldown; Energy Bomb clears non-boss + projectiles, **boss-safe (non-lethal)**. Property test: bomb never kills a boss. **Refs:** ROC-DEF-1,2,3.
 - [ ] **T7.5 — Contraband interception.** Carrying illegal cargo at level end ⇒ extra Viper fight, no credits, kills count. Scenario test. **Refs:** ROC-LVL-4, ROC-ECO-4.
 - [ ] **T7.6 — Density profiles.** L1–2 sparse/readable; L3–4 Xenon-2 bullet-hell via difficulty/count curves. **Refs:** ROC-ENM-13.

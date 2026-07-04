@@ -1,10 +1,12 @@
 # Right on Commander — Requirements Specification
 
-**Version:** 1.9 (draft — all design decisions resolved)
+**Version:** 1.10 (draft — all design decisions resolved)
 **Author:** Chloe
 **Notation:** EARS (Easy Approach to Requirements Syntax)
 **Status:** Spec under construction — review
 
+> **Changelog 1.9 → 1.10:** **Level 3 mid-boss changed** from the rogue station/Vipers to **a pair of Anacondas** (ROC-L3-3). **Added a witchspace interlude between Level 2 and Level 3** (new): the Level 2 → 3 hyperspace jump now lingers in witchspace — starfield held in its stretched, hyperspace state — for a **Thargoid wave the player must clear** before the jump resolves and Level 3 begins (ROC-WITCH-1..4). **Level 4 renamed "Alien warzone"** (was "Alien space") and **no longer entered via a forced witchspace misjump** — that framing now belongs to the Level 2→3 interlude instead — Level 4 is entered by an ordinary jump/launch like every other level (ROC-L4-0 revised). Level 4 also gains the **broken remains of Galactic Navy vessels** scattered through it as wreckage (ROC-L4-3, new), and **drops its mid-boss** — wave combat runs straight to the end boss — making it **shorter** than the standard §3.9 pacing (ROC-L4-4, new).
+>
 > **Changelog 1.8 → 1.9:** **Removed graduated hull damage for the player** (ROC-DMG-6b, new): once shields are at zero, any further hit is now **instantly lethal** — the player has no hull hit-point buffer, unlike enemies/bosses/hazards which are unaffected. To compensate, **starting lives raised from 3 to 4** (ROC-LIFE-1). The player now **flashes white on every hit**, including one a shield ring fully absorbs (ROC-DMG-2a) — previously only unshielded hull hits flashed. **Blinking (visibility toggling) is now reserved solely for the brief invulnerability window right after a respawn** (ROC-LIFE-2c) — it no longer triggers for an ordinary hit's short ramming/contact i-frames, so a blinking ship on screen always means "just respawned," never "just got hit." **Removed the hull readout from the bottom status bar** (ROC-HUD-2 revised) since hull no longer functions as a player survivability stat.
 >
 > **Changelog 1.7 → 1.8:** Reversed the v1.0 no-HUD decision — added a **persistent bottom status bar** (ROC-HUD-2,3) showing hull, shield, missile level + countdown, energy bomb count and energy bank countdown alongside score/credits/lives (an ECM countdown is planned to join it later); the diegetic shield rings and damage particles stay too. **Death no longer restarts anything**: every death (wherever it happens — part 1, part 2, a boss fight) now just respawns the player **in place** once the ship's explosion has fully played out, superseding the old "restart the level" default and the part-2 checkpoint (ROC-LIFE-2, replacing ROC-BOSS-5/6/7). The player's own explosion is now bigger and longer-lived than a routine kill, and — since the ship can die at speed — it **does not carry the ship's momentum**, so it plays out **in place**; a new ship appears **500 ms after the explosion finishes**, flashing with its usual respawn invulnerability. **Removed the Escape Pod** entirely (ROC-LIFE-3 old wording). Added the **Energy Bomb auto-trigger** (ROC-DEF-2 revised): it now fires automatically instead of the ship dying — destroying every non-boss hazard and enemy shot/missile on screen, dealing a boss 50% of its current hull in damage (which can kill a weakened one), leaving the ship at 1 hull, and captioning **"Emergency energy bomb deployed"** — capped at **one** carried at a time, or **two** in the Fer-de-Lance. Added the **Energy Bank** (new, purchasable at dock): passively regenerates one shield ring every 15 seconds. Fixed **touch fire** to autofire continuously while held/dragged, matching the mouse (ROC-CTL-1,2) — needed for the beam laser to sustain on touch. Corrected the docking-sequence spec (ROC-DCKG-3) to match the station-as-backdrop behaviour already shipped: the Coriolis has no collision, and the shop opens automatically once it's held in view for a beat.
@@ -176,7 +178,7 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
 ### 3.9 Level structure & bosses
 
 - **ROC-LVL-1** The system shall **begin every level launching from a Coriolis station** and **end every level docking at a Coriolis station** (then the dock/sell/equip screen). The Coriolis is the non-combat bookend, not a boss.
-- **ROC-LVL-2** The system shall stage, within each level, scrolling wave combat (§3.13) plus a **mid-level boss** and an **end-of-level boss** as below.
+- **ROC-LVL-2** The system shall stage, within each level, scrolling wave combat (§3.13) plus a **mid-level boss** and an **end-of-level boss** as below — **except Level 4**, which drops the mid-boss (ROC-L4-4).
 - **ROC-LVL-3** The system shall pace each level so its **combat/wave phase lasts roughly 3–5 minutes**, plus **about 1 minute for the end-of-level boss**.
 - **ROC-LVL-4** If the player is carrying **illegal/contraband cargo** at the end of a level, then before docking the system shall stage an **extra interception fight against a number of Vipers**; this fight yields **no credit reward (kills still count toward rating)** and scales the Viper count with the amount of contraband / difficulty.
 
@@ -193,17 +195,25 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
 - **ROC-L2-3** The system shall provide a **mid boss: a Python**.
 - **ROC-L2-4** The system shall provide an **end boss: the Constrictor** — the prototype warship with abnormally strong shields that GalCop wants stopped (the canonical disk-Elite mission target); its boss fight shall reflect its **unusually high shield strength**.
 
+**Witchspace interlude — between Level 2 and 3** *(v1.10, new)*
+- **ROC-WITCH-1** The system shall insert a **witchspace interlude** into the Level 2 → Level 3 transition: launching from the Level 2 station triggers the standard hyperspace sequence (§3.27), but instead of settling directly into Level 3's arrival, the jump **lingers in witchspace** — the starfield stays held in its fully-stretched, hyperspace-lines state — for a combat encounter before arrival.
+- **ROC-WITCH-2** While the interlude holds, the system shall spawn a **wave of Thargoids** (ROC-ENM-6) that the player must defeat; the ship's guns/missiles/movement all function normally against the stretched-starfield backdrop.
+- **ROC-WITCH-3** Once the Thargoid wave is cleared, the system shall **resolve the hyperspace jump** — the stretched lines shrink back into the normal scrolling starfield (as ROC-HYP-4) — and proceed into Level 3's arrival (info card, then wave combat) exactly as any other inter-level jump.
+- **ROC-WITCH-4** This witchspace framing is used **only** for the Level 2 → 3 transition; Level 4 is entered by an ordinary jump (ROC-L4-0), since the witchspace beat has already been spent here.
+
 **Level 3 — Star surface**
 - **ROC-L3-1** The system shall render a **large white star occupying the right-hand side with massive curvature**.
 - **ROC-L3-2** The system shall present **dangerous ships** plus the **star as an environmental hazard, with occasional white star activity** (flares/eruptions).
-- **ROC-L3-3** The system shall provide a **mid boss: a rogue station with Vipers**.
+- **ROC-L3-3** *(v1.10 — was a rogue station with Vipers)* The system shall provide a **mid boss: a pair of Anacondas** fought together.
 - **ROC-L3-4** The system shall provide an **end boss: a generation ship**.
 
-**Level 4 — Alien space**
-- **ROC-L4-0** The system shall frame the **entry to Level 4 as a forced misjump into witchspace** — the player's hyperspace jump is dragged short by the Thargoids (per Elite lore) rather than a normal Coriolis launch, dropping them straight into the alien ambush.
+**Level 4 — Alien warzone** *(v1.10 — renamed from "Alien space")*
+- **ROC-L4-0** *(v1.10 — revised: no longer a misjump)* The system shall enter Level 4 via an **ordinary hyperspace jump/launch** (§3.27), the same as every other level. *(The forced-witchspace-misjump framing previously used here has moved to the Level 2→3 transition, ROC-WITCH-1..4, so it isn't reused.)*
 - **ROC-L4-1** The system shall populate the level with **Thargoids and asteroids**.
 - **ROC-L4-1a** The system shall include **several variants of the Thargoid saucer** — differing in size, shield strength, Thargon-launch behaviour and/or attack pattern — to keep Level 4 varied.
 - **ROC-L4-2** The system shall provide an **end boss: the (Thargoid) mothership**.
+- **ROC-L4-3** *(v1.10, new)* The system shall scatter the **broken remains of Galactic Navy vessels** through the level as wreckage — passive environmental scenery/hazard (in the spirit of ROC-L1-1's asteroid field) — underscoring that this is an active warzone.
+- **ROC-L4-4** *(v1.10, new)* The system shall **omit a mid-level boss for Level 4** (relaxing the §3.9/ROC-LVL-2 mid+end default for this level only) — wave combat runs straight through to the end boss — and shall **pace the level shorter** than the standard combat window (ROC-LVL-3).
 
 ### 3.10 Visual style
 
@@ -313,7 +323,7 @@ Shown on docking (§3.9), between levels.
 ### 3.17 Lore & flavour (Elite homage)
 
 - **ROC-LORE-1** *(Procedural blurbs)* The system shall show an **Elite-style one-line system description** on each level-intro / station screen (e.g. "Lave is most famous for its vast rain forests and the Laveian tree grub"), drawn from a tuneable text bank in the period style.
-- **ROC-LORE-2** *(Named systems)* The system shall name levels after **canonical Elite systems** (default mapping, adjustable: L1 Lave, L2 Diso, L3 Leesti/Zaonce, L4 the witchspace sector), and reserve the **anarchy system Riedquat** for a hard level / **Elite mode**.
+- **ROC-LORE-2** *(Named systems)* The system shall name levels after **canonical Elite systems** (default mapping, adjustable: L1 Lave, L2 Diso, [witchspace interlude, ROC-WITCH-1], L3 Leesti/Zaonce, L4 the Thargoid Exclusion Zone *(v1.10 — replaces "the witchspace sector" now that L4 is an ordinary jump, not a misjump)*), and reserve the **anarchy system Riedquat** for a hard level / **Elite mode**.
 - **ROC-LORE-3** *(Commander Jameson)* The system shall use **"Jameson"** as the default commander / high-score name (ROC-LBD-2).
 - **ROC-LORE-4** *(The Dark Wheel)* The system shall present elite ace-pirate squadrons as **"The Dark Wheel"** — a recurring, tougher named enemy wave (the shadowy cult from the packaged novella).
 - **ROC-LORE-5** *(Raxxla)* The system shall hide a single well-buried **Raxxla** secret/bonus for completionists (Elite's enduring mystery system).
@@ -341,7 +351,7 @@ Shown on docking (§3.9), between levels.
   | Low shield / warning ("Condition Red") | `alert` |
   | Launch from station | `launch` |
   | Docking | `dock` |
-  | Witchspace misjump (L4 entry) | `witchspace` |
+  | Witchspace interlude (L2→3 transition, ROC-WITCH-1) | `witchspace` |
   | Rank-up / "Right On, Commander!" | `rank_up` |
   | Menu / button select | `ui_select` |
   | Docking music cue (Blue Danube-style, ROC-LORE-7) | `docking_theme` |

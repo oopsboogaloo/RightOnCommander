@@ -1,7 +1,9 @@
 # Right on Commander — Design
 
-**Version:** 0.7 (draft — all design decisions resolved)
+**Version:** 0.8 (draft — all design decisions resolved)
 
+> **Changelog 0.7 → 0.8:** Level 3's mid-boss changes to a **pair of Anacondas** (`midBoss: "anaconda_pair"`, ROC-L3-3). Added a **witchspace interlude between Level 2 and 3**: level3's schema entry becomes `"entry": "witchspace_interlude"`, and the level FSM gains a `WITCHSPACE_COMBAT` state between `HYPERSPACE` and `INFO` — `world.scroll` holds at its fully-stretched hyperspace value (instead of resuming) until a spawned Thargoid wave is cleared, then the jump resolves as usual (§12, §12a). **Level 4 renamed "Alien warzone"**, reverts to a normal `"entry": "launch"` (the misjump framing moved to the new interlude), adds **broken Galactic Navy wrecks** as scenery/hazard, and **drops its `midBoss`** entirely — wave combat runs straight to the end boss, and the level is paced shorter. See requirements v1.10 (ROC-L3-3, ROC-WITCH-1..4, ROC-L4-0,3,4).
+>
 > **Changelog 0.6 → 0.7:** Removed the player's graduated hull damage: `applyDamage` now special-cases `kind === 'player'` to set `hull = 0` outright on any unshielded hit, instantly lethal, while every other entity keeps subtracting damage as before. The player also now flashes white (`flashTtl`) on a shield-absorbed hit, not just an unshielded one. Split blink from i-frames: added `player.respawnBlinkTtl`, set only by `respawnPlayer()` (never by the ramming contact's `invulnTtl` grant), so the ship only blinks in the window right after a fresh respawn. Starting lives raised 3 → 4 to compensate. Dropped the hull segment from the bottom status bar. See §8, §12 Game FSM, and requirements v1.9 (ROC-DMG-2a,6b; ROC-LIFE-1,2c; ROC-HUD-2).
 >
 > **Changelog 0.5 → 0.6:** Designed the **boss encounters, docking and hyperspace** (requirements §3.23–3.27). The sim now owns a **`world.scroll` factor** (1 normal, 0 during boss fights, ramping >1 through hyperspace) that the render starfield consumes — scroll-stop is game state, not a render effect. The **level FSM** gains `HYPERSPACE`/`INFO` up front and a `DOCKING` approach phase before `DOCK`; death resolution branches on `levelState` (boss states respawn **in place** with all entities kept; `WAVES_B` restarts part 2; part 1 keeps the restart-level default). Entities gain an optional **per-entity `scale`** multiplier honoured by both the renderer and collision (FdL 1.5×, boss FdL 2.0×, hermit/dock station 2× Coriolis). New **boss ECM** system (300 ms fuse, harmless missile detonation, 500 ms cooldown, "ECM" caption) and two boss `ai` archetypes: `hermit` (y-rotation, port-aligned triple damage, adder launcher) and `strafe` (rounded-rect track, random direction reversals, timed aimed fire). See §12a.
@@ -315,14 +317,16 @@ Pattern, enemy and stats are orthogonal: swap `enemy` to re-skin a pattern; the 
   "blurb": "Leesti is reasonably famous for its vast bird population.",
   "ship": "asp_mk2",
   "dock": "coriolis",
-  "entry": "launch",            // "witchspace" for level4 [ROC-L4-0]
+  "entry": "witchspace_interlude", // (v1.10) L2->L3 only: the hyperspace jump lingers, stretched
+                                    // starfield held, for a Thargoid wave before arrival [ROC-WITCH-1..4]
   "hazards": ["star_right", "flare"],   // [ROC-L3-1,2]
   "waves": ["w30","w31","w32"],
-  "midBoss": "rogue_station",
+  "midBoss": "anaconda_pair",      // (v1.10) two Anacondas fought together [ROC-L3-3]
   "endBoss": "generation_ship",
   "difficultyBase": 3
 }
 ```
+Level 4 reverts to `"entry": "launch"` (v1.10 — the misjump framing moved to level3's `witchspace_interlude` above) and omits `midBoss` entirely (v1.10, ROC-L4-4).
 
 ### Difficulty scaling `[ROC-DIF-1,2, ROC-ENM-13,14]`
 A single `difficulty` value scales **enemy count per wave** (primary live lever) and applies hull/shield/fire-rate multipliers; Elite mode raises the floor. Density profiles per level give L1–2 sparse, L3–4 bullet-hell.
@@ -351,8 +355,8 @@ A single `difficulty` value scales **enemy count per wave** (primary live lever)
 
 ## 12. State machines
 
-### Level FSM (`levelstate.js`) `[ROC-LVL-1,2, ROC-BOSS, ROC-DCKG, ROC-HYP]`
-`LAUNCH (Coriolis departure / witchspace) → HYPERSPACE → INFO → [ASTEROIDS] → WAVES_A → MID_BOSS → WAVES_B → END_BOSS → [VIPER_INTERCEPT if contraband] → DOCKING → DOCK → STATION`. Death respawns in place per §3.16/ROC-LIFE-2 (v1.8) — the level state is never touched by a death, so nothing here resets. `MID_BOSS`/`END_BOSS` set `world.scroll = 0` and run the boss-bar/kill-text framing; `DOCKING` is a backdrop-only approach (no collision, opens the shop automatically); `DOCK` remains the shop.
+### Level FSM (`levelstate.js`) `[ROC-LVL-1,2, ROC-BOSS, ROC-DCKG, ROC-HYP, ROC-WITCH]`
+`LAUNCH (Coriolis departure) → HYPERSPACE → [WITCHSPACE_COMBAT, L2→3 only (v1.10): starfield held stretched, Thargoid wave must clear before the jump resolves] → INFO → [ASTEROIDS] → WAVES_A → MID_BOSS (skipped for Level 4, v1.10 ROC-L4-4) → WAVES_B → END_BOSS → [VIPER_INTERCEPT if contraband] → DOCKING → DOCK → STATION`. Death respawns in place per §3.16/ROC-LIFE-2 (v1.8) — the level state is never touched by a death, so nothing here resets. `MID_BOSS`/`END_BOSS` set `world.scroll = 0` and run the boss-bar/kill-text framing; `WITCHSPACE_COMBAT` holds `world.scroll` at its hyperspace-stretched value instead of resuming it, until the Thargoid wave resolves; `DOCKING` is a backdrop-only approach (no collision, opens the shop automatically); `DOCK` remains the shop.
 
 ### Game FSM (`gamestate.js`) `[ROC-PROG-1,2]`
 `TITLE → (fly-in) → LEVEL[1..4] → COMPLETE → (unlock Elite) → ELITE LEVEL[1..4] → (unlock Thargoid) → TITLE`. Death (v1.8): if an energy bomb is carried it auto-triggers instead (ROC-DEF-2) — no life lost, ship survives at 1 hull; otherwise `lives--` immediately, then once the player's in-place, momentum-free explosion has fully played out (`PLAYER_EXPLOSION_SEC`) plus a 500ms beat (`respawnDelaySec`), the ship **respawns at the exact death position** — always, regardless of `levelState` (boss fights, part 2, anywhere); `lives==0` ⇒ GAME_OVER → score submit, deferred the same way. Runs start with **4 lives** (v1.9, up from 3). The ship no longer has graduated hull damage — once unshielded, any hit is instantly lethal (v1.9) — and blinks on screen only during this respawn's invulnerability window, never for an ordinary hit's brief contact i-frames. `[ROC-LIFE-1,2,2a,2b,2c,5; ROC-DEF-2; ROC-DMG-2a,6b]`
