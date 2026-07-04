@@ -43,6 +43,8 @@ describe('loadContent', () => {
     expect(levels[2].midBoss).toEqual(['anaconda', 'anaconda']); // [ROC-L3-3]
     expect(levels[2].endBoss).toBe('cobra_ace'); // [ROC-L3-4]
     expect(levels[2].starFlare?.zoneX).toBeGreaterThan(0); // [ROC-L3-1,2]
+    expect(levels[2].witchspace?.enemy).toBe('thargoid'); // the L2->3 interlude [ROC-WITCH-1..4]
+    expect(levels[1].witchspace).toBeUndefined(); // only set on the level it delivers into
   });
 
   it('rejects a malformed asteroidWaves', () => {

@@ -5,6 +5,7 @@
   "adder": { "hull": 1, "bounty": 16, "meshId": "adder", "colliderRx": 0.22, "colliderRz": 0.22 },
   "viper": { "hull": 2, "bounty": 20, "meshId": "viper", "colliderRx": 0.2, "colliderRz": 0.22 },
   "mamba": { "hull": 3, "bounty": 24, "meshId": "mamba", "colliderRx": 0.2, "colliderRz": 0.24 },
+  "thargoid": { "hull": 6, "shield": 3, "bounty": 300, "meshId": "thargoid", "colliderRx": 0.25, "colliderRz": 0.25 },
   "transporter": { "hull": 12, "bounty": 60, "meshId": "transporter", "colliderRx": 0.5, "colliderRz": 0.45 },
   "hermit": { "hull": 90, "bounty": 1000, "meshId": "rock_hermit", "scale": 4, "behavior": "hermit", "ecm": true, "cargoDrops": 10, "colliderRx": 0.35, "colliderRz": 0.35 },
   "fer_de_lance": { "hull": 30, "shield": 2, "bounty": 250, "meshId": "fer_de_lance", "scale": 1.5, "colliderRx": 0.4, "colliderRz": 0.35 },

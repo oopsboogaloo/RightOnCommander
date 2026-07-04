@@ -51,6 +51,7 @@ import fer_de_lance from '../content/meshes/fer_de_lance.json';
 import python from '../content/meshes/python.json';
 import constrictor from '../content/meshes/constrictor.json';
 import anaconda from '../content/meshes/anaconda.json';
+import thargoid from '../content/meshes/thargoid.json';
 import coriolis from '../content/meshes/coriolis.json';
 import transporter from '../content/meshes/transporter.json';
 import asteroid from '../content/meshes/asteroid.json';
@@ -91,6 +92,7 @@ const MESHES: Record<string, Mesh> = {
   python,
   constrictor,
   anaconda,
+  thargoid,
   coriolis,
   transporter,
   asteroid,

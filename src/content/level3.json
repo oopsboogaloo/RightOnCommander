@@ -10,6 +10,16 @@
   "launchMs": 2500,
   "backdrop": "star",
   "starFlare": { "intervalSec": 7, "warnSec": 1.5, "zoneX": 0.9, "damage": 1 },
+  "witchspace": {
+    "id": "l3w",
+    "pattern": "sine_column",
+    "enemy": "thargoid",
+    "count": 3,
+    "spacingMs": 1400,
+    "durationMs": 60000,
+    "params": { "amplitude": 0.6, "cycles": 2 },
+    "fire": { "rate": 0.3, "aimed": true }
+  },
   "combatAsteroids": [
     { "count": 5, "spacingMs": 3200, "delayMs": 2000, "speed": 0.3, "xSpread": 0.8 }
   ],

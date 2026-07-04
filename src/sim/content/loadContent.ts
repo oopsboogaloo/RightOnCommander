@@ -137,6 +137,7 @@ function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
     endBoss: boss('endBoss'),
     viper: raw.viper === undefined ? undefined : parseWave(raw.viper, enemies, 'level.viper'),
     starFlare,
+    witchspace: raw.witchspace === undefined ? undefined : parseWave(raw.witchspace, enemies, 'level.witchspace'),
   };
 }
 

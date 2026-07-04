@@ -265,7 +265,7 @@ have nowhere to load into until the campaign can actually advance between levels
   and Constrictor's shield count exceeds the FdL boss's.
   **Refs:** ROC-L2-1..4.
 
-- [ ] **T7.1a — Witchspace interlude (L2→3).** *(v1.10, new)*
+- [x] **T7.1a — Witchspace interlude (L2→3).** *(v1.10, new)*
   **Do:** new `LevelState = 'WITCHSPACE_COMBAT'`, entered from `HYPERSPACE` in place of `INFO`
   when `level.witchspace` is set (only Level 3's `LevelDef` sets it, per ROC-WITCH-4). On entry,
   freeze `world.scroll` at `HYPER.peak` (don't let it settle) and `startWave(world,

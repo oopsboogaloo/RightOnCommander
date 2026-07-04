@@ -82,6 +82,7 @@ describe('Level 3', () => {
 
     expect(w.levelState).toBe('DOCK');
     expect(states.has('HYPERSPACE')).toBe(true);
+    expect(states.has('WITCHSPACE_COMBAT')).toBe(true); // the L2->3 interlude [ROC-WITCH-1..4]
     expect(states.has('INFO')).toBe(true);
     expect(states.has('MID_BOSS')).toBe(true);
     expect(states.has('END_BOSS')).toBe(true);
