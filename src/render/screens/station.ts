@@ -7,7 +7,7 @@ import { modelMatrix } from '../project.js';
 import { vec3 } from '../../sim/math/vec3.js';
 import type { Mesh } from '../../interfaces.js';
 import type { World } from '../../sim/world.js';
-import { nextShipId, equippedCount, DIRECTIONS, type LaserType } from '../../sim/systems/ships.js';
+import { nextShipId, equippedCount, energyBombCap, DIRECTIONS, type LaserType } from '../../sim/systems/ships.js';
 import type { StationContext } from '../../sim/systems/station.js';
 
 export type StationAction =
@@ -20,7 +20,7 @@ export type StationAction =
   | 'fitRight'
   | 'ecm'
   | 'bomb'
-  | 'pod'
+  | 'bank'
   | 'life'
   | 'missile'
   | 'launch';
@@ -75,8 +75,15 @@ export function stationButtons(world: World, ctx: StationContext, w: number, h: 
       };
     }),
     { label: `Buy ECM  ${prices.equipment.ecm}cr`, enabled: affordable(world, prices.equipment.ecm), action: 'ecm' },
-    { label: `Buy Energy Bomb  ${prices.equipment.bomb}cr`, enabled: affordable(world, prices.equipment.bomb), action: 'bomb' },
-    { label: `Buy Escape Pod  ${prices.equipment.pod}cr`, enabled: !world.player.escapePod && affordable(world, prices.equipment.pod), action: 'pod' },
+    (() => {
+      const bombCap = energyBombCap(world.player.shipClass);
+      return {
+        label: `Buy Energy Bomb (${world.player.energyBombs}/${bombCap})  ${prices.equipment.bomb}cr`,
+        enabled: world.player.energyBombs < bombCap && affordable(world, prices.equipment.bomb),
+        action: 'bomb' as StationAction,
+      };
+    })(),
+    { label: `Buy Energy Bank  ${prices.equipment.bank}cr`, enabled: !world.player.energyBank && affordable(world, prices.equipment.bank), action: 'bank' },
     { label: `Buy Life  ${prices.equipment.life}cr`, enabled: world.player.lives < 5 && affordable(world, prices.equipment.life), action: 'life' },
     { label: `Missile +1  ${prices.equipment.missile}cr`, enabled: world.player.missileGrade < 4 && affordable(world, prices.equipment.missile), action: 'missile' },
     { label: launchArmed ? 'CONFIRM LAUNCH' : 'Launch', enabled: true, action: 'launch' },
@@ -128,8 +135,8 @@ export function drawStation(
     `Credits: ${world.econ.wallet}cr`,
     `Ship: ${ctx.ships.ships[world.player.shipClass]?.name ?? world.player.shipClass}`,
     `Lasers (${equippedCount(lasers)}/${totalHp} hp): ${fitted}`,
-    `Lives: ${world.player.lives}   Pod: ${world.player.escapePod ? 'yes' : 'no'}`,
-    `ECM: ${world.player.ecm}  Bombs: ${world.player.energyBombs}  Missile: L${world.player.missileGrade}`,
+    `Lives: ${world.player.lives}   Bank: ${world.player.energyBank ? 'yes' : 'no'}`,
+    `ECM: ${world.player.ecm}  Bombs: ${world.player.energyBombs}/${energyBombCap(world.player.shipClass)}  Missile: L${world.player.missileGrade}`,
   ];
   lines.forEach((t, i) => renderer.drawText(t, { x: 20, y: h - 130 + i * 20 }, { fill: '#9ab', font: '13px monospace', align: 'left' }));
 

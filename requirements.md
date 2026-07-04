@@ -1,10 +1,12 @@
 # Right on Commander — Requirements Specification
 
-**Version:** 1.7 (draft — all design decisions resolved)
+**Version:** 1.8 (draft — all design decisions resolved)
 **Author:** Chloe
 **Notation:** EARS (Easy Approach to Requirements Syntax)
 **Status:** Spec under construction — review
 
+> **Changelog 1.7 → 1.8:** Reversed the v1.0 no-HUD decision — added a **persistent bottom status bar** (ROC-HUD-2,3) showing hull, shield, missile level + countdown, energy bomb count and energy bank countdown alongside score/credits/lives (an ECM countdown is planned to join it later); the diegetic shield rings and damage particles stay too. **Death no longer restarts anything**: every death (wherever it happens — part 1, part 2, a boss fight) now just respawns the player **in place** once the ship's explosion has fully played out, superseding the old "restart the level" default and the part-2 checkpoint (ROC-LIFE-2, replacing ROC-BOSS-5/6/7). The player's own explosion is now bigger and longer-lived than a routine kill, and — since the ship can die at speed — it **does not carry the ship's momentum**, so it plays out **in place**; a new ship appears **500 ms after the explosion finishes**, flashing with its usual respawn invulnerability. **Removed the Escape Pod** entirely (ROC-LIFE-3 old wording). Added the **Energy Bomb auto-trigger** (ROC-DEF-2 revised): it now fires automatically instead of the ship dying — destroying every non-boss hazard and enemy shot/missile on screen, dealing a boss 50% of its current hull in damage (which can kill a weakened one), leaving the ship at 1 hull, and captioning **"Emergency energy bomb deployed"** — capped at **one** carried at a time, or **two** in the Fer-de-Lance. Added the **Energy Bank** (new, purchasable at dock): passively regenerates one shield ring every 15 seconds. Fixed **touch fire** to autofire continuously while held/dragged, matching the mouse (ROC-CTL-1,2) — needed for the beam laser to sustain on touch. Corrected the docking-sequence spec (ROC-DCKG-3) to match the station-as-backdrop behaviour already shipped: the Coriolis has no collision, and the shop opens automatically once it's held in view for a beat.
+>
 > **Changelog 1.6 → 1.7:** Specified the **mid- and end-of-level boss fights**. Added **§3.23 Boss encounters** (scroll stops for the fight, horizontal black-and-white boss health bar at the top of the screen, "RIGHT ON COMMANDER" kill text that fades, scroll resumes; **boss ECM** that harmlessly detonates player missiles 300 ms after launch on a 500 ms cooldown with an "ECM" caption; death at a boss respawns **in place** with the boss keeping its damage, death in part 2 resumes at the **start of part 2** — refining ROC-LIFE-2). Added **§3.24 L1 mid-boss: pirate hermit asteroid** (asteroid mesh replacing the Coriolis placeholder, Coriolis-style docking-port rectangle on the rotation axis, 2× Coriolis size at top-centre, slow y-rotation, adder launches every 5 s capped at 3 alive, no shields / 30-hit hull with **triple damage on the docking port**, 1,000 cr + guaranteed laser + 10 random cargo, survivors flee, whole-fight adder wave bonus). Added **§3.25 L1 end boss: Fer-de-Lance** (**all FdL rescaled 1.5×, including the player's; the boss renders 2.0×**, 8 shield rings, boss ECM, fast rounded-rectangle strafing track with direction reversals every 200–2000 ms, aimed laser every 400 ms, 1,000 cr + 10 cargo). Added **§3.26 Docking sequence** (2× rotating Coriolis scrolls in, guns/missiles disabled, dock through the port when within 30° of horizontal; collision = death, then the shop if lives remain) and **§3.27 Launch & hyperspace** (Coriolis departure on **every** launch, "Hyperspace [destination] 5" countdown, starfield stretches to full-height lines then settles, system info card with Elite facts).
 
 > **Changelog 1.5 → 1.6:** **Shields now hug the hull** instead of a separate ellipse (ROC-DMG-1,2,3,5 revised) — the collision shape and the rendered rings are both the hull's own silhouette, offset outward by a small gap (proportional to hull size), one increment per remaining ring; ship-to-ship ramming uses the same silhouette shape (dilated by each side's shield gap) instead of a bounding circle.
@@ -130,11 +132,14 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
 - **ROC-PWR-5** The system shall make the weapon/utility pickups (lasers §3.4, missiles §3.5, ECM, Energy Bomb) **collectable in flight as well as purchasable**.
 - **ROC-PWR-6** When a **mid-level boss** is destroyed, the system shall **always drop a laser power-up** (guaranteed), collectable by the player.
 
-### 3.7 ECM & Energy Bomb
+### 3.7 ECM, Energy Bomb & Energy Bank
 
 - **ROC-DEF-1** Where **ECM** is triggered, the system shall **destroy all missiles and bullets on screen** and then enter a **cooldown** before it can be used again.
-- **ROC-DEF-2** Where the **Energy Bomb** is triggered, the system shall **destroy all non-boss enemies, missiles and bullets on screen** (consuming one charge). The system shall **never destroy a mid- or end-of-level boss** with an Energy Bomb; at most it may apply limited, non-lethal damage.
-- **ROC-DEF-3** The system shall expose ECM and Energy Bomb via the partly-transparent touch buttons (§3.12) and bindable controls.
+- **ROC-DEF-2** *(v1.8 — auto-trigger)* When the player's hull would reach **zero** and an **Energy Bomb** is carried, the system shall trigger it **automatically instead of destroying the ship**: consume one charge, leave the ship at **1 hull** (bare survival — the next hit can still kill), **destroy every non-boss enemy, asteroid, and enemy shot/missile on screen**, and deal a **boss 50% of its current hull** in damage (enough to kill an already-weakened one). The system shall display **"Emergency energy bomb deployed"** near the top of the screen with a bright flash.
+- **ROC-DEF-2a** The system shall cap the number of Energy Bombs carried at **one**, or **two** while flying the **Fer-de-Lance** (§3.2).
+- **ROC-DEF-3** The system shall expose **ECM** via a partly-transparent touch button (§3.12) and bindable control; the Energy Bomb has **no manual trigger** — it is purely automatic (ROC-DEF-2).
+- **ROC-BANK-1** *(v1.8, new)* The system shall offer an **Energy Bank** as a one-time station purchase (§3.15).
+- **ROC-BANK-2** While the Energy Bank is owned, the system shall **regenerate one shield ring every 15 seconds** (capped at the ship's maximum), independently of any other shield-restoring pickup.
 
 ### 3.8 Economy: bounty, cargo & score
 
@@ -154,8 +159,8 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
   | Beam laser | 1,000 |
   | Military laser | 10,000 |
   | ECM | 2,000 |
-  | Energy bomb | 5,000 |
-  | Escape pod | tuned (see §5) |
+  | Energy bomb (max 1, or 2 in the Fer-de-Lance) | 5,000 |
+  | Energy bank | 5,000 |
   | Extra life (max 5 held) | tuned (see §5) |
   | Next ship (Cobra / Asp / Fer-de-Lance) | tuned per ROC-SHIP-1a |
 
@@ -210,14 +215,14 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
 ### 3.11 Screen & HUD
 
 - **ROC-HUD-1** The system shall run in **portrait aspect ratio**.
-- **ROC-HUD-2** The system shall display **no persistent HUD except score, credits and lives**, as simple white text.
-- **ROC-HUD-3** The system shall keep the screen otherwise clear and convey player shield/hull state **entirely diegetically** — via the player ship's own shield rings and hull-damage particles (§3.3) — with no gauges or bars.
+- **ROC-HUD-2** *(v1.8 — revises the v1.0 no-HUD decision)* The system shall display a **persistent status bar at the bottom of the screen**, as simple white/grey text, showing: **hull**, **shield**, **missile level with a countdown in seconds**, **energy bomb count**, and **energy bank countdown** — plus **score, credits and lives**. *(An ECM countdown is planned to join this row later.)*
+- **ROC-HUD-3** In addition to the numeric bar (ROC-HUD-2), the system shall keep conveying player shield/hull state **diegetically** too — via the player ship's own shield rings and hull-damage particles (§3.3) — so the two reinforce each other rather than replacing one another.
 
 ### 3.12 Controls
 
 - **ROC-CTL-1** Where a mouse is used, the system shall move the ship to follow the pointer and **autofire while the button is held**; a single click fires one shot (tap-fire fallback).
-- **ROC-CTL-2** Where touch is used, the system shall move the ship by drag and **fire on tap**.
-- **ROC-CTL-3** On touch, the system shall present **partly-transparent white buttons for ECM and Energy Bomb**.
+- **ROC-CTL-2** *(v1.8 — fixed touch parity)* Where touch is used, the system shall move the ship by drag and **fire continuously while the touch is held or dragged, matching ROC-CTL-1**; a single tap fires one shot (needed for the beam laser, which has no discrete "shot" to fire on a tap alone).
+- **ROC-CTL-3** On touch, the system shall present a **partly-transparent white button for ECM** (§3.7).
 - **ROC-CTL-4** The system shall support full **keyboard** control.
 - **ROC-CTL-5** The system shall support **game-controller** input.
 - **ROC-CTL-6** The system shall allow input remapping and persist it locally.
@@ -280,8 +285,8 @@ Shown on docking (§3.9), between levels.
 - **ROC-STN-2** The system shall provide a **Sell Cargo** action that converts all collected cargo (and banked surplus pickups) to credits and updates the wallet.
 - **ROC-STN-3** The system shall provide an **Upgrade Ship** action that lets the player **buy the next ship** in the ladder (§3.2) if they can afford it, carrying weapons forward per ROC-SHIP-5; if unaffordable, the action shall be disabled and indicate the shortfall.
 - **ROC-STN-4** The system shall provide **laser-fitting controls** that let the player **add a laser of any type (Pulse / Beam / Military) to any available firing direction (front / rear / left / right)**, up to the ship's hardpoint count and at most one per direction (§3.4), charging the per-type price (§3.8).
-- **ROC-STN-5** The system shall let the player buy **ECM** and **Energy Bomb** here at their listed prices (§3.8).
-- **ROC-STN-5a** The system shall let the player buy an **Escape Pod** and **additional lives** here (lives capped at 5, §3.16), at their tuned prices.
+- **ROC-STN-5** The system shall let the player buy **ECM** and **Energy Bomb** here at their listed prices (§3.8), the latter **capped at one carried (two in the Fer-de-Lance, ROC-DEF-2a)**.
+- **ROC-STN-5a** *(v1.8 — Escape Pod removed)* The system shall let the player buy an **Energy Bank** (a one-time purchase that passively regenerates one shield ring every 15 seconds, §3.7) and **additional lives** here (lives capped at 5, §3.16), at their tuned prices.
 - **ROC-STN-5b** The system shall let the player **upgrade the missile level** here (still timed, per ROC-ECO-9 / §3.5).
 - **ROC-STN-6** The system shall provide a **Launch** action that, **after an "Are you sure?" confirmation**, undocks the ship and begins the next level's launch sequence (§3.9).
 - **ROC-STN-7** While on the station screen, the system shall display the player's current **credit balance** so purchase decisions are informed.
@@ -291,8 +296,9 @@ Shown on docking (§3.9), between levels.
 - **ROC-DIF-1** The system shall provide a **global, tuneable difficulty** setting, selectable by the player, so the game can be **replayed at a harder setting**.
 - **ROC-DIF-2** The system shall implement difficulty primarily via the per-wave **enemy-count scaler** (ROC-ENM-14) plus enemy hp/shield/fire-rate multipliers.
 - **ROC-LIFE-1** The system shall start a run with **3 lives**.
-- **ROC-LIFE-2** When the player ship is destroyed, the system shall **deduct one life** and, by default, **restart the current level from its beginning**.
-- **ROC-LIFE-3** Where the player holds an **Escape Pod** at the moment of destruction, the system shall instead **respawn the player at the location of death**, **consume the pod** (the player then has no pod), and **not restart the level**.
+- **ROC-LIFE-2** *(v1.8 — always respawn in place)* When the player ship is destroyed (and no Energy Bomb saves it, ROC-DEF-2), the system shall **deduct one life immediately** and — once the explosion has fully played out (ROC-LIFE-2b) — **respawn the player at the location of death**. This applies **everywhere**: part 1, part 2, and mid-/end-boss fights (§3.23) all behave identically; nothing about the level, its waves, or a boss's damage/state is ever reset. *(Supersedes the old "restart the level from its beginning" default and the old Escape Pod.)*
+- **ROC-LIFE-2a** Where an **Energy Bomb** is carried at the moment the hull would reach zero, the system shall trigger it instead (ROC-DEF-2) — the ship never dies, no life is lost, and ROC-LIFE-2 does not apply.
+- **ROC-LIFE-2b** *(v1.8, new)* The player's own explosion shall be **larger and longer-lived** than an ordinary kill (§3.10, ROC-VIS-6), and — since the ship may be destroyed at speed — shall **not carry the ship's momentum**, so it plays out **in place** rather than drifting across the field. The system shall hide the ship for the explosion's full duration, then wait a further **500 ms**, before the new ship appears (flashing with respawn invulnerability, as any respawn does).
 - **ROC-LIFE-4** The system shall let the player **buy additional lives**, up to a **maximum of 5** held at once.
 - **ROC-LIFE-5** If lives reach **zero**, then the system shall end the run (game over) and proceed to score submission (§3.14).
 - **ROC-PROG-1** When the player **completes all four levels**, the system shall **unlock Elite mode** — a replay of the game at greater difficulty.
@@ -399,9 +405,7 @@ Framing shared by **every mid-level and end-of-level boss** (§3.9). Level 1's t
 - **ROC-BOSS-2** While a boss is alive, the system shall display a **horizontal black-and-white boss health bar at the top of the screen** that **reduces as the boss is damaged**.
 - **ROC-BOSS-3** When a boss is destroyed, after its explosion the system shall display the text **"RIGHT ON COMMANDER"** in white, then **fade it out**. *(This deliberately reuses the Elite-rating cry of ROC-RTG-3; both usages are retained.)*
 - **ROC-BOSS-4** When the boss-kill text has faded, the system shall **resume scrolling**: after a **mid-level** boss, the second half of the level (WAVES_B) plays; after an **end-of-level** boss, a space station scrolls into view for the docking sequence (§3.26).
-- **ROC-BOSS-5** *(respawn in place)* When the player dies during a boss fight, the system shall **respawn the player in place to continue the fight** — the boss (and any escorts) **retain their current damage and state**; a life is still deducted per §3.16.
-- **ROC-BOSS-6** *(part-2 checkpoint)* When the player dies during **part 2 of a level** (after the mid-boss, before the end boss), the system shall **resume at the start of part 2**, not the start of the level.
-- **ROC-BOSS-7** The system shall treat ROC-BOSS-5/6 as refinements of ROC-LIFE-2: the "restart the current level from its beginning" default now applies only to deaths in **part 1** (before the mid-boss is destroyed). Escape-pod behaviour (ROC-LIFE-3) is unchanged and takes precedence where a pod is held.
+- **ROC-BOSS-5** *(v1.8 — folded into the universal rule)* Dying during a boss fight is just the general case of ROC-LIFE-2: the player respawns in place once the explosion plays out, and the boss (and any escorts) **retain their current damage and state** exactly as everything else on the field does. *(ROC-BOSS-6/7, the old part-2 checkpoint and its part-1-only restart carve-out, are removed — every death behaves identically now; see ROC-LIFE-2.)*
 
 **Boss ECM** (carried by both Level 1 bosses; reusable by later bosses):
 
@@ -437,8 +441,7 @@ Framing shared by **every mid-level and end-of-level boss** (§3.9). Level 1's t
 
 - **ROC-DCKG-1** When the end boss's kill text has faded, the system shall **resume scrolling** and scroll a **Coriolis station into view** at **twice the size of the current one** (the old hermit placeholder), **rotating slowly on its y axis**.
 - **ROC-DCKG-2** While the docking sequence is active, the system shall **disable the player's guns and missiles**.
-- **ROC-DCKG-3** When the player moves the ship **into the docking port while the port is oriented within 30° of horizontal**, the system shall dock successfully and present the station shop screen (§3.15).
-- **ROC-DCKG-4** When the ship instead **collides with the station**, the system shall kill the player (**losing a life**, §3.16); if lives remain, the system shall then proceed to the **shop screen** (the dock is not retried); at zero lives the run ends as normal.
+- **ROC-DCKG-3** *(v1.8 — corrected: the fly-in docking minigame wasn't fun and was removed)* The docking Coriolis is a **backdrop only, with no collision** — it cannot kill the player. Once it has scrolled fully into view and held for a short beat, the system shall **open the station shop screen (§3.15) automatically**.
 
 ### 3.27 Launch & hyperspace sequence (v1.7)
 
@@ -477,13 +480,13 @@ The game shall be architected so that **almost all of it can be tested headless*
 
 All design open-questions are resolved:
 
-1. **Player self-status** — no HUD; status is fully diegetic via shield rings + hull-damage visuals (ROC-HUD-3). ✔
+1. **Player self-status** — *(v1.8, reversed)* a persistent bottom status bar (hull/shield/missile+countdown/bomb/bank/score/credits/lives, ROC-HUD-2) alongside the diegetic shield rings + hull-damage visuals (ROC-HUD-3). ✔
 2. **Gems when shot** — shatter (ROC-PWR-3). ✔
 3. **Missile levels** — upgradable at the station, still timed (ROC-ECO-9, ROC-STN-5b). ✔
-4. **Pricing & balance** — ship / pod / life / missile costs are tuning parameters, set against per-level bounty income via the **TS balance-simulation auto-player** (Vitest, design.md §15) once playable (ROC-SHIP-1a). ✔ (approach agreed; exact numbers are a build-time tuning task)
+4. **Pricing & balance** — ship / bank / life / missile costs are tuning parameters, set against per-level bounty income via the **TS balance-simulation auto-player** (Vitest, design.md §15) once playable (ROC-SHIP-1a). ✔ (approach agreed; exact numbers are a build-time tuning task)
 5. **Endgame / replay** — completing the 4 levels unlocks **Elite mode** (harder); completing Elite mode unlocks the **Thargoid ship** as playable; **high score table** maintained (ROC-PROG-1/2/3, ROC-LBD-1a). ✔
 
-Earlier resolutions: stack is JS/TS + Canvas 2D (AS-1); ships purchased and tuned to ~one per level (§3.2); rating is kill-based, separate from credits (ROC-RTG); Energy Bomb cannot destroy bosses (ROC-DEF-2); station screen (§3.15); data-driven composable waves (§3.13).
+Earlier resolutions: stack is JS/TS + Canvas 2D (AS-1); ships purchased and tuned to ~one per level (§3.2); rating is kill-based, separate from credits (ROC-RTG); station screen (§3.15); data-driven composable waves (§3.13).
 
 **Remaining before code:** only the numeric balance pass (item 4) — everything else is specified.
 

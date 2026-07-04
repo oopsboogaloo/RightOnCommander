@@ -199,7 +199,8 @@ World = {
   player: {             // persistent across deaths within a run
     shipClass, hardpoints, lasers: {front,rear,left,right}, // laser type or null [ROC-LAS-2]
     missileGrade, missileTimer,                              // [ROC-MIS-1..4]
-    ecm, energyBombs, escapePod, lives,                      // [ROC-LIFE-1..4]
+    ecm, energyBombs, energyBank, energyBankTimer, lives,    // [ROC-LIFE-1..4, ROC-BANK-1,2]
+    respawnPending: {x,z,timer} | null,   // wreck waiting out its explosion + 500ms [ROC-LIFE-2b]
   },
   econ: { wallet, score },          // credits vs lifetime score [ROC-ECO-2]
   cargo: { /* type -> tonnage */ }, // sellable at dock
@@ -251,9 +252,9 @@ A mesh = `{ vertices:Vec3[], edges:[i,j][], faces:{loop:int[], normal:Vec3}[] }`
 ### Other render
 - **Lasers:** `drawLine` white segments (pulse short, military fatter, beam full-length flash). `[ROC-LAS-4..6]`
 - **Shields:** N concentric rings hugging the hull's own projected silhouette (rounded outward offset, gap proportional to hull size and shield count) = remaining strength; drawn white @ 50% alpha, brief brighten on `shieldFlashTtl`. Collision uses the identical silhouette + gap, so a shot lands exactly where the outermost ring is drawn — see `hullRadius`/`shieldGap`/`SHIELD_GAP_FRAC` in `sim/systems/collision.ts` and `offsetPolygonPath` in `render/shieldRing.ts`. Ramming (ship-vs-ship contact) uses the same silhouettes dilated by each side's shield gap, instead of a bounding circle. `[ROC-DMG-1,2,3, ROC-DMG-6a]`
-- **Explosions:** scatter the dying mesh's edges as line particles + white circular `drawParticles`. `[ROC-VIS-6]`
+- **Explosions:** scatter the dying mesh's edges as line particles + white circular `drawParticles`. The player's own death (v1.8) uses a denser, longer-lived `PLAYER_EXPLOSION_PARTICLES` config with `base` velocity forced to zero — it plays out **in place**, not carried by the ship's speed. `[ROC-VIS-6, ROC-LIFE-2b]`
 - **Starfield:** slow-scrolling white-dot layer drawn first, behind everything. `[ROC-VIS-7]`
-- **Text/overlays:** score/credits/lives; floating bounty/cargo text; full-screen wave-bonus and rank-up flashes. `[ROC-HUD-2, ROC-VIS-8, ROC-ECO-1b, ROC-RTG-3]`
+- **Text/overlays:** persistent **bottom status bar** — hull/shield/missile+countdown/bomb/bank, plus score/credits/lives (v1.8; an ECM countdown is planned to join it) — floating bounty/cargo text; full-screen wave-bonus and rank-up flashes; a top-of-screen flash + caption on the energy-bomb auto-trigger. `[ROC-HUD-2,3, ROC-VIS-8, ROC-ECO-1b, ROC-RTG-3, ROC-DEF-2]`
 
 Renderer interpolates positions by `alpha` between the last two sim states for smoothness without sub-stepping the sim.
 
@@ -278,7 +279,7 @@ Renderer interpolates positions by `alpha` between the last two sim states for s
 - **Beam:** no projectile entity; on each tick while firing it raycasts the mount direction and applies `dps*DT` to the first target hit (continuous contact). `[ROC-LAS-5]`
 - **Military:** fatter/longer pulse projectile, highest damage, slightly slower cadence. `[ROC-LAS-6]`
 - **Missiles:** while `missileGrade>0`, auto-fire `grade` homing missiles per volley at nearest targets; `missileTimer` counts down `DT`; on expiry `grade--` and reset timer (remove at 0). Missiles are entities and destructible. `[ROC-MIS-1..5]`
-- **ECM:** clears all `projectile`+`missile` entities on field, then cooldown. **Energy bomb:** destroys all non-boss enemies + projectiles; bosses take capped non-lethal damage only. `[ROC-DEF-1,2]`
+- **ECM:** clears all `projectile`+`missile` entities on field, then cooldown. **Energy bomb** (v1.8 — auto-triggers instead of the ship dying, `gamestate.js`): destroys all non-boss enemies/asteroids + enemy projectiles/missiles; a boss takes 50% of its *current* hull as real damage (can kill an already-weakened one); the ship survives at 1 hull; capped at 1 carried (2 in the Fer-de-Lance). **Energy bank** (new): while owned, +1 shield ring every 15s (`energyBank.js`). `[ROC-DEF-1,2,2a; ROC-BANK-1,2]`
 
 ---
 
@@ -347,10 +348,10 @@ A single `difficulty` value scales **enemy count per wave** (primary live lever)
 ## 12. State machines
 
 ### Level FSM (`levelstate.js`) `[ROC-LVL-1,2, ROC-BOSS, ROC-DCKG, ROC-HYP]`
-`LAUNCH (Coriolis departure / witchspace) → HYPERSPACE → INFO → [ASTEROIDS] → WAVES_A → MID_BOSS → WAVES_B → END_BOSS → [VIPER_INTERCEPT if contraband] → DOCKING → DOCK → STATION`. Death branches per §3.16 as refined by ROC-BOSS-5..7 (see §12a). `MID_BOSS`/`END_BOSS` set `world.scroll = 0` and run the boss-bar/kill-text framing; `DOCKING` is the playable station-approach minigame; `DOCK` remains the shop.
+`LAUNCH (Coriolis departure / witchspace) → HYPERSPACE → INFO → [ASTEROIDS] → WAVES_A → MID_BOSS → WAVES_B → END_BOSS → [VIPER_INTERCEPT if contraband] → DOCKING → DOCK → STATION`. Death respawns in place per §3.16/ROC-LIFE-2 (v1.8) — the level state is never touched by a death, so nothing here resets. `MID_BOSS`/`END_BOSS` set `world.scroll = 0` and run the boss-bar/kill-text framing; `DOCKING` is a backdrop-only approach (no collision, opens the shop automatically); `DOCK` remains the shop.
 
 ### Game FSM (`gamestate.js`) `[ROC-PROG-1,2]`
-`TITLE → (fly-in) → LEVEL[1..4] → COMPLETE → (unlock Elite) → ELITE LEVEL[1..4] → (unlock Thargoid) → TITLE`. Death: `lives--`; escape-pod ⇒ respawn at death pos (consume pod); else respawn per the `levelState` checkpoint policy — **boss states**: respawn in place, keep every entity (boss damage persists); **WAVES_B**: restart part 2 only; **anything earlier**: restart the level; `lives==0` ⇒ GAME_OVER → score submit. `[ROC-LIFE-2,3,5; ROC-BOSS-5,6,7]`
+`TITLE → (fly-in) → LEVEL[1..4] → COMPLETE → (unlock Elite) → ELITE LEVEL[1..4] → (unlock Thargoid) → TITLE`. Death (v1.8): if an energy bomb is carried it auto-triggers instead (ROC-DEF-2) — no life lost, ship survives at 1 hull; otherwise `lives--` immediately, then once the player's in-place, momentum-free explosion has fully played out (`PLAYER_EXPLOSION_SEC`) plus a 500ms beat (`respawnDelaySec`), the ship **respawns at the exact death position** — always, regardless of `levelState` (boss fights, part 2, anywhere); `lives==0` ⇒ GAME_OVER → score submit, deferred the same way. `[ROC-LIFE-2,2a,2b,5; ROC-DEF-2]`
 
 ### 12a. Boss encounters, docking & hyperspace `[requirements §3.23–3.27]`
 
@@ -360,7 +361,7 @@ A single `difficulty` value scales **enemy count per wave** (primary live lever)
 - **Per-entity `scale`** multiplies `SHIP_SCALE` in the renderer's model matrix *and* in collision (silhouette scaling, `hullRadius`, ram tests) so hitbox always matches sprite. Content sets it: FdL 1.5 (ships.json + enemies.json), boss FdL 2.0, hermit and the docking Coriolis 2× the Coriolis' current drawn size. `[ROC-FDL-1, ROC-HERM-2, ROC-DCKG-1]`
 - **Hermit** (`ai.kind:'hermit'`): fixed at top-centre, slow y-spin with the docking port on the rotation axis facing the play plane; the port is a rectangle rendered over the hull — a "direct port hit" is judged by the **shot's path** (impact point traced forward along its velocity crossing the port rectangle), since collision stops a projectile at the hull's rim while the port sits on the face at the centre; such hits apply 3× damage. An adder launcher (5 s cadence, ≤3 alive, launch-from-rock spawns inherit the rock's current yaw and unwind in flight, else edge entry) runs until death; on death survivors switch to flee paths, and one whole-fight wave record backs the 50% bonus. `[ROC-HERM-*]`
 - **Strafe boss** (`ai.kind:'strafe'`): position parameterised along a rounded-rectangle track (arc-length t, signed direction); direction flips when an rng timer in [200, 2000] ms expires; aimed shot every 400 ms. `[ROC-FDL-3,4]`
-- **Docking** (`DOCKING`): weapons/missiles disabled; the 2× Coriolis scrolls down into the top of the field spinning slowly on y. Dock test: player silhouette fully inside the port rectangle **while** the port's long axis is within 30° of horizontal ⇒ enter `DOCK`; player-vs-station hull contact ⇒ death (normal life loss), and with lives remaining the FSM proceeds to `DOCK` anyway (no retry). `[ROC-DCKG-1..4]`
+- **Docking** (`DOCKING`): weapons/missiles disabled; the 2× Coriolis scrolls down into the top of the field, rolling slowly about its own docking-port axis — purely a backdrop, v1.8: **no collision**. Once it holds in view for `DOCK_SETTLE_SEC`, the FSM enters `DOCK` (the shop) automatically. `[ROC-DCKG-1..3]`
 - **Launch & hyperspace**: `LAUNCH` renders the departure Coriolis (pointing up-screen) scrolling away below the player; `HYPERSPACE` emits per-second countdown events (`Hyperspace <system> 5…1`, system name from level content), drives the `world.scroll` ramp, and hands over to `INFO` — a fading card of Elite-flavour facts for the level's system (extends blurbs content) — before the level proper. Plays on every launch, including the first. `[ROC-HYP-1..5]`
 
 ---
@@ -368,8 +369,8 @@ A single `difficulty` value scales **enemy count per wave** (primary live lever)
 ## 13. Screens
 
 - **Title** (`screens/title.js`): rotating wireframe **Sidewinder**, title/credits top, privacy disclaimer bottom; on start, the Sidewinder flies into play position and control transfers (one continuous transition driven by the same renderer). `[ROC-TTL-1..5]`
-- **Station** (`screens/station.js`): wireframe dock + docked ship (geometry varies by level), system blurb, **Sell Cargo / Upgrade Ship / fit lasers per direction / buy ECM·bomb·pod·life·missile-level / Launch (with confirm)**, current balance shown. `[ROC-STN-1..7, ROC-LORE-1,6]`
-- **HUD** (`screens/hud.js`): white text score/credits/lives only; everything else diegetic. `[ROC-HUD-2,3]`
+- **Station** (`screens/station.js`): wireframe dock + docked ship (geometry varies by level), system blurb, **Sell Cargo / Upgrade Ship / fit lasers per direction / buy ECM·bomb·bank·life·missile-level / Launch (with confirm)**, current balance shown. `[ROC-STN-1..7, ROC-LORE-1,6]`
+- **HUD** (v1.8): a persistent bottom status bar — hull/shield/missile+countdown/bomb/bank, plus score/credits/lives — alongside the diegetic shield rings/damage visuals. `[ROC-HUD-2,3]`
 
 Screens are pure render + emit intents back as `InputFrame` flags (e.g. `confirm`), so the **station is testable headlessly too** (assert that "Upgrade Ship" intent with sufficient wallet changes `shipClass` and carries lasers forward). `[ROC-STN-3, ROC-SHIP-5]`
 
@@ -430,7 +431,7 @@ All of the above run headless in CI with no display. `[ROC-TEST-8]`
 | Waves/enemies/AI `[ROC-ENM]` | `systems/waves.js`, `paths.js`, `ai.js`, `content/waves` |
 | Levels/bosses/witchspace `[ROC-LVL,L1-4]` | `systems/levelstate.js`, `content/levels` |
 | Visuals `[ROC-VIS]` | `render/` |
-| HUD/controls `[ROC-HUD,CTL]` | `screens/hud.js`, `input/` |
+| HUD/controls `[ROC-HUD,CTL]` | `platform/main.js` (bottom status bar, inline), `input/` |
 | Rating/persistence/progression `[ROC-RTG,LBD,PROG]` | `economy.js`, `gamestate.js`, `platform/storage.js` |
 | Station `[ROC-STN]` | `screens/station.js` |
 | Lives/difficulty `[ROC-LIFE,DIF]` | `gamestate.js`, difficulty scalers |

@@ -91,9 +91,11 @@ export function damageSystem(
     const proj = world.entities.get(hit.projectile);
     if (!proj || spent.has(hit.projectile)) continue; // projectile already consumed
 
-    // An invulnerable (just-spawned) or already-dead player soaks the shot harmlessly. [T6.4]
+    // An invulnerable (just-spawned), already-dead, or mid-explosion player soaks the shot
+    // harmlessly — a wreck waiting to respawn can't take further hits or re-trigger death. [T6.4]
     const playerImmune =
-      target.kind === 'player' && (world.mode === 'GAME_OVER' || world.player.invulnTtl > 0);
+      target.kind === 'player' &&
+      (world.mode === 'GAME_OVER' || world.player.invulnTtl > 0 || !!world.player.respawnPending);
     // A direct hit on a docking port (the hermit's weak spot) deals triple damage; the shot's
     // path from its impact point decides "direct". [ROC-HERM-8]
     const mult = portDamageMultiplier(target, proj.pos.x, proj.pos.z, proj.vel.x, proj.vel.z);

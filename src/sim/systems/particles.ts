@@ -43,6 +43,19 @@ export const DEFAULT_PARTICLES: ParticlesConfig = {
   sparkTtl: [0.05, 0.12],
 };
 
+// The player's own death is a bigger, showier, longer-lasting break-up than any other ship's —
+// denser burst, longer-lived pieces — so it reads as a dramatic moment, not a routine kill.
+// [ROC-LIFE-3]
+export const PLAYER_EXPLOSION_PARTICLES: ParticlesConfig = {
+  ...DEFAULT_PARTICLES,
+  explosionCount: [32, 46],
+  speed: [0.15, 0.5],
+  ttl: [1.4, 2.2],
+  fragSpeed: [0.15, 0.5],
+  fragSpin: [1.0, 3.0],
+  fragTtl: [1.6, 2.4],
+};
+
 // One edge of a ship mesh, projected to the play plane and pre-scaled to the rendered hull size.
 export interface FragSeg {
   ax: number;
@@ -193,13 +206,17 @@ export function particlesSystem(
   // Spawn from this step's damage events.
   for (const ev of world.events) {
     if (ev.type === 'destroyed') {
-      const base = (ev.vel as Vel) ?? ZERO;
-      burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.explosionCount), cfg, base);
+      const isPlayer = ev.kind === 'player';
+      const pcfg = isPlayer ? PLAYER_EXPLOSION_PARTICLES : cfg;
+      // The player's wreck doesn't carry the ship's own velocity — it happens in place, since the
+      // ship can be moving very fast and a drifting explosion would look wrong. [ROC-LIFE-3]
+      const base = isPlayer ? ZERO : ((ev.vel as Vel) ?? ZERO);
+      burst(world, rng, ev.pos as XYZ, randInt(rng, pcfg.explosionCount), pcfg, base);
       let segs = fragGeom && typeof ev.meshId === 'string' ? fragGeom[ev.meshId] : undefined;
       // Scale the wireframe shards to the entity's drawn size (bosses shatter big). [ROC-FDL-1]
       const s = typeof ev.scale === 'number' ? ev.scale : 1;
       if (segs && s !== 1) segs = segs.map((g) => ({ ax: g.ax * s, az: g.az * s, bx: g.bx * s, bz: g.bz * s }));
-      if (segs && segs.length) spawnFragments(world, rng, segs, ev.pos as XYZ, (ev.yaw as number) ?? 0, cfg, base);
+      if (segs && segs.length) spawnFragments(world, rng, segs, ev.pos as XYZ, (ev.yaw as number) ?? 0, pcfg, base);
     } else if (ev.type === 'fragments') {
       burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.fragmentCount), cfg, (ev.vel as Vel) ?? ZERO);
     } else if (ev.type === 'exhaust') {

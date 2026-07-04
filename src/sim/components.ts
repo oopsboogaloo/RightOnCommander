@@ -24,7 +24,6 @@ export type PickupType =
   | 'missile'
   | 'ecm'
   | 'bomb'
-  | 'pod'
   | 'life'
   | 'cargo'; // a tradeable commodity (see `commodity`) [ROC-CARGO-1]
 

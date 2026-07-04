@@ -105,3 +105,6 @@ export function nextShipId(ships: ShipsContent, current: string): string | null 
   const i = ships.ladder.indexOf(current);
   return i >= 0 && i + 1 < ships.ladder.length ? ships.ladder[i + 1] : null;
 }
+
+// How many energy bombs a ship can carry: the Fer-de-Lance's extra bay takes a second. [ROC-BOMB-2]
+export const energyBombCap = (shipClass: string): number => (shipClass === 'fer_de_lance' ? 2 : 1);

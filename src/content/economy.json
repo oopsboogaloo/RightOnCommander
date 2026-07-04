@@ -1,6 +1,6 @@
 {
   "lasers": { "pulse": 100, "beam": 1000, "military": 10000 },
-  "equipment": { "ecm": 2000, "bomb": 5000, "pod": 1500, "life": 3000, "missile": 750 },
+  "equipment": { "ecm": 2000, "bomb": 5000, "bank": 5000, "life": 3000, "missile": 750 },
   "cargo": {
     "fuel": 5, "gems": 120, "laser": 80, "default": 10,
     "Food": 5, "Textiles": 8, "Radioactives": 20, "Slaves": 12, "Liquor/Wines": 18,

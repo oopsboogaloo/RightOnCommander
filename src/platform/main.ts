@@ -21,14 +21,14 @@ import {
   fitLaserAt,
   buyEcm,
   buyEnergyBomb,
-  buyEscapePod,
+  buyEnergyBank,
   buyLife,
   upgradeMissile,
   launch,
   type PricesContent,
   type StationContext,
 } from '../sim/systems/station.js';
-import { loadShips, type LaserType } from '../sim/systems/ships.js';
+import { loadShips, energyBombCap, type LaserType } from '../sim/systems/ships.js';
 import { SPLINTER_HIT_SCALE } from '../sim/systems/asteroids.js';
 import { hyperCountdown, BOSS_FADE_SEC } from '../sim/systems/levelstate.js';
 import { stationButtons, buttonAt, drawStation, type StationAction } from '../render/screens/station.js';
@@ -122,7 +122,7 @@ function runStationAction(action: StationAction): void {
     case 'fitRight': fitLaserAt(w, stationCtx, 'right', selectedLaser); break;
     case 'ecm': buyEcm(w, stationCtx); break;
     case 'bomb': buyEnergyBomb(w, stationCtx); break;
-    case 'pod': buyEscapePod(w, stationCtx); break;
+    case 'bank': buyEnergyBank(w, stationCtx); break;
     case 'life': buyLife(w, stationCtx); break;
     case 'missile': upgradeMissile(w, stationCtx); break;
     case 'launch':
@@ -201,6 +201,12 @@ let ecmTextTtl = 0;
 const ECM_FLASH_SEC = 0.12;
 const ECM_TEXT_SEC = 0.8;
 
+// Energy-bomb presentation: a brighter, longer flash and a caption at the top. [ROC-BOMB-4]
+let bombFlashTtl = 0;
+let bombTextTtl = 0;
+const BOMB_FLASH_SEC = 0.25;
+const BOMB_TEXT_SEC = 2.5;
+
 function drainFloaters(events: ReturnType<typeof sim.step>): void {
   for (const ev of events) {
     if (ev.type === 'floatingText' && (ev.category === 'bounty' || ev.category === 'cargo')) {
@@ -211,10 +217,15 @@ function drainFloaters(events: ReturnType<typeof sim.step>): void {
     } else if (ev.type === 'ecm') {
       ecmFlashTtl = ECM_FLASH_SEC;
       ecmTextTtl = ECM_TEXT_SEC;
+    } else if (ev.type === 'energyBombDeployed') {
+      bombFlashTtl = BOMB_FLASH_SEC;
+      bombTextTtl = BOMB_TEXT_SEC;
     }
   }
   ecmFlashTtl = Math.max(0, ecmFlashTtl - DT);
   ecmTextTtl = Math.max(0, ecmTextTtl - DT);
+  bombFlashTtl = Math.max(0, bombFlashTtl - DT);
+  bombTextTtl = Math.max(0, bombTextTtl - DT);
   for (let i = floaters.length - 1; i >= 0; i--) {
     floaters[i].age += DT;
     if (floaters[i].age >= floaters[i].ttl) floaters.splice(i, 1);
@@ -335,12 +346,13 @@ startGameLoop({
       renderer.drawWorldLine(a, c, { stroke: '#fff', lineWidth: 2 });
     }
 
-    // Player ship, interpolated between the last two sim states. Blink while invulnerable
-    // (just spawned / after a hit) so the i-frames read on screen. [ROC-LIFE-2]
+    // Player ship, interpolated between the last two sim states. Hidden while the wreck's
+    // dramatic explosion plays out (respawnPending); blinks while invulnerable just after a fresh
+    // ship appears, so the i-frames read on screen. [ROC-LIFE-2,3]
     const player = sim.state.entities.get(PLAYER_ID)!;
     const invuln = sim.state.player.invulnTtl;
     const blinkOff = invuln > 0 && Math.floor(invuln / 0.1) % 2 === 1;
-    if (sim.state.mode !== 'GAME_OVER' && !blinkOff) {
+    if (sim.state.mode !== 'GAME_OVER' && !blinkOff && !sim.state.player.respawnPending) {
       const pmesh = (player.meshId && MESHES[player.meshId]) || MESHES.sidewinder;
       const pos = vec3(lerp(prev.x, curr.x, alpha), lerp(prev.y, curr.y, alpha), lerp(prev.z, curr.z, alpha));
       const model = modelMatrix(
@@ -405,6 +417,20 @@ startGameLoop({
       renderer.drawText('ECM', { x: w / 2, y: h - 24 }, { fill: '#fff', font: '20px monospace', align: 'center' });
     }
 
+    // Emergency energy bomb: a brighter flash + a caption at the top. [ROC-BOMB-4]
+    if (bombFlashTtl > 0) {
+      ctx!.fillStyle = `rgba(255,255,255,${(0.85 * (bombFlashTtl / BOMB_FLASH_SEC)).toFixed(2)})`;
+      ctx!.fillRect(0, 0, w, h);
+    }
+    if (bombTextTtl > 0) {
+      const a = Math.min(1, bombTextTtl / (BOMB_TEXT_SEC * 0.4));
+      renderer.drawText('Emergency energy bomb deployed', { x: w / 2, y: 24 }, {
+        fill: `rgba(255,255,255,${a.toFixed(2)})`,
+        font: '16px monospace',
+        align: 'center',
+      });
+    }
+
     // Hyperspace countdown: "Hyperspace Lave 5" ... 1. [ROC-HYP-2]
     if (sim.state.levelState === 'HYPERSPACE') {
       const n = hyperCountdown(sim.state.levelTimer);
@@ -427,6 +453,24 @@ startGameLoop({
 
     if (sim.state.mode === 'GAME_OVER') {
       renderer.drawText('GAME OVER', { x: w / 2, y: h / 2 }, { fill: '#f55', font: '32px monospace', align: 'center' });
+    } else {
+      // Persistent status bar, bottom of the screen: hull, shield, missile level + countdown,
+      // energy bomb, energy bank countdown, score/credits/lives. An ECM countdown will join this
+      // row later. [ROC-HUD-2,3]
+      const ps = sim.state.player;
+      const missileStr = ps.missileGrade > 0 ? `Missile L${ps.missileGrade} ${Math.ceil(ps.missileTimer)}s` : 'Missile -';
+      const bombCap = energyBombCap(ps.shipClass);
+      const bankStr = ps.energyBank ? `Bank ${Math.ceil(ps.energyBankTimer)}s` : 'Bank -';
+      renderer.drawText(
+        `Hull ${player.hull ?? 0}/${player.hullMax ?? 0}   Shield ${player.shield ?? 0}/${player.shieldMax ?? 0}   ${missileStr}   Bomb ${ps.energyBombs}/${bombCap}   ${bankStr}`,
+        { x: w / 2, y: h - 32 },
+        { fill: '#9ab', font: '12px monospace', align: 'center' },
+      );
+      renderer.drawText(
+        `Score ${sim.state.econ.score}   Credits ${sim.state.econ.wallet}cr   Lives ${ps.lives}`,
+        { x: w / 2, y: h - 14 },
+        { fill: '#9ab', font: '12px monospace', align: 'center' },
+      );
     }
 
     renderer.endFrame(alpha);

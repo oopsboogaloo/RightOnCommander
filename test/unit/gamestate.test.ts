@@ -1,14 +1,15 @@
-// T6.4: the player can be shot/rammed, and losing all hull spends a life and restarts the
-// level — or, with an escape pod, respawns at the death point. Game over at zero lives, and
-// lives stay within 0..5. [ROC-LIFE-1..5, ROC-DMG-6a]
+// T6.4: the player can be shot/rammed, and losing all hull spends a life; the energy bomb
+// auto-triggers to save the ship if one is carried; otherwise the ship's dramatic explosion
+// plays out and a beat later a new one appears in place — nothing about the level ever resets.
+// Game over at zero lives, and lives stay within 0..5. [ROC-LIFE-1..5, ROC-DMG-6a, ROC-BOMB-1..4]
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { makeWorld, PLAYER_ID } from '../../src/sim/world.js';
 import { vec3 } from '../../src/sim/math/vec3.js';
 import type { Entity } from '../../src/sim/components.js';
-import { gamestateSystem, DEFAULT_GAMESTATE, MAX_LIVES } from '../../src/sim/systems/gamestate.js';
+import { gamestateSystem, DEFAULT_GAMESTATE, MAX_LIVES, PLAYER_EXPLOSION_SEC } from '../../src/sim/systems/gamestate.js';
 import { collisionSystem, meshSilhouette } from '../../src/sim/systems/collision.js';
 import { damageSystem } from '../../src/sim/systems/damage.js';
 import { SHIP_SCALE } from '../../src/sim/index.js';
@@ -17,6 +18,13 @@ import type { Pt } from '../../src/sim/math/geom2.js';
 
 const DT = 1 / 120;
 const collCfg = { dt: DT, cellSize: 1, getSilhouette: () => undefined, colliderScale: 1 };
+const CFG = { ...DEFAULT_GAMESTATE, colliderScale: 1 };
+
+// Steps enough to carry the wreck through its full explosion + respawn delay. [ROC-LIFE-3]
+const RESPAWN_STEPS = Math.ceil((PLAYER_EXPLOSION_SEC + DEFAULT_GAMESTATE.respawnDelaySec + 0.1) / DT);
+const runOutPending = (w: ReturnType<typeof makeWorld>): void => {
+  for (let i = 0; i < RESPAWN_STEPS; i++) gamestateSystem(w, DT, CFG);
+};
 
 function addEnemyShot(w: ReturnType<typeof makeWorld>, pos = vec3(0, 0, 0)): Entity {
   const id = w.nextId++;
@@ -63,18 +71,18 @@ describe('player takes damage', () => {
     const e = addEnemyShip(w, vec3(0, 0, 0)); // overlapping the player at origin
     e.hull = 99; // durable, so it survives the ram and we can test the player i-frames
     e.hullMax = 99;
-    gamestateSystem(w, DT, undefined, { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    gamestateSystem(w, DT, CFG);
     expect(w.entities.get(PLAYER_ID)!.shield).toBe(3);
     expect(w.player.invulnTtl).toBeGreaterThan(0);
     const before = w.entities.get(PLAYER_ID)!.shield;
-    gamestateSystem(w, DT, undefined, { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    gamestateSystem(w, DT, CFG);
     expect(w.entities.get(PLAYER_ID)!.shield).toBe(before); // i-frames held
   });
 
   it('ramming wrecks a fighter and only dents a boss', () => {
     const w = makeWorld(1);
     const fighter = addEnemyShip(w, vec3(0, 0, 0)); // hull 3 < ramDamage 4
-    gamestateSystem(w, DT, undefined, { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    gamestateSystem(w, DT, CFG);
     expect(w.entities.has(fighter.id)).toBe(false); // destroyed by the ram
 
     const w2 = makeWorld(1);
@@ -82,47 +90,83 @@ describe('player takes damage', () => {
     boss.kind = 'boss';
     boss.hull = 30;
     boss.hullMax = 30;
-    gamestateSystem(w2, DT, undefined, { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    gamestateSystem(w2, DT, CFG);
     expect(w2.entities.has(boss.id)).toBe(true); // survives
     expect(boss.hull).toBe(26); // chipped by ramDamage
   });
 });
 
 describe('death, lives & respawn', () => {
-  it('losing all hull spends a life and restarts the level at full health', () => {
+  it('losing all hull spends a life immediately, then respawns in place once the explosion plays out', () => {
     const w = makeWorld(1);
     const p = w.entities.get(PLAYER_ID)!;
     p.shield = 0;
     p.hull = 0;
     p.pos = vec3(0.5, 0, 0.7);
-    const restart = vi.fn();
-    gamestateSystem(w, DT, restart, { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    gamestateSystem(w, DT, CFG);
 
-    expect(w.player.lives).toBe(2);
-    expect(restart).toHaveBeenCalledOnce();
+    expect(w.player.lives).toBe(2); // spent right away
+    expect(w.player.respawnPending).toBeTruthy(); // wreck waits, nothing has respawned yet
+    expect(p.hull).toBe(0); // still a wreck
+    expect(w.mode).not.toBe('GAME_OVER');
+
+    runOutPending(w);
+    expect(w.player.respawnPending).toBeNull();
     expect(p.hull).toBe(p.hullMax);
     expect(p.shield).toBe(p.shieldMax);
-    expect(p.pos).toEqual(vec3(0, 0, 0)); // restart recentres the player
+    expect(p.pos).toEqual(vec3(0.5, 0, 0.7)); // respawns in place, not recentred [ROC-LIFE-2]
     expect(w.player.invulnTtl).toBeGreaterThan(0);
   });
 
-  it('an escape pod respawns at the death point, consumes the pod and the cargo, no life lost', () => {
+  it('freezes the wreck through the pending window: further hits and ram checks do nothing', () => {
     const w = makeWorld(1);
     const p = w.entities.get(PLAYER_ID)!;
     p.shield = 0;
     p.hull = 0;
-    p.pos = vec3(0.5, 0, 0.7);
-    w.player.escapePod = true;
-    w.cargo = { gold: 3 };
-    const restart = vi.fn();
-    gamestateSystem(w, DT, restart, { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    gamestateSystem(w, DT, CFG);
+    expect(w.player.lives).toBe(2);
 
-    expect(w.player.lives).toBe(3); // pod saved the life
-    expect(w.player.escapePod).toBe(false);
-    expect(w.cargo).toEqual({});
-    expect(restart).not.toHaveBeenCalled();
-    expect(p.pos).toEqual(vec3(0.5, 0, 0.7)); // respawn at the death point
-    expect(p.hull).toBe(p.hullMax);
+    const e = addEnemyShip(w, { ...p.pos });
+    e.hull = 99;
+    e.hullMax = 99;
+    gamestateSystem(w, DT, CFG); // a ram-worthy overlap sits right on the wreck
+    expect(w.player.lives).toBe(2); // no second life lost
+    expect(p.hull).toBe(0); // still just the wreck, untouched
+  });
+
+  it('the energy bomb auto-triggers instead of the ship dying', () => {
+    const w = makeWorld(1);
+    w.player.energyBombs = 1;
+    const p = w.entities.get(PLAYER_ID)!;
+    p.shield = 0;
+    p.hull = 0;
+    const enemy = addEnemyShip(w, vec3(0.9, 0, 0.9)); // away from the player, just present on the field
+    const boss: Entity = { id: w.nextId++, kind: 'boss', pos: vec3(-0.5, 0, 0.5), vel: vec3(), yaw: 0, bank: 0, hull: 40, hullMax: 40 };
+    w.entities.set(boss.id, boss);
+    const shot = addEnemyShot(w, vec3(0.2, 0, 0.2));
+
+    gamestateSystem(w, DT, CFG);
+
+    expect(w.player.energyBombs).toBe(0); // consumed
+    expect(p.hull).toBe(1); // bare survival, not a full heal
+    expect(w.player.lives).toBe(3); // no life spent — the ship never died
+    expect(w.player.respawnPending).toBeNull(); // no explosion/respawn sequence at all
+    expect(w.entities.has(enemy.id)).toBe(false); // wiped
+    expect(w.entities.has(shot.id)).toBe(false); // enemy bullets wiped too
+    expect(boss.hull).toBe(20); // bosses just take 50% of their current hull
+    expect(w.events.some((ev) => ev.type === 'energyBombDeployed')).toBe(true);
+  });
+
+  it('rounds the boss blast damage up to at least 1', () => {
+    const w = makeWorld(1);
+    w.player.energyBombs = 1;
+    const p = w.entities.get(PLAYER_ID)!;
+    p.shield = 0;
+    p.hull = 0;
+    const boss: Entity = { id: w.nextId++, kind: 'boss', pos: vec3(0, 0, 0.5), vel: vec3(), yaw: 0, bank: 0, hull: 1, hullMax: 40 };
+    w.entities.set(boss.id, boss);
+    gamestateSystem(w, DT, CFG);
+    expect(w.entities.has(boss.id)).toBe(false); // 1 hull, 50% rounds to at least 1 -> destroyed
   });
 
   const cargoWreck = (w: ReturnType<typeof makeWorld>): Entity[] =>
@@ -135,7 +179,7 @@ describe('death, lives & respawn', () => {
     p.hull = 0;
     p.pos = vec3(0.2, 0, 0.5);
     w.cargo = { gold: 2, furs: 3 }; // 5 tonnes
-    gamestateSystem(w, DT, vi.fn(), { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    gamestateSystem(w, DT, CFG);
 
     const wreck = cargoWreck(w);
     expect(wreck).toHaveLength(5); // one canister per tonne [ROC-CARGO-6]
@@ -149,7 +193,7 @@ describe('death, lives & respawn', () => {
     p.shield = 0;
     p.hull = 0;
     w.cargo = { gold: 25 };
-    gamestateSystem(w, DT, vi.fn(), { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    gamestateSystem(w, DT, CFG);
     expect(cargoWreck(w)).toHaveLength(10); // never more than 10 [ROC-CARGO-6]
   });
 
@@ -158,24 +202,27 @@ describe('death, lives & respawn', () => {
     const p = w.entities.get(PLAYER_ID)!;
     p.shield = 0;
     p.hull = 0;
-    gamestateSystem(w, DT, vi.fn(), { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    gamestateSystem(w, DT, CFG);
     expect(cargoWreck(w)).toHaveLength(0);
   });
 
-  it('runs out of lives into GAME_OVER and then stops resolving', () => {
+  it('runs out of lives into GAME_OVER only once the explosion has played out', () => {
     const w = makeWorld(1);
     w.player.lives = 1;
     const p = w.entities.get(PLAYER_ID)!;
     p.shield = 0;
     p.hull = 0;
-    gamestateSystem(w, DT, undefined, { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    gamestateSystem(w, DT, CFG);
     expect(w.player.lives).toBe(0);
+    expect(w.mode).not.toBe('GAME_OVER'); // not yet — the wreck is still exploding
+
+    runOutPending(w);
     expect(w.mode).toBe('GAME_OVER');
     expect(w.events.some((e) => e.type === 'gameOver')).toBe(true);
 
     // No respawn loop: a further tick is a no-op once over.
     w.events = [];
-    gamestateSystem(w, DT, undefined, { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    gamestateSystem(w, DT, CFG);
     expect(w.events).toEqual([]);
   });
 
@@ -186,8 +233,9 @@ describe('death, lives & respawn', () => {
     const p = w.entities.get(PLAYER_ID)!;
     p.shield = 0;
     p.hull = 0;
-    gamestateSystem(w, DT, undefined, { ...DEFAULT_GAMESTATE, colliderScale: 1 });
+    gamestateSystem(w, DT, CFG);
     expect(w.player.lives).toBe(0);
+    runOutPending(w);
     expect(w.mode).toBe('GAME_OVER');
   });
 });
@@ -225,13 +273,13 @@ describe('ramming hugs the hull silhouette (not a bounding circle)', () => {
     // z=0.2 is the exact separation that the old bounding-circle ram test falsely triggered at,
     // ~14px before the drawn hulls actually met (both unshielded here). [DEFECTS review]
     const { w, player } = ramWorld(vec3(0, 0, 0.2));
-    gamestateSystem(w, DT, undefined, realCfg);
+    gamestateSystem(w, DT, realCfg);
     expect(player.hull).toBe(3); // no contact damage: hulls are still clear of each other
   });
 
   it('DOES ram head-on once the hulls actually touch', () => {
     const { w, player } = ramWorld(vec3(0, 0, 0.14));
-    gamestateSystem(w, DT, undefined, realCfg);
+    gamestateSystem(w, DT, realCfg);
     expect(player.hull).toBe(2); // contact damage applied
   });
 
@@ -239,17 +287,17 @@ describe('ramming hugs the hull silhouette (not a bounding circle)', () => {
     // x=0.24: the old circle-vs-circle test (radius sum 0.21) missed this despite the drawn
     // wingtips visibly overlapping. [DEFECTS review]
     const { w, player } = ramWorld(vec3(0.24, 0, 0));
-    gamestateSystem(w, DT, undefined, realCfg);
+    gamestateSystem(w, DT, realCfg);
     expect(player.hull).toBe(2);
   });
 
   it('a shield extends the ram range by its own gap, but still not out to the old false-positive distance', () => {
     const { w, player } = ramWorld(vec3(0, 0, 0.18), 2); // within a 2-ring shield's gap of the hull
-    gamestateSystem(w, DT, undefined, realCfg);
+    gamestateSystem(w, DT, realCfg);
     expect(player.shield).toBe(1); // rammed (shield ring absorbs it)
 
     const { w: w2, player: player2 } = ramWorld(vec3(0, 0, 0.2), 2); // still the old defect's distance
-    gamestateSystem(w2, DT, undefined, realCfg);
+    gamestateSystem(w2, DT, realCfg);
     expect(player2.shield).toBe(2); // untouched: even shielded, this is still outside the gap
   });
 });

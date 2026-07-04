@@ -25,10 +25,11 @@ import { aiSystem } from './systems/ai.js';
 import { missilesSystem } from './systems/missiles.js';
 import { dropsSystem } from './systems/drops.js';
 import { pickupsSystem } from './systems/pickups.js';
-import { startLevel, enterLevelState, levelStateSystem, type LevelDef } from './systems/levelstate.js';
+import { startLevel, levelStateSystem, type LevelDef } from './systems/levelstate.js';
 import { gamestateSystem, DEFAULT_GAMESTATE } from './systems/gamestate.js';
 import { bossSystem } from './systems/boss.js';
 import { ecmSystem } from './systems/ecm.js';
+import { energyBankSystem } from './systems/energyBank.js';
 import { loadContent } from './content/loadContent.js';
 
 // Fixed sim tick, in seconds. Must match the shell loop's DT (platform/loop.ts). [design §3]
@@ -134,38 +135,13 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     world.ecm = { fuse: -1, cooldown: 0 };
   }
 
-  // Re-run the level's opening after a death that costs a life.
+  // Re-run the level's opening. Deaths never call this any more (they respawn in place,
+  // preserving whatever waves/asteroids/boss fight was underway); only relaunch() (leaving the
+  // station after docking, to fly the next level fresh) uses it. [ROC-LIFE-2]
   function restartLevel(): void {
     if (!level) return;
     clearCombat();
     startLevel(world, level, waveCtx);
-  }
-
-  // Death checkpoint policy: where a spent life resumes. Boss fights respawn the player in
-  // place and continue (the boss keeps its damage); a part-2 death resumes at the start of
-  // part 2; a docking crash proceeds straight to the shop; anything earlier restarts the
-  // level. Returns the respawn point. [ROC-BOSS-5,6,7, ROC-DCKG-4]
-  function resumeAfterDeath(deathX: number, deathZ: number): { x: number; z: number } {
-    if (!level) return { x: 0, z: 0 };
-    switch (world.levelState) {
-      case 'MID_BOSS':
-      case 'END_BOSS':
-      case 'VIPER_INTERCEPT':
-        return { x: deathX, z: deathZ }; // fight on — nothing is reset [ROC-BOSS-5]
-      case 'WAVES_B':
-        clearCombat();
-        world.scroll = 1;
-        world.bossFadeTtl = 0;
-        enterLevelState(world, 'WAVES_B', level, waveCtx); // part-2 checkpoint [ROC-BOSS-6]
-        return { x: 0, z: 0 };
-      case 'DOCKING':
-        clearCombat();
-        enterLevelState(world, 'DOCK', level, waveCtx); // crash still reaches the shop [ROC-DCKG-4]
-        return { x: 0, z: 0 };
-      default:
-        restartLevel();
-        return { x: 0, z: 0 };
-    }
   }
 
   function step(input: InputFrame): SimEvent[] {
@@ -189,12 +165,13 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
       colliderScale: SHIP_SCALE,
     });
     damageSystem(world, hits, SIM_DT);
-    gamestateSystem(world, SIM_DT, resumeAfterDeath, {
+    gamestateSystem(world, SIM_DT, {
       ...DEFAULT_GAMESTATE,
       colliderScale: SHIP_SCALE,
       getSilhouette: (id) => silhouettes[id],
       getHullRadius: (id) => hullRadii[id],
     });
+    energyBankSystem(world, SIM_DT); // very slow passive shield regen, if fitted [ROC-BANK-1,2]
     asteroidSplitSystem(world, rng);
     dropsSystem(world, rng);
     pickupsSystem(world, SIM_DT);

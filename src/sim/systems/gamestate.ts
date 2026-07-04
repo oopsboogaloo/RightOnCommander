@@ -1,14 +1,17 @@
 // Player survival FSM: contact (ramming) damage, post-hit/respawn invulnerability, and what
-// happens when the player's hull is gone — an escape pod respawns at the death point, otherwise a
-// life is spent and the level restarts; at zero lives the game is over. Either way the hold is
-// lost: the cargo is jettisoned as tumbling canister wreckage. Bullet damage to the player is
-// applied in damageSystem; this resolves the consequences. [tasks T6.4, ROC-LIFE-1..5, ROC-CARGO-6]
+// happens when the player's hull would reach zero — an energy bomb auto-triggers to save the
+// ship if one is carried, otherwise a life is spent and the ship respawns in place once its
+// dramatic, in-place explosion has fully played out (nothing about the level/waves/boss ever
+// resets); at zero lives the game is over. Either way the hold is lost: the cargo is jettisoned
+// as tumbling canister wreckage. Bullet damage to the player is applied in damageSystem; this
+// resolves the consequences. [tasks T6.4, ROC-LIFE-1..5, ROC-CARGO-6, ROC-BOMB-1..4]
 
 import type { Entity } from '../components.js';
 import { PLAYER_ID, type World } from '../world.js';
 import { applyDamage } from './damage.js';
 import { convexPolygonsDistanceSq, type Pt } from '../math/geom2.js';
 import { transformSilhouette, hullRadius, shieldGap } from './collision.js';
+import { PLAYER_EXPLOSION_PARTICLES } from './particles.js';
 
 export const MAX_LIVES = 5; // [ROC-LIFE-5]
 
@@ -16,7 +19,9 @@ export interface GamestateConfig {
   contactDamage: number; // hull/shield the player loses when rammed
   ramDamage: number; // hull/shield the rammed ship loses — enough to wreck a fighter, chip a boss
   contactInvuln: number; // brief i-frames after a contact so a touch costs one ring, not the lot
-  respawnInvuln: number; // i-frames granted on respawn / level restart
+  respawnInvuln: number; // i-frames granted on respawn
+  respawnDelaySec: number; // extra beat after the explosion fully plays out, before the new ship appears [ROC-LIFE-3]
+  bombBossDamageFrac: number; // fraction of a boss's current hull the energy-bomb blast deals [ROC-BOMB-3]
   colliderScale: number; // matches the rendered hull size (SHIP_SCALE)
   getSilhouette?: (meshId: string) => Pt[] | undefined; // local-space hull silhouettes
   getHullRadius?: (meshId: string) => number | undefined; // precomputed hullRadius() per mesh
@@ -27,8 +32,17 @@ export const DEFAULT_GAMESTATE: GamestateConfig = {
   ramDamage: 4,
   contactInvuln: 0.6,
   respawnInvuln: 1.5,
+  respawnDelaySec: 0.5,
+  bombBossDamageFrac: 0.5,
   colliderScale: 1,
 };
+
+// How long the player's dramatic explosion takes to fully play out (the longest-lived particles/
+// fragments it spawns), so the respawn timer never cuts it short. [ROC-LIFE-3]
+export const PLAYER_EXPLOSION_SEC = Math.max(
+  PLAYER_EXPLOSION_PARTICLES.ttl[1],
+  PLAYER_EXPLOSION_PARTICLES.fragTtl[1],
+);
 
 const radius = (rx: number | undefined, rz: number | undefined, scale: number): number =>
   Math.max(rx ?? 0.3, rz ?? 0.3) * scale;
@@ -104,21 +118,49 @@ function respawnPlayer(world: World, x: number, z: number, invuln: number): void
   world.player.invulnTtl = invuln;
 }
 
-// Where a spent life resumes play, decided by the levelState checkpoint policy the sim supplies:
-// boss fights respawn in place (the fight — and the boss's damage — continues), part 2 restarts
-// at WAVES_B, a docking crash proceeds to the shop, anything earlier restarts the level. The
-// callback resets the world as needed and returns the respawn point. [ROC-BOSS-5,6,7, ROC-DCKG-4]
-export type DeathResume = (deathX: number, deathZ: number) => { x: number; z: number };
+// Emergency energy bomb: instead of the ship dying, one bomb is spent to clear the board — every
+// enemy, asteroid and enemy shot/missile is destroyed outright; a boss merely takes a chunk of
+// damage. The shell flashes "Emergency energy bomb deployed" on the energyBombDeployed event.
+// [ROC-BOMB-1,3,4]
+function detonateEnergyBomb(world: World, cfg: GamestateConfig): void {
+  for (const e of [...world.entities.values()]) {
+    if (e.kind === 'enemy' || e.kind === 'asteroid') {
+      world.entities.delete(e.id);
+    } else if ((e.kind === 'projectile' || e.kind === 'missile') && e.team === 'enemy') {
+      world.entities.delete(e.id);
+    } else if (e.kind === 'boss' && (e.hull ?? 0) > 0) {
+      applyDamage(world, e, Math.max(1, Math.round((e.hull ?? 0) * cfg.bombBossDamageFrac)));
+    }
+  }
+  world.events.push({ type: 'energyBombDeployed' });
+  world.events.push({ type: 'sfx', id: 'energy_bomb' });
+}
 
 export function gamestateSystem(
   world: World,
   dt: number,
-  resume?: DeathResume,
   cfg: GamestateConfig = DEFAULT_GAMESTATE,
 ): void {
   if (world.mode === 'GAME_OVER') return;
 
   if (world.player.invulnTtl > 0) world.player.invulnTtl = Math.max(0, world.player.invulnTtl - dt);
+
+  // The ship is mid-explosion, waiting to respawn: frozen in place (movement/weapons/missiles are
+  // gated on this same flag), immune to further hits, no ram checks, nothing re-triggers. [ROC-LIFE-3]
+  if (world.player.respawnPending) {
+    const pending = world.player.respawnPending;
+    pending.timer -= dt;
+    if (pending.timer <= 0) {
+      world.player.respawnPending = null;
+      if (world.player.lives <= 0) {
+        world.mode = 'GAME_OVER';
+        world.events.push({ type: 'gameOver' });
+      } else {
+        respawnPlayer(world, pending.x, pending.z, cfg.respawnInvuln);
+      }
+    }
+    return;
+  }
 
   const player = world.entities.get(PLAYER_ID);
   if (!player) return;
@@ -144,28 +186,26 @@ export function gamestateSystem(
     const dx = player.pos.x;
     const dz = player.pos.z;
 
+    // The energy bomb auto-triggers instead of letting the ship die. [ROC-BOMB-1]
+    if (world.player.energyBombs > 0) {
+      world.player.energyBombs -= 1;
+      player.hull = 1; // bare survival — the next hit can still kill
+      detonateEnergyBomb(world, cfg);
+      return;
+    }
+
     // Jettison the hold as canister wreckage (up to 10, never more than it carried), then the
     // cargo is gone — however the ship dies. [ROC-CARGO-6]
     const tons = Object.values(world.cargo).reduce((n, t) => n + t, 0);
     spawnCargoWreck(world, dx, dz, Math.min(CARGO_WRECK_MAX, tons), player.vel.x, player.vel.z);
     world.cargo = {};
 
-    if (world.player.escapePod) {
-      world.player.escapePod = false; // consumed
-      respawnPlayer(world, dx, dz, cfg.respawnInvuln);
-      world.events.push({ type: 'escapePod' });
-      return;
-    }
-
     world.player.lives = Math.max(0, Math.min(MAX_LIVES, world.player.lives) - 1);
-    if (world.player.lives <= 0) {
-      world.mode = 'GAME_OVER';
-      world.events.push({ type: 'gameOver' });
-      return;
-    }
-
     world.events.push({ type: 'lifeLost', lives: world.player.lives });
-    const at = resume?.(dx, dz) ?? { x: 0, z: 0 };
-    respawnPlayer(world, at.x, at.z, cfg.respawnInvuln);
+
+    // The dramatic, in-place explosion (already triggered by damageSystem's 'destroyed' event)
+    // needs to fully play out, then a beat, before the new ship appears — nothing about the
+    // level/waves/boss resets; it all just continues while the wreck sits inert. [ROC-LIFE-2,3]
+    world.player.respawnPending = { x: dx, z: dz, timer: PLAYER_EXPLOSION_SEC + cfg.respawnDelaySec };
   }
 }

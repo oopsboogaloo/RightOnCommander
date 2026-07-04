@@ -7,7 +7,7 @@ import { type Vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
 import { PLAYER_ID, type World } from '../world.js';
 import { collectMissile } from './missiles.js';
-import { firstFreeDirection } from './ships.js';
+import { energyBombCap, firstFreeDirection } from './ships.js';
 
 export interface PickupsConfig {
   scoopRadius: number; // player collection radius
@@ -74,10 +74,7 @@ function collect(world: World, pickup: Entity, player: Entity, cfg: PickupsConfi
       world.player.ecm += 1;
       break;
     case 'bomb':
-      world.player.energyBombs += 1;
-      break;
-    case 'pod':
-      world.player.escapePod = true;
+      world.player.energyBombs = Math.min(energyBombCap(world.player.shipClass), world.player.energyBombs + 1);
       break;
     case 'life':
       world.player.lives = Math.min(5, world.player.lives + 1);

@@ -1,5 +1,5 @@
 // T6.2: station shop intents — sell cargo, buy the next ship (carrying lasers), fit lasers,
-// buy ECM/bomb/pod/lives, upgrade the missile level, and launch only after confirmation.
+// buy ECM/bomb/bank/lives, upgrade the missile level, and launch only after confirmation.
 // Insufficient credits disable a purchase and report the shortfall. [ROC-STN-1..7, ROC-ECO-6,7,8,9]
 
 import { describe, it, expect } from 'vitest';
@@ -13,13 +13,14 @@ import {
   fitLaserAt,
   buyEcm,
   buyEnergyBomb,
-  buyEscapePod,
+  buyEnergyBank,
   buyLife,
   upgradeMissile,
   launch,
   type PricesContent,
   type StationContext,
 } from '../../src/sim/systems/station.js';
+import { ENERGY_BANK_INTERVAL_SEC } from '../../src/sim/systems/energyBank.js';
 
 const ctx: StationContext = { ships: loadShips(shipsJson), prices: economyJson as PricesContent };
 
@@ -116,16 +117,30 @@ describe('fit lasers', () => {
 });
 
 describe('equipment', () => {
-  it('buys ECM / bomb / pod with credits', () => {
+  it('buys ECM / bomb / bank with credits', () => {
     const w = makeWorld(1);
-    w.econ.wallet = 10000;
+    w.econ.wallet = 20000;
     expect(buyEcm(w, ctx).ok).toBe(true);
     expect(buyEnergyBomb(w, ctx).ok).toBe(true);
-    expect(buyEscapePod(w, ctx).ok).toBe(true);
+    expect(buyEnergyBank(w, ctx).ok).toBe(true);
     expect(w.player.ecm).toBe(1);
     expect(w.player.energyBombs).toBe(1);
-    expect(w.player.escapePod).toBe(true);
-    expect(buyEscapePod(w, ctx).ok).toBe(false); // already fitted
+    expect(w.player.energyBank).toBe(true);
+    expect(w.player.energyBankTimer).toBe(ENERGY_BANK_INTERVAL_SEC);
+    expect(buyEnergyBank(w, ctx).ok).toBe(false); // already fitted
+  });
+
+  it('caps energy bombs at 1, or 2 in the Fer-de-Lance', () => {
+    const w = makeWorld(1);
+    w.econ.wallet = 100000;
+    expect(buyEnergyBomb(w, ctx).ok).toBe(true);
+    expect(buyEnergyBomb(w, ctx).ok).toBe(false); // capped at 1 for every other ship
+    expect(w.player.energyBombs).toBe(1);
+
+    applyShip(w, ctx.ships, 'fer_de_lance');
+    expect(buyEnergyBomb(w, ctx).ok).toBe(true); // the FdL's extra bay takes a second
+    expect(w.player.energyBombs).toBe(2);
+    expect(buyEnergyBomb(w, ctx).ok).toBe(false);
   });
 
   it('caps lives at five', () => {

@@ -1,5 +1,5 @@
 // Station shop intents. While docked the player sells cargo, buys the next hull, fits lasers,
-// buys ECM / energy bomb / escape pod / extra lives, upgrades the (still-timed) missile level,
+// buys ECM / energy bomb / energy bank / extra lives, upgrades the (still-timed) missile level,
 // and launches after a confirmation. Each action is a pure function over the World returning a
 // result, so the station screen is just render + intents and is fully testable headlessly.
 // [tasks T6.2, ROC-STN-1..7, ROC-ECO-6,7,8,9]
@@ -7,9 +7,11 @@
 import type { World } from '../world.js';
 import { canAfford, spend } from './economy.js';
 import { collectMissile, DEFAULT_MISSILES } from './missiles.js';
+import { ENERGY_BANK_INTERVAL_SEC } from './energyBank.js';
 import {
   applyShip,
   canFitLaser,
+  energyBombCap,
   nextShipId,
   type Direction,
   type LaserType,
@@ -18,7 +20,7 @@ import {
 
 export interface PricesContent {
   lasers: Record<LaserType, number>;
-  equipment: { ecm: number; bomb: number; pod: number; life: number; missile: number };
+  equipment: { ecm: number; bomb: number; bank: number; life: number; missile: number };
   cargo: Record<string, number>;
 }
 
@@ -107,18 +109,23 @@ export function buyEcm(world: World, ctx: StationContext): StationResult {
   return { ok: true };
 }
 
+// Max 1 energy bomb, or 2 in the Fer-de-Lance's extra bay. [ROC-BOMB-2]
 export function buyEnergyBomb(world: World, ctx: StationContext): StationResult {
+  const cap = energyBombCap(world.player.shipClass);
+  if (world.player.energyBombs >= cap) return fail(`bomb bay full (max ${cap})`);
   const err = charge(world, ctx.prices.equipment.bomb);
   if (err) return err;
   world.player.energyBombs += 1;
   return { ok: true };
 }
 
-export function buyEscapePod(world: World, ctx: StationContext): StationResult {
-  if (world.player.escapePod) return fail('pod already fitted');
-  const err = charge(world, ctx.prices.equipment.pod);
+// One-time purchase: while owned, very slowly regenerates shields (energyBank.ts). [ROC-BANK-1,2]
+export function buyEnergyBank(world: World, ctx: StationContext): StationResult {
+  if (world.player.energyBank) return fail('energy bank already fitted');
+  const err = charge(world, ctx.prices.equipment.bank);
   if (err) return err;
-  world.player.escapePod = true;
+  world.player.energyBank = true;
+  world.player.energyBankTimer = ENERGY_BANK_INTERVAL_SEC; // first regen tick is a full interval away
   return { ok: true };
 }
 

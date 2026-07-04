@@ -87,6 +87,7 @@ export class DomInput {
         const t = e.changedTouches[0];
         this.pointerTarget = this.toField(t.clientX, t.clientY);
         this.pointerTapped = true; // a touch fires one shot [ROC-CTL-2]
+        this.pointerFiring = true; // and holding fires continuously, same as a held mouse button
       },
       { passive: false },
     );
@@ -96,11 +97,13 @@ export class DomInput {
         e.preventDefault();
         const t = e.changedTouches[0];
         this.pointerTarget = this.toField(t.clientX, t.clientY);
+        this.pointerFiring = true; // dragging still counts as holding down [ROC-CTL-1,2]
       },
       { passive: false },
     );
     const endTouch = (): void => {
       this.pointerTarget = null;
+      this.pointerFiring = false;
     };
     this.canvas.addEventListener('touchend', endTouch);
     this.canvas.addEventListener('touchcancel', endTouch);

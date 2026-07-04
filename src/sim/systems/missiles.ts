@@ -150,8 +150,9 @@ export function missilesSystem(world: World, dt: number, cfg: MissilesConfig = D
   // Continuous autofire, one missile at a time, alternating wings, only while a target is on
   // screen. Keep up to `cap` (min of the timed grade and the ship's capacity) airborne; the hard
   // ceiling evicts the oldest so nothing lives forever. Missile launches are disabled through
-  // the docking approach. [ROC-MIS-1,7,8,9,12, ROC-DCKG-2]
-  if (p.missileGrade > 0 && world.levelState !== 'DOCKING' && enemyOnScreen(world)) {
+  // the docking approach, and while the wreck is waiting to respawn. [ROC-MIS-1,7,8,9,12,
+  // ROC-DCKG-2, ROC-LIFE-3]
+  if (p.missileGrade > 0 && world.levelState !== 'DOCKING' && !world.player.respawnPending && enemyOnScreen(world)) {
     p.missileCooldown -= dt;
     if (p.missileCooldown <= 0) {
       const cap = Math.min(p.missileGrade, SHIP_MISSILE_CAP[p.shipClass] ?? 1);

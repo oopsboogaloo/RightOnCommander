@@ -17,11 +17,16 @@ export interface PlayerState {
   missileWing: number; // 0/1: which wing launches next (alternates) [ROC-MIS-8]
   ecm: number;
   energyBombs: number;
-  escapePod: boolean;
+  energyBank: boolean; // owned: slowly regenerates shields over time [ROC-BANK-1,2]
+  energyBankTimer: number; // seconds until the next regen tick
   lives: number;
   fireCooldown: number; // seconds until the next pulse may fire [ROC-LAS-3]
   militaryCooldown: number; // seconds until the next military-laser bolt may fire [ROC-LAS-5]
   invulnTtl: number; // post-spawn / post-hit invulnerability, seconds [ROC-LIFE-2]
+  // Set the instant the ship would otherwise be destroyed (no bomb saved it): the wreck sits
+  // inert while its dramatic, in-place explosion plays out, then a new ship appears here once the
+  // timer elapses (or GAME_OVER, if lives ran out). [ROC-LIFE-2,3]
+  respawnPending: { x: number; z: number; timer: number } | null;
 }
 
 // A live beam-laser shot: a straight segment from the muzzle to whatever it hit (or its max
@@ -144,11 +149,13 @@ export function makeWorld(seed: number): World {
       missileWing: 0,
       ecm: 0,
       energyBombs: 0,
-      escapePod: false,
+      energyBank: false,
+      energyBankTimer: 0,
       lives: 3,
       fireCooldown: 0,
       militaryCooldown: 0,
       invulnTtl: 0,
+      respawnPending: null,
     },
     econ: { wallet: 0, score: 0 },
     cargo: {},

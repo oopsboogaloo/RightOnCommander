@@ -168,7 +168,7 @@ export function weaponsSystem(
   world.beams = []; // beams are instantaneous: recomputed fresh every step
 
   const player = world.entities.get(PLAYER_ID);
-  if (player) {
+  if (player && !world.player.respawnPending) {
     world.player.fireCooldown = Math.max(0, world.player.fireCooldown - dt);
     world.player.militaryCooldown = Math.max(0, world.player.militaryCooldown - dt);
 
