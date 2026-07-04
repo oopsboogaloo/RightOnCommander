@@ -20,6 +20,10 @@ import type { WaveContext } from './waves.js';
 
 export const HERMIT_POS = { x: 0, z: 1.05 }; // middle top of the screen [ROC-HERM-2]
 export const HERMIT_SPIN = 0.25; // slow y-rotation, rad/s [ROC-HERM-3]
+// How far toward the player, from the rock's centre, the modelled docking bay sits (it's on the
+// roll axis, so this offset holds regardless of the rock's current roll). A rock-launched escort
+// spawns here instead of at the rock's centre, reading as emerging from the entrance. [ROC-HERM-5]
+const HERMIT_PORT_OFFSET = 0.35;
 export const HERMIT_SPAWN_SEC = 2.5; // an adder every 2.5 seconds [ROC-HERM-4]
 export const HERMIT_INITIAL_ESCORTS = 2; // adders already launched when the fight opens [ROC-HERM-4]
 export const HERMIT_ESCORT_CAP = 3; // max adders on screen [ROC-HERM-4]
@@ -178,7 +182,7 @@ function spawnEscort(world: World, rng: Rng, hermit: Entity, ctx: WaveContext): 
 
   const fromRock = rng.int(2) === 0;
   const from = fromRock
-    ? { x: hermit.pos.x, z: hermit.pos.z, yaw: hermit.yaw } // rock-angle launch [ROC-HERM-5]
+    ? { x: hermit.pos.x, z: hermit.pos.z - HERMIT_PORT_OFFSET, yaw: hermit.yaw } // from the docking port, not the rock's centre [ROC-HERM-5]
     : { x: rng.int(2) === 0 ? -1.45 : 1.45, z: rng.range(-0.5, 0.1), yaw: 0 };
 
   const ai: EscortAi = {

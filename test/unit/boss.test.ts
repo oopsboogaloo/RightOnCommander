@@ -137,6 +137,19 @@ describe('strafe track', () => {
 });
 
 describe('hermit', () => {
+  it('launches rock-angle escorts from the docking port, not the rock\'s exact centre', () => {
+    const w = makeWorld(1);
+    const rng = createRng(1); // this draw produces a rock-launched escort in the opening burst
+    const hermit = spawnHermit(w);
+    bossSystem(w, rng, DT, ctx);
+    const rockLaunched = escorts(w).filter((e) => Math.abs(e.pos.x - hermit.pos.x) < 0.5);
+    expect(rockLaunched.length).toBeGreaterThan(0);
+    for (const e of rockLaunched) {
+      expect(e.pos.z).toBeLessThan(hermit.pos.z - 0.2); // reads as emerging from the port [ROC-HERM-5]
+      expect(e.pos.z).toBeGreaterThan(hermit.pos.z - 0.5); // not clear off the rock either
+    }
+  });
+
   it('rolls slowly, launches an opening burst of 2, then one every 2.5 s, capped at 3 alive', () => {
     const w = makeWorld(1);
     const rng = createRng(3);
