@@ -56,7 +56,7 @@
     {
       "id": "l1a2",
       "pattern": "vform",
-      "enemy": "gecko",
+      "enemy": "shuttle",
       "count": 5,
       "spacingMs": 450,
       "delayMs": 2250,
@@ -138,7 +138,7 @@
     {
       "id": "l1a8",
       "pattern": "vform",
-      "enemy": "gecko",
+      "enemy": "cobra_mk1",
       "count": 6,
       "spacingMs": 450,
       "delayMs": 16200,
@@ -146,6 +146,10 @@
       "params": {
         "x0": 0.8,
         "x1": -0.2
+      },
+      "fire": {
+        "rate": 0.25,
+        "aimed": true
       }
     },
     {
@@ -303,7 +307,7 @@
     {
       "id": "l1b7",
       "pattern": "sine_column",
-      "enemy": "gecko",
+      "enemy": "cobra_mk1",
       "count": 6,
       "spacingMs": 450,
       "delayMs": 15300,
@@ -311,6 +315,10 @@
       "params": {
         "amplitude": 0.9,
         "cycles": 4
+      },
+      "fire": {
+        "rate": 0.25,
+        "aimed": true
       }
     },
     {

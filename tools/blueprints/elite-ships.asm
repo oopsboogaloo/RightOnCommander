@@ -6,6 +6,13 @@
 \ version. Geometry derives from Acornsoft Elite (1984, Bell & Braben) and is
 \ used here as homage; see tasks.md T9.6 for the IP/licensing sanity-check.
 \
+\ Boa/Cobra Mk I/Moray/Shuttle/Worm/Chameleon/Iguana below are extracted from
+\ Mark Moxon's Elite-A source (github.com/markmoxon/elite-a-source-code-bbc-micro),
+\ an expanded fan variant of BBC Elite with a larger ship roster; kept the
+\ upstream "Mod: Code removed/added for Elite-A" diff comments intact so the
+\ Elite-A-specific edits stay visible (the parser already ignores backslash-
+\ prefixed VERTEX/EDGE/FACE lines as disabled/replaced source).
+\
 \ Values are the original integers (Elite ±255 coordinate box). Regenerate
 \ meshes with:  python3 tools/bbcelite_to_mesh.py
 \ ============================================================================
@@ -1150,3 +1157,485 @@
  FACE       97,       72,       24,         31      \ Face 10
  FACE        0,       94,       18,         31      \ Face 11
 
+
+.SHIP_BOA_VERTICES
+
+      \    x,    y,    z, face1, face2, face3, face4, visibility
+ VERTEX    0,    0,   93,    15,     15,   15,    15,         31    \ Vertex 0
+ VERTEX    0,   40,  -87,     2,      0,    3,     3,         24    \ Vertex 1
+ VERTEX   38,  -25,  -99,     1,      0,    4,     4,         24    \ Vertex 2
+ VERTEX  -38,  -25,  -99,     2,      1,    5,     5,         24    \ Vertex 3
+ VERTEX  -38,   40,  -59,     3,      2,    9,     6,         31    \ Vertex 4
+ VERTEX   38,   40,  -59,     3,      0,   11,     6,         31    \ Vertex 5
+ VERTEX   62,    0,  -67,     4,      0,   11,     8,         31    \ Vertex 6
+ VERTEX   24,  -65,  -79,     4,      1,   10,     8,         31    \ Vertex 7
+ VERTEX  -24,  -65,  -79,     5,      1,   10,     7,         31    \ Vertex 8
+ VERTEX  -62,    0,  -67,     5,      2,    9,     7,         31    \ Vertex 9
+ VERTEX    0,    7, -107,     2,      0,   10,    10,         22    \ Vertex 10
+ VERTEX   13,   -9, -107,     1,      0,   10,    10,         22    \ Vertex 11
+ VERTEX  -13,   -9, -107,     2,      1,   12,    12,         22    \ Vertex 12
+
+.SHIP_BOA_EDGES
+
+    \ vertex1, vertex2, face1, face2, visibility
+ EDGE       0,       5,    11,     6,         31    \ Edge 0
+ EDGE       0,       7,    10,     8,         31    \ Edge 1
+ EDGE       0,       9,     9,     7,         31    \ Edge 2
+ EDGE       0,       4,     9,     6,         29    \ Edge 3
+ EDGE       0,       6,    11,     8,         29    \ Edge 4
+ EDGE       0,       8,    10,     7,         29    \ Edge 5
+ EDGE       4,       5,     6,     3,         31    \ Edge 6
+ EDGE       5,       6,    11,     0,         31    \ Edge 7
+ EDGE       6,       7,     8,     4,         31    \ Edge 8
+ EDGE       7,       8,    10,     1,         31    \ Edge 9
+ EDGE       8,       9,     7,     5,         31    \ Edge 10
+ EDGE       4,       9,     9,     2,         31    \ Edge 11
+ EDGE       1,       4,     3,     2,         24    \ Edge 12
+ EDGE       1,       5,     3,     0,         24    \ Edge 13
+ EDGE       3,       9,     5,     2,         24    \ Edge 14
+ EDGE       3,       8,     5,     1,         24    \ Edge 15
+ EDGE       2,       6,     4,     0,         24    \ Edge 16
+ EDGE       2,       7,     4,     1,         24    \ Edge 17
+ EDGE       1,      10,     2,     0,         22    \ Edge 18
+ EDGE       2,      11,     1,     0,         22    \ Edge 19
+ EDGE       3,      12,     2,     1,         22    \ Edge 20
+ EDGE      10,      11,    12,     0,         14    \ Edge 21
+ EDGE      11,      12,    12,     1,         14    \ Edge 22
+ EDGE      12,      10,    12,     2,         14    \ Edge 23
+
+.SHIP_BOA_FACES
+
+    \ normal_x, normal_y, normal_z, visibility
+ FACE       43,       37,      -60,         31      \ Face 0
+ FACE        0,      -45,      -89,         31      \ Face 1
+ FACE      -43,       37,      -60,         31      \ Face 2
+ FACE        0,       40,        0,         31      \ Face 3
+ FACE       62,      -32,      -20,         31      \ Face 4
+ FACE      -62,      -32,      -20,         31      \ Face 5
+ FACE        0,       23,        6,         31      \ Face 6
+ FACE      -23,      -15,        9,         31      \ Face 7
+ FACE       23,      -15,        9,         31      \ Face 8
+ FACE      -26,       13,       10,         31      \ Face 9
+ FACE        0,      -31,       12,         31      \ Face 10
+ FACE       26,       13,       10,         31      \ Face 11
+ FACE        0,        0,     -107,         14      \ Face 12
+
+.SHIP_COBRA_MK_1_VERTICES
+
+      \    x,    y,    z, face1, face2, face3, face4, visibility
+ VERTEX  -18,   -1,   50,     1,      0,    3,     2,         31    \ Vertex 0
+ VERTEX   18,   -1,   50,     1,      0,    5,     4,         31    \ Vertex 1
+ VERTEX  -66,    0,    7,     3,      2,    8,     8,         31    \ Vertex 2
+ VERTEX   66,    0,    7,     5,      4,    9,     9,         31    \ Vertex 3
+ VERTEX  -32,   12,  -38,     6,      2,    8,     7,         31    \ Vertex 4
+ VERTEX   32,   12,  -38,     6,      4,    9,     7,         31    \ Vertex 5
+ VERTEX  -54,  -12,  -38,     3,      1,    8,     7,         31    \ Vertex 6
+ VERTEX   54,  -12,  -38,     5,      1,    9,     7,         31    \ Vertex 7
+ VERTEX    0,   12,   -6,     2,      0,    6,     4,         20    \ Vertex 8
+ VERTEX    0,   -1,   50,     1,      0,    1,     1,          2    \ Vertex 9
+ VERTEX    0,   -1,   60,     1,      0,    1,     1,         31    \ Vertex 10
+
+.SHIP_COBRA_MK_1_EDGES
+
+    \ vertex1, vertex2, face1, face2, visibility
+ EDGE       1,       0,     1,     0,         31    \ Edge 0
+ EDGE       0,       2,     3,     2,         31    \ Edge 1
+ EDGE       2,       6,     8,     3,         31    \ Edge 2
+ EDGE       6,       7,     7,     1,         31    \ Edge 3
+ EDGE       7,       3,     9,     5,         31    \ Edge 4
+ EDGE       3,       1,     5,     4,         31    \ Edge 5
+ EDGE       2,       4,     8,     2,         31    \ Edge 6
+ EDGE       4,       5,     7,     6,         31    \ Edge 7
+ EDGE       5,       3,     9,     4,         31    \ Edge 8
+ EDGE       0,       8,     2,     0,         20    \ Edge 9
+ EDGE       8,       1,     4,     0,         20    \ Edge 10
+ EDGE       4,       8,     6,     2,         16    \ Edge 11
+ EDGE       8,       5,     6,     4,         16    \ Edge 12
+ EDGE       4,       6,     8,     7,         31    \ Edge 13
+ EDGE       5,       7,     9,     7,         31    \ Edge 14
+ EDGE       0,       6,     3,     1,         20    \ Edge 15
+ EDGE       1,       7,     5,     1,         20    \ Edge 16
+ EDGE      10,       9,     1,     0,          2    \ Edge 17
+
+.SHIP_COBRA_MK_1_FACES
+
+    \ normal_x, normal_y, normal_z, visibility
+ FACE        0,       41,       10,         31      \ Face 0
+ FACE        0,      -27,        3,         31      \ Face 1
+ FACE       -8,       46,        8,         31      \ Face 2
+ FACE      -12,      -57,       12,         31      \ Face 3
+ FACE        8,       46,        8,         31      \ Face 4
+ FACE       12,      -57,       12,         31      \ Face 5
+ FACE        0,       49,        0,         31      \ Face 6
+ FACE        0,        0,     -154,         31      \ Face 7
+ FACE     -121,      111,      -62,         31      \ Face 8
+ FACE      121,      111,      -62,         31      \ Face 9
+
+.SHIP_MORAY_VERTICES
+
+      \    x,    y,    z, face1, face2, face3, face4, visibility
+ VERTEX   15,    0,   65,     2,      0,    8,     7,         31    \ Vertex 0
+ VERTEX  -15,    0,   65,     1,      0,    7,     6,         31    \ Vertex 1
+ VERTEX    0,   18,  -40,    15,     15,   15,    15,         17    \ Vertex 2
+ VERTEX  -60,    0,    0,     3,      1,    6,     6,         31    \ Vertex 3
+ VERTEX   60,    0,    0,     5,      2,    8,     8,         31    \ Vertex 4
+ VERTEX   30,  -27,  -10,     5,      4,    8,     7,         24    \ Vertex 5
+ VERTEX  -30,  -27,  -10,     4,      3,    7,     6,         24    \ Vertex 6
+ VERTEX   -9,   -4,  -25,     4,      4,    4,     4,          7    \ Vertex 7
+ VERTEX    9,   -4,  -25,     4,      4,    4,     4,          7    \ Vertex 8
+ VERTEX    0,  -18,  -16,     4,      4,    4,     4,          7    \ Vertex 9
+ VERTEX   13,    3,   49,     0,      0,    0,     0,          5    \ Vertex 10
+ VERTEX    6,    0,   65,     0,      0,    0,     0,          5    \ Vertex 11
+ VERTEX  -13,    3,   49,     0,      0,    0,     0,          5    \ Vertex 12
+ VERTEX   -6,    0,   65,     0,      0,    0,     0,          5    \ Vertex 13
+
+.SHIP_MORAY_EDGES
+
+    \ vertex1, vertex2, face1, face2, visibility
+ EDGE       0,       1,     7,     0,         31    \ Edge 0
+ EDGE       1,       3,     6,     1,         31    \ Edge 1
+ EDGE       3,       6,     6,     3,         24    \ Edge 2
+ EDGE       5,       6,     7,     4,         24    \ Edge 3
+ EDGE       4,       5,     8,     5,         24    \ Edge 4
+ EDGE       0,       4,     8,     2,         31    \ Edge 5
+ EDGE       1,       6,     7,     6,         15    \ Edge 6
+ EDGE       0,       5,     8,     7,         15    \ Edge 7
+ EDGE       0,       2,     2,     0,         15    \ Edge 8
+ EDGE       1,       2,     1,     0,         15    \ Edge 9
+ EDGE       2,       3,     3,     1,         17    \ Edge 10
+ EDGE       2,       4,     5,     2,         17    \ Edge 11
+ EDGE       2,       5,     5,     4,         13    \ Edge 12
+ EDGE       2,       6,     4,     3,         13    \ Edge 13
+ EDGE       7,       8,     4,     4,          5    \ Edge 14
+ EDGE       7,       9,     4,     4,          7    \ Edge 15
+ EDGE       8,       9,     4,     4,          7    \ Edge 16
+ EDGE      10,      11,     0,     0,          5    \ Edge 17
+ EDGE      12,      13,     0,     0,          5    \ Edge 18
+
+.SHIP_MORAY_FACES
+
+    \ normal_x, normal_y, normal_z, visibility
+ FACE        0,       43,        7,         31      \ Face 0
+ FACE      -10,       49,        7,         31      \ Face 1
+ FACE       10,       49,        7,         31      \ Face 2
+ FACE      -59,      -28,     -101,         24      \ Face 3
+ FACE        0,      -52,      -78,         24      \ Face 4
+ FACE       59,      -28,     -101,         24      \ Face 5
+ FACE      -72,      -99,       50,         31      \ Face 6
+ FACE        0,      -83,       30,         31      \ Face 7
+ FACE       72,      -99,       50,         31      \ Face 8
+
+.SHIP_SHUTTLE_VERTICES
+
+                        \ --- Mod: Code removed for Elite-A: ------------------>
+
+\     \    x,    y,    z, face1, face2, face3, face4, visibility
+\VERTEX    0,  -17,   23,    15,     15,   15,    15,         31    \ Vertex 0
+\VERTEX  -17,    0,   23,    15,     15,   15,    15,         31    \ Vertex 1
+\VERTEX    0,   18,   23,    15,     15,   15,    15,         31    \ Vertex 2
+\VERTEX   18,    0,   23,    15,     15,   15,    15,         31    \ Vertex 3
+\VERTEX  -20,  -20,  -27,     2,      1,    9,     3,         31    \ Vertex 4
+\VERTEX  -20,   20,  -27,     4,      3,    9,     5,         31    \ Vertex 5
+\VERTEX   20,   20,  -27,     6,      5,    9,     7,         31    \ Vertex 6
+\VERTEX   20,  -20,  -27,     7,      1,    9,     8,         31    \ Vertex 7
+\VERTEX    5,    0,  -27,     9,      9,    9,     9,         16    \ Vertex 8
+\VERTEX    0,   -2,  -27,     9,      9,    9,     9,         16    \ Vertex 9
+\VERTEX   -5,    0,  -27,     9,      9,    9,     9,          9    \ Vertex 10
+\VERTEX    0,    3,  -27,     9,      9,    9,     9,          9    \ Vertex 11
+\VERTEX    0,   -9,   35,    10,      0,   12,    11,         16    \ Vertex 12
+\VERTEX    3,   -1,   31,    15,     15,    2,     0,          7    \ Vertex 13
+\VERTEX    4,   11,   25,     1,      0,    4,    15,          8    \ Vertex 14
+\VERTEX   11,    4,   25,     1,     10,   15,     3,          8    \ Vertex 15
+\VERTEX   -3,   -1,   31,    11,      6,    3,     2,          7    \ Vertex 16
+\VERTEX   -3,   11,   25,     8,     15,    0,    12,          8    \ Vertex 17
+\VERTEX  -10,    4,   25,    15,      4,    8,     1,          8    \ Vertex 18
+
+                        \ --- And replaced by: -------------------------------->
+
+      \    x,    y,    z, face1, face2, face3, face4, visibility
+ VERTEX    0,  -35,   47,    15,    15,    15,    15,         31     \ Vertex 0
+ VERTEX  -35,    0,   47,    15,    15,    15,    15,         31     \ Vertex 1
+ VERTEX    0,   35,   47,    15,    15,    15,    15,         31     \ Vertex 2
+ VERTEX   35,    0,   47,    15,    15,    15,    15,         31     \ Vertex 3
+ VERTEX  -40,  -40,  -53,     2,     1,     9,     3,         31     \ Vertex 4
+ VERTEX  -40,   40,  -53,     4,     3,     9,     5,         31     \ Vertex 5
+ VERTEX   40,   40,  -53,     6,     5,     9,     7,         31     \ Vertex 6
+ VERTEX   40,  -40,  -53,     7,     1,     9,     8,         31     \ Vertex 7
+ VERTEX   10,    0,  -53,     9,     9,     9,     9,         16     \ Vertex 8
+ VERTEX    0,   -5,  -53,     9,     9,     9,     9,         16     \ Vertex 9
+ VERTEX  -10,    0,  -53,     9,     9,     9,     9,          8     \ Vertex 10
+ VERTEX    0,    5,  -53,     9,     9,     9,     9,          8     \ Vertex 11
+ VERTEX    0,  -17,   71,    10,     0,    12,    11,         16     \ Vertex 12
+ VERTEX    5,   -2,   61,    15,    15,     2,     0,          6     \ Vertex 13
+ VERTEX    7,   23,   49,     1,     0,     4,    15,          7     \ Vertex 14
+ VERTEX   21,    9,   49,     1,    10,    15,     3,          7     \ Vertex 15
+ VERTEX   -5,   -2,   61,    11,     6,     3,     2,          6     \ Vertex 16
+ VERTEX   -7,   23,   49,     8,    15,     0,    12,          7     \ Vertex 17
+ VERTEX  -21,    9,   49,    15,     4,     8,     1,          7     \ Vertex 18
+
+                        \ --- End of replacement ------------------------------>
+
+.SHIP_SHUTTLE_EDGES
+
+    \ vertex1, vertex2, face1, face2, visibility
+ EDGE       0,       1,     2,     0,         31    \ Edge 0
+ EDGE       1,       2,    10,     4,         31    \ Edge 1
+ EDGE       2,       3,    11,     6,         31    \ Edge 2
+ EDGE       0,       3,    12,     8,         31    \ Edge 3
+ EDGE       0,       7,     8,     1,         31    \ Edge 4
+ EDGE       0,       4,     2,     1,         24    \ Edge 5
+ EDGE       1,       4,     3,     2,         31    \ Edge 6
+ EDGE       1,       5,     4,     3,         24    \ Edge 7
+ EDGE       2,       5,     5,     4,         31    \ Edge 8
+ EDGE       2,       6,     6,     5,         12    \ Edge 9
+ EDGE       3,       6,     7,     6,         31    \ Edge 10
+ EDGE       3,       7,     8,     7,         24    \ Edge 11
+ EDGE       4,       5,     9,     3,         31    \ Edge 12
+ EDGE       5,       6,     9,     5,         31    \ Edge 13
+ EDGE       6,       7,     9,     7,         31    \ Edge 14
+ EDGE       4,       7,     9,     1,         31    \ Edge 15
+ EDGE       0,      12,    12,     0,         16    \ Edge 16
+ EDGE       1,      12,    10,     0,         16    \ Edge 17
+ EDGE       2,      12,    11,    10,         16    \ Edge 18
+ EDGE       3,      12,    12,    11,         16    \ Edge 19
+ EDGE       8,       9,     9,     9,         16    \ Edge 20
+
+                        \ --- Mod: Code removed for Elite-A: ------------------>
+
+\EDGE       9,      10,     9,     9,          7    \ Edge 21
+\EDGE      10,      11,     9,     9,          9    \ Edge 22
+\EDGE       8,      11,     9,     9,          7    \ Edge 23
+\EDGE      13,      14,    11,    11,          5    \ Edge 24
+\EDGE      14,      15,    11,    11,          8    \ Edge 25
+\EDGE      13,      15,    11,    11,          7    \ Edge 26
+\EDGE      16,      17,    10,    10,          5    \ Edge 27
+\EDGE      17,      18,    10,    10,          8    \ Edge 28
+\EDGE      16,      18,    10,    10,          7    \ Edge 29
+
+                        \ --- And replaced by: -------------------------------->
+
+ EDGE       9,      10,     9,     9,          6    \ Edge 21
+ EDGE      10,      11,     9,     9,          8    \ Edge 22
+ EDGE       8,      11,     9,     9,          6    \ Edge 23
+ EDGE      13,      14,    11,    11,          4    \ Edge 24
+ EDGE      14,      15,    11,    11,          7    \ Edge 25
+ EDGE      13,      15,    11,    11,          6    \ Edge 26
+ EDGE      16,      17,    10,    10,          4    \ Edge 27
+ EDGE      17,      18,    10,    10,          7    \ Edge 28
+ EDGE      16,      18,    10,    10,          6    \ Edge 29
+
+                        \ --- End of replacement ------------------------------>
+
+.SHIP_SHUTTLE_FACES
+
+                        \ --- Mod: Code removed for Elite-A: ------------------>
+
+\   \ normal_x, normal_y, normal_z, visibility
+\FACE      -55,      -55,       40,         31      \ Face 0
+\FACE        0,      -74,        4,         31      \ Face 1
+\FACE      -51,      -51,       23,         31      \ Face 2
+\FACE      -74,        0,        4,         31      \ Face 3
+\FACE      -51,       51,       23,         31      \ Face 4
+\FACE        0,       74,        4,         31      \ Face 5
+\FACE       51,       51,       23,         31      \ Face 6
+\FACE       74,        0,        4,         31      \ Face 7
+\FACE       51,      -51,       23,         31      \ Face 8
+\FACE        0,        0,     -107,         31      \ Face 9
+\FACE      -41,       41,       90,         31      \ Face 10
+\FACE       41,       41,       90,         31      \ Face 11
+\FACE       55,      -55,       40,         31      \ Face 12
+
+                        \ --- And replaced by: -------------------------------->
+
+    \ normal_x, normal_y, normal_z, visibility
+ FACE     -110,     -110,       80,         31      \ Face 0
+ FACE        0,     -149,        7,         31      \ Face 1
+ FACE     -102,     -102,       46,         31      \ Face 2
+ FACE     -149,        0,        7,         31      \ Face 3
+ FACE     -102,      102,       46,         31      \ Face 4
+ FACE        0,      149,        7,         31      \ Face 5
+ FACE      102,      102,       46,         31      \ Face 6
+ FACE      149,        0,        7,         31      \ Face 7
+ FACE      102,     -102,       46,         31      \ Face 8
+ FACE        0,        0,     -213,         31      \ Face 9
+ FACE      -81,       81,      177,         31      \ Face 10
+ FACE       81,       81,      177,         31      \ Face 11
+ FACE      110,     -110,       80,         31      \ Face 12
+
+.SHIP_WORM_VERTICES
+
+      \    x,    y,    z, face1, face2, face3, face4, visibility
+ VERTEX   10,  -10,   35,     2,      0,    7,     7,         31    \ Vertex 0
+ VERTEX  -10,  -10,   35,     3,      0,    7,     7,         31    \ Vertex 1
+ VERTEX    5,    6,   15,     1,      0,    4,     2,         31    \ Vertex 2
+ VERTEX   -5,    6,   15,     1,      0,    5,     3,         31    \ Vertex 3
+ VERTEX   15,  -10,   25,     4,      2,    7,     7,         31    \ Vertex 4
+ VERTEX  -15,  -10,   25,     5,      3,    7,     7,         31    \ Vertex 5
+ VERTEX   26,  -10,  -25,     6,      4,    7,     7,         31    \ Vertex 6
+ VERTEX  -26,  -10,  -25,     6,      5,    7,     7,         31    \ Vertex 7
+ VERTEX    8,   14,  -25,     4,      1,    6,     6,         31    \ Vertex 8
+ VERTEX   -8,   14,  -25,     5,      1,    6,     6,         31    \ Vertex 9
+
+.SHIP_WORM_EDGES
+
+    \ vertex1, vertex2, face1, face2, visibility
+ EDGE       0,       1,     7,     0,         31    \ Edge 0
+ EDGE       1,       5,     7,     3,         31    \ Edge 1
+ EDGE       5,       7,     7,     5,         31    \ Edge 2
+ EDGE       7,       6,     7,     6,         31    \ Edge 3
+ EDGE       6,       4,     7,     4,         31    \ Edge 4
+ EDGE       4,       0,     7,     2,         31    \ Edge 5
+ EDGE       0,       2,     2,     0,         31    \ Edge 6
+ EDGE       1,       3,     3,     0,         31    \ Edge 7
+ EDGE       4,       2,     4,     2,         31    \ Edge 8
+ EDGE       5,       3,     5,     3,         31    \ Edge 9
+ EDGE       2,       8,     4,     1,         31    \ Edge 10
+ EDGE       8,       6,     6,     4,         31    \ Edge 11
+ EDGE       3,       9,     5,     1,         31    \ Edge 12
+ EDGE       9,       7,     6,     5,         31    \ Edge 13
+ EDGE       2,       3,     1,     0,         31    \ Edge 14
+ EDGE       8,       9,     6,     1,         31    \ Edge 15
+
+.SHIP_WORM_FACES
+
+    \ normal_x, normal_y, normal_z, visibility
+ FACE        0,       88,       70,         31      \ Face 0
+ FACE        0,       69,       14,         31      \ Face 1
+ FACE       70,       66,       35,         31      \ Face 2
+ FACE      -70,       66,       35,         31      \ Face 3
+ FACE       64,       49,       14,         31      \ Face 4
+ FACE      -64,       49,       14,         31      \ Face 5
+ FACE        0,        0,     -200,         31      \ Face 6
+ FACE        0,      -80,        0,         31      \ Face 7
+
+.SHIP_CHAMELEON_VERTICES
+
+      \    x,    y,    z, face1, face2, face3, face4, visibility
+ VERTEX  -18,    0,  110,     5,     2,     1,     0,         31     \ Vertex 0
+ VERTEX   18,    0,  110,     4,     3,     1,     0,         31     \ Vertex 1
+ VERTEX  -40,    0,    0,    11,     8,     5,     2,         31     \ Vertex 2
+ VERTEX   -8,   24,    0,     8,     6,     2,     2,         31     \ Vertex 3
+ VERTEX    8,   24,    0,     9,     6,     3,     3,         31     \ Vertex 4
+ VERTEX   40,    0,    0,    10,     9,     4,     3,         31     \ Vertex 5
+ VERTEX    8,  -24,    0,    10,     7,     4,     4,         31     \ Vertex 6
+ VERTEX   -8,  -24,    0,    11,     7,     5,     5,         31     \ Vertex 7
+ VERTEX    0,   24,   40,     6,     3,     2,     0,         31     \ Vertex 8
+ VERTEX    0,  -24,   40,     7,     5,     4,     1,         31     \ Vertex 9
+ VERTEX  -32,    0,  -40,    12,    11,     8,     8,         31     \ Vertex 10
+ VERTEX    0,   24,  -40,    12,     9,     8,     6,         31     \ Vertex 11
+ VERTEX   32,    0,  -40,    12,    10,     9,     9,         31     \ Vertex 12
+ VERTEX    0,  -24,  -40,    12,    11,    10,     7,         31     \ Vertex 13
+ VERTEX   -8,    0,  -40,    12,    12,    12,    12,         10     \ Vertex 14
+ VERTEX    0,    8,  -40,    12,    12,    12,    12,         10     \ Vertex 15
+ VERTEX    8,    0,  -40,    12,    12,    12,    12,         10     \ Vertex 16
+ VERTEX    0,   -8,  -40,    12,    12,    12,    12,         10     \ Vertex 17
+
+.SHIP_CHAMELEON_EDGES
+
+    \ vertex1, vertex2, face1, face2, visibility
+ EDGE       0,       1,     1,     0,         31    \ Edge 0
+ EDGE       0,       8,     2,     0,         31    \ Edge 1
+ EDGE       0,       9,     5,     1,         31    \ Edge 2
+ EDGE       1,       8,     3,     0,         31    \ Edge 3
+ EDGE       1,       9,     4,     1,         31    \ Edge 4
+ EDGE       1,       5,     4,     3,         31    \ Edge 5
+ EDGE       0,       2,     5,     2,         31    \ Edge 6
+ EDGE       3,       8,     6,     2,         31    \ Edge 7
+ EDGE       4,       8,     6,     3,         31    \ Edge 8
+ EDGE       7,       9,     5,     7,         31    \ Edge 9
+ EDGE       6,       9,     4,     7,         31    \ Edge 10
+ EDGE       4,       5,     9,     3,         31    \ Edge 11
+ EDGE       5,       6,    10,     4,         31    \ Edge 12
+ EDGE       2,       3,     8,     2,         31    \ Edge 13
+ EDGE       2,       7,    11,     5,         31    \ Edge 14
+ EDGE       2,      10,    11,     8,         31    \ Edge 15
+ EDGE       5,      12,    10,     9,         31    \ Edge 16
+ EDGE       3,      11,     8,     6,         31    \ Edge 17
+ EDGE       7,      13,    11,     7,         31    \ Edge 18
+ EDGE       4,      11,     9,     6,         31    \ Edge 19
+ EDGE       6,      13,    10,     7,         31    \ Edge 20
+ EDGE      10,      11,    12,     8,         31    \ Edge 21
+ EDGE      10,      13,    12,    11,         31    \ Edge 22
+ EDGE      11,      12,    12,     9,         31    \ Edge 23
+ EDGE      12,      13,    12,    10,         31    \ Edge 24
+ EDGE      14,      15,    12,    12,         10    \ Edge 25
+ EDGE      15,      16,    12,    12,         10    \ Edge 26
+ EDGE      16,      17,    12,    12,         10    \ Edge 27
+ EDGE      17,      14,    12,    12,         10    \ Edge 28
+
+.SHIP_CHAMELEON_FACES
+
+    \ normal_x, normal_y, normal_z, visibility
+ FACE        0,       90,       31,         31      \ Face 0
+ FACE        0,      -90,       31,         31      \ Face 1
+ FACE      -57,       76,       11,         31      \ Face 2
+ FACE       57,       76,       11,         31      \ Face 3
+ FACE       57,      -76,       11,         31      \ Face 4
+ FACE      -57,      -76,       11,         31      \ Face 5
+ FACE        0,       96,        0,         31      \ Face 6
+ FACE        0,      -96,        0,         31      \ Face 7
+ FACE      -57,       76,      -11,         31      \ Face 8
+ FACE       57,       76,      -11,         31      \ Face 9
+ FACE       57,      -76,      -11,         31      \ Face 10
+ FACE      -57,      -76,      -11,         31      \ Face 11
+ FACE        0,        0,      -96,         31      \ Face 12
+
+.SHIP_IGUANA_VERTICES
+
+      \    x,    y,    z, face1, face2, face3, face4, visibility
+ VERTEX    0,    0,   90,     3,     2,     1,     0,         31     \ Vertex 0
+ VERTEX    0,   20,   30,     6,     4,     2,     0,         31     \ Vertex 1
+ VERTEX  -40,    0,   10,     5,     4,     1,     0,         31     \ Vertex 2
+ VERTEX    0,  -20,   30,     7,     5,     3,     1,         31     \ Vertex 3
+ VERTEX   40,    0,   10,     7,     6,     3,     2,         31     \ Vertex 4
+ VERTEX    0,   20,  -40,     9,     8,     6,     4,         31     \ Vertex 5
+ VERTEX  -40,    0,  -30,     8,     8,     5,     4,         31     \ Vertex 6
+ VERTEX    0,  -20,  -40,     9,     8,     7,     5,         31     \ Vertex 7
+ VERTEX   40,    0,  -30,     9,     9,     7,     6,         31     \ Vertex 8
+ VERTEX  -40,    0,   40,     1,     1,     0,     0,         30     \ Vertex 9
+ VERTEX   40,    0,   40,     3,     3,     2,     2,         30     \ Vertex 10
+ VERTEX    0,    8,  -40,     9,     9,     8,     8,         10     \ Vertex 11
+ VERTEX  -16,    0,  -36,     8,     8,     8,     8,         10     \ Vertex 12
+ VERTEX    0,   -8,  -40,     9,     9,     8,     8,         10     \ Vertex 13
+ VERTEX   16,    0,  -36,     9,     9,     9,     9,         10     \ Vertex 14
+
+.SHIP_IGUANA_EDGES
+
+    \ vertex1, vertex2, face1, face2, visibility
+ EDGE       0,       1,     2,     0,         31    \ Edge 0
+ EDGE       0,       2,     1,     0,         31    \ Edge 1
+ EDGE       0,       3,     3,     1,         31    \ Edge 2
+ EDGE       0,       4,     3,     2,         31    \ Edge 3
+ EDGE       1,       5,     6,     4,         31    \ Edge 4
+ EDGE       2,       6,     5,     4,         31    \ Edge 5
+ EDGE       3,       7,     7,     5,         31    \ Edge 6
+ EDGE       4,       8,     7,     6,         31    \ Edge 7
+ EDGE       5,       6,     8,     4,         31    \ Edge 8
+ EDGE       6,       7,     8,     5,         31    \ Edge 9
+ EDGE       5,       8,     9,     6,         31    \ Edge 10
+ EDGE       7,       8,     9,     7,         31    \ Edge 11
+ EDGE       1,       2,     4,     0,         31    \ Edge 12
+ EDGE       2,       3,     5,     1,         31    \ Edge 13
+ EDGE       1,       4,     6,     2,         31    \ Edge 14
+ EDGE       3,       4,     7,     3,         31    \ Edge 15
+ EDGE       5,       7,     9,     8,         31    \ Edge 16
+ EDGE       2,       9,     1,     0,         30    \ Edge 17
+ EDGE       4,      10,     3,     2,         30    \ Edge 18
+ EDGE      11,      12,     8,     8,         10    \ Edge 19
+ EDGE      13,      12,     8,     8,         10    \ Edge 20
+ EDGE      11,      14,     9,     9,         10    \ Edge 21
+ EDGE      13,      14,     9,     9,         10    \ Edge 22
+
+.SHIP_IGUANA_FACES
+
+    \ normal_x, normal_y, normal_z, visibility
+ FACE      -51,       77,       25,         31      \ Face 0
+ FACE      -51,      -77,       25,         31      \ Face 1
+ FACE       51,       77,       25,         31      \ Face 2
+ FACE       51,      -77,       25,         31      \ Face 3
+ FACE      -42,       85,        0,         31      \ Face 4
+ FACE      -42,      -85,        0,         31      \ Face 5
+ FACE       42,       85,        0,         31      \ Face 6
+ FACE       42,      -85,        0,         31      \ Face 7
+ FACE      -23,        0,      -93,         31      \ Face 8
+ FACE       23,        0,      -93,         31      \ Face 9

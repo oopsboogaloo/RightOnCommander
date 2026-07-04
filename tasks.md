@@ -306,6 +306,29 @@ have nowhere to load into until the campaign can actually advance between levels
   **unit test** for the flare hazard's damage timing/zone on a known star position.
   **Refs:** ROC-L3-1..4.
 
+- [x] **T7.2a — Expand the regular-enemy roster (classic Elite ships).**
+  **Do:** add Boa, Cobra Mk I, Moray (Star Boat), Shuttle, Worm, Chameleon, Iguana as new regular
+  (non-boss) enemies, plus feature the existing Asp Mk II hull (previously player-only) as a
+  regular enemy in Level 3. Blueprint data for the 7 new hulls sourced from
+  `github.com/markmoxon/elite-a-source-code-bbc-micro` (Mark Moxon's Elite-A disassembly, an
+  expanded fan variant with a larger roster than the base bbcelite disc source) — same
+  `tools/bbcelite_to_mesh.py` pipeline, no parser changes needed; kept the upstream Elite-A diff
+  comments (`Mod: Code removed/added`) intact in `elite-ships.asm` since the parser already ignores
+  backslash-prefixed macro lines as disabled source. Woven into `content/level{1,2,3}.json` by
+  swapping a handful of existing wave entries' `enemy` field (not new entries — keeps each level's
+  timing/pacing untouched) rather than only ever spawning the original six pirate types.
+  **Not resolved:** Cougar, Copperhead, Caiman, and Delta (also requested from
+  wiki.alioth.net/Classic_Elite_ships) have **no verified source**. They don't appear anywhere in
+  the Elite-A repo (checked all 23 ship-data files + every comment), and the wiki page itself
+  403s from this environment so its list couldn't be cross-checked either. A later message
+  supplied vertex/edge data for these four, but it doesn't match the real bbcelite blueprint
+  format (no per-vertex face-membership, no `FACE` block with normals, no visibility bytes) and
+  reads as fabricated rather than extracted — not used. Revisit if real blueprint data turns up.
+  **Done-when:** `tools/test_meshes.py` passes with all 7 new hulls' vertex/edge/face counts locked
+  in; `npm test` (full suite incl. the Level 1/2/3 scenario tests) green with the reskinned waves;
+  lint/build clean.
+  **Refs:** ROC-ENM-4 (distinct enemy types); requirements §References (ship-data provenance).
+
 - [ ] **T7.3 — Level 4 (Alien warzone).** *(v1.10 — renamed; ordinary launch entry, no mid-boss, shorter pacing)* Thargoids + **saucer variants** + Thargon swarms (inert on parent death) + **broken Galactic Navy wrecks** as scenery/hazard; **mothership end**, no mid-boss. **Refs:** ROC-L4-0,1,1a,2,3,4; ROC-ENM-6.
 - [ ] **T7.4 — ECM & Energy Bomb.** ECM clears projectiles+missiles on cooldown; Energy Bomb clears non-boss + projectiles, **boss-safe (non-lethal)**. Property test: bomb never kills a boss. **Refs:** ROC-DEF-1,2,3.
 - [ ] **T7.5 — Contraband interception.** Carrying illegal cargo at level end ⇒ extra Viper fight, no credits, kills count. Scenario test. **Refs:** ROC-LVL-4, ROC-ECO-4.

@@ -38,7 +38,7 @@
     {
       "id": "l3a2",
       "pattern": "pincer",
-      "enemy": "mamba",
+      "enemy": "moray",
       "count": 6,
       "spacingMs": 380,
       "delayMs": 2300,
@@ -60,7 +60,7 @@
     {
       "id": "l3a4",
       "pattern": "side_stream",
-      "enemy": "fer_de_lance",
+      "enemy": "asp_mk2",
       "count": 2,
       "spacingMs": 900,
       "delayMs": 6900,
@@ -105,7 +105,7 @@
     {
       "id": "l3a8",
       "pattern": "pincer",
-      "enemy": "adder",
+      "enemy": "worm",
       "count": 6,
       "spacingMs": 380,
       "delayMs": 16100,
@@ -152,7 +152,7 @@
     {
       "id": "l3b2",
       "pattern": "orbit",
-      "enemy": "viper",
+      "enemy": "boa",
       "count": 7,
       "spacingMs": 320,
       "delayMs": 2400,
@@ -197,7 +197,7 @@
     {
       "id": "l3b6",
       "pattern": "drop_hold",
-      "enemy": "adder",
+      "enemy": "moray",
       "count": 6,
       "spacingMs": 400,
       "delayMs": 11800,
