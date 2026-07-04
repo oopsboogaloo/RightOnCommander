@@ -51,6 +51,7 @@ DEFAULT_SHIPS: dict[str, str] = {
     "coriolis": "SHIP_CORIOLIS",
     "thargoid": "SHIP_THARGOID",
     "constrictor": "SHIP_CONSTRICTOR",
+    "python": "SHIP_PYTHON",
     "transporter": "SHIP_TRANSPORTER",
     "asteroid": "SHIP_ASTEROID",
     "splinter": "SHIP_SPLINTER",
