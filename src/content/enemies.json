@@ -5,7 +5,7 @@
   "adder": { "hull": 1, "bounty": 16, "meshId": "adder", "colliderRx": 0.22, "colliderRz": 0.22 },
   "viper": { "hull": 2, "bounty": 20, "meshId": "viper", "colliderRx": 0.2, "colliderRz": 0.22 },
   "mamba": { "hull": 3, "bounty": 24, "meshId": "mamba", "colliderRx": 0.2, "colliderRz": 0.24 },
-  "thargoid": { "hull": 6, "shield": 3, "bounty": 300, "meshId": "thargoid", "colliderRx": 0.25, "colliderRz": 0.25 },
+  "thargoid": { "hull": 12, "shield": 6, "bounty": 300, "meshId": "thargoid", "colliderRx": 0.25, "colliderRz": 0.25, "missileImmune": true },
   "shuttle": { "hull": 1, "bounty": 8, "meshId": "shuttle", "colliderRx": 0.16, "colliderRz": 0.28 },
   "cobra_mk1": { "hull": 2, "bounty": 18, "meshId": "cobra_mk1", "colliderRx": 0.26, "colliderRz": 0.24 },
   "iguana": { "hull": 2, "bounty": 20, "meshId": "iguana", "colliderRx": 0.16, "colliderRz": 0.35 },

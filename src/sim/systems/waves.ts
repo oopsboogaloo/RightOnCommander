@@ -21,6 +21,7 @@ export interface EnemyDef {
   ecm?: boolean; // boss ECM: harmlessly detonates player missiles while alive [ROC-BECM-1..4]
   behavior?: 'hermit' | 'strafe'; // boss movement/escort archetype [ROC-HERM-*, ROC-FDL-3]
   cargoDrops?: number; // random cargo canisters shed on destruction [ROC-HERM-10, ROC-FDL-5]
+  missileImmune?: boolean; // player missiles won't lock onto or home toward this enemy type
 }
 
 // Wave-as-data: pattern, enemy and stats are orthogonal. [ROC-ENM-7,8]
@@ -117,6 +118,7 @@ function spawnMember(world: World, waveId: number, rec: WaveRecord, ctx: WaveCon
     scale: def.scale,
     colliderRx: def.colliderRx,
     colliderRz: def.colliderRz,
+    missileImmune: def.missileImmune,
     waveId,
     path,
     ai: fireRate > 0 ? { rate: fireRate, aimed: s.fireAimed, cooldown: 1 / fireRate } : undefined,

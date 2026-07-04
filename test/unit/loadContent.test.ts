@@ -18,6 +18,7 @@ describe('loadContent', () => {
     expect(enemies.fer_de_lance_boss.ecm).toBe(true);
     expect(enemies.hermit.behavior).toBe('hermit');
     expect(enemies.hermit.meshId).toBe('rock_hermit'); // bespoke rock-hermit hull with a modelled bay [ROC-HERM-1]
+    expect(enemies.thargoid.missileImmune).toBe(true); // ECM jams player missile lock-on [Thargoid tuning]
     expect(level?.midBoss).toBe('hermit');
     expect(level?.endBoss).toBe('fer_de_lance_boss');
     expect(level?.name).toBe('Lave'); // hyperspace destination [ROC-HYP-2]

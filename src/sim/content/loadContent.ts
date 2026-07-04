@@ -38,6 +38,7 @@ function parseEnemies(raw: unknown): Record<string, EnemyDef> {
       ecm: v.ecm === undefined ? undefined : !!v.ecm,
       behavior: v.behavior as EnemyDef['behavior'],
       cargoDrops: v.cargoDrops === undefined ? undefined : num(v.cargoDrops, `enemy ${name}.cargoDrops`),
+      missileImmune: v.missileImmune === undefined ? undefined : !!v.missileImmune,
     };
   }
   return out;
