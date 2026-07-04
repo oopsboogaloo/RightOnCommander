@@ -1,10 +1,12 @@
 # Right on Commander — Requirements Specification
 
-**Version:** 1.10 (draft — all design decisions resolved)
+**Version:** 1.11 (draft — all design decisions resolved)
 **Author:** Chloe
 **Notation:** EARS (Easy Approach to Requirements Syntax)
 **Status:** Spec under construction — review
 
+> **Changelog 1.10 → 1.11:** **Level 3 end boss changed** from the generation ship to an **Elite-rated ace pilot flying a fully-kitted Cobra Mk III** — military laser, beam lasers, missiles, and shields to match (ROC-L3-4 revised) — keeping every boss in the roster a real Elite hull rather than an original invention.
+>
 > **Changelog 1.9 → 1.10:** **Level 3 mid-boss changed** from the rogue station/Vipers to **a pair of Anacondas** (ROC-L3-3). **Added a witchspace interlude between Level 2 and Level 3** (new): the Level 2 → 3 hyperspace jump now lingers in witchspace — starfield held in its stretched, hyperspace state — for a **Thargoid wave the player must clear** before the jump resolves and Level 3 begins (ROC-WITCH-1..4). **Level 4 renamed "Alien warzone"** (was "Alien space") and **no longer entered via a forced witchspace misjump** — that framing now belongs to the Level 2→3 interlude instead — Level 4 is entered by an ordinary jump/launch like every other level (ROC-L4-0 revised). Level 4 also gains the **broken remains of Galactic Navy vessels** scattered through it as wreckage (ROC-L4-3, new), and **drops its mid-boss** — wave combat runs straight to the end boss — making it **shorter** than the standard §3.9 pacing (ROC-L4-4, new).
 >
 > **Changelog 1.8 → 1.9:** **Removed graduated hull damage for the player** (ROC-DMG-6b, new): once shields are at zero, any further hit is now **instantly lethal** — the player has no hull hit-point buffer, unlike enemies/bosses/hazards which are unaffected. To compensate, **starting lives raised from 3 to 4** (ROC-LIFE-1). The player now **flashes white on every hit**, including one a shield ring fully absorbs (ROC-DMG-2a) — previously only unshielded hull hits flashed. **Blinking (visibility toggling) is now reserved solely for the brief invulnerability window right after a respawn** (ROC-LIFE-2c) — it no longer triggers for an ordinary hit's short ramming/contact i-frames, so a blinking ship on screen always means "just respawned," never "just got hit." **Removed the hull readout from the bottom status bar** (ROC-HUD-2 revised) since hull no longer functions as a player survivability stat.
@@ -205,7 +207,7 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
 - **ROC-L3-1** The system shall render a **large white star occupying the right-hand side with massive curvature**.
 - **ROC-L3-2** The system shall present **dangerous ships** plus the **star as an environmental hazard, with occasional white star activity** (flares/eruptions).
 - **ROC-L3-3** *(v1.10 — was a rogue station with Vipers)* The system shall provide a **mid boss: a pair of Anacondas** fought together.
-- **ROC-L3-4** The system shall provide an **end boss: a generation ship**.
+- **ROC-L3-4** *(v1.11 — was a generation ship)* The system shall provide an **end boss: an Elite-rated ace pilot flying a fully-kitted Cobra Mk III** — military laser, beam lasers, missiles, and shields to match its pilot's rating — rather than an original hull, keeping the boss roster drawn entirely from real Elite ships.
 
 **Level 4 — Alien warzone** *(v1.10 — renamed from "Alien space")*
 - **ROC-L4-0** *(v1.10 — revised: no longer a misjump)* The system shall enter Level 4 via an **ordinary hyperspace jump/launch** (§3.27), the same as every other level. *(The forced-witchspace-misjump framing previously used here has moved to the Level 2→3 transition, ROC-WITCH-1..4, so it isn't reused.)*

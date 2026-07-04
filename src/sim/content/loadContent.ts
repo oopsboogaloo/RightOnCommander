@@ -4,6 +4,7 @@
 import type { EnemyDef, WaveDef } from '../systems/waves.js';
 import type { LevelDef } from '../systems/levelstate.js';
 import type { AsteroidFieldDef } from '../systems/asteroids.js';
+import type { StarFlareDef } from '../systems/hazards.js';
 import { PATTERNS } from '../systems/paths.js';
 
 export interface Content {
@@ -110,6 +111,18 @@ function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
   if (facts !== undefined && (!Array.isArray(facts) || facts.some((f) => typeof f !== 'string'))) {
     throw new Error('content: "level.facts" must be an array of strings');
   }
+  const starFlareRaw = raw.starFlare;
+  const starFlare: StarFlareDef | undefined = starFlareRaw === undefined
+    ? undefined
+    : (() => {
+        if (!isObj(starFlareRaw)) throw new Error('content: "level.starFlare" must be an object');
+        return {
+          intervalSec: num(starFlareRaw.intervalSec, 'level.starFlare.intervalSec'),
+          warnSec: num(starFlareRaw.warnSec, 'level.starFlare.warnSec'),
+          zoneX: num(starFlareRaw.zoneX, 'level.starFlare.zoneX'),
+          damage: num(starFlareRaw.damage, 'level.starFlare.damage'),
+        };
+      })();
   return {
     id: typeof raw.id === 'string' ? raw.id : 'level',
     name: typeof raw.name === 'string' ? raw.name : undefined,
@@ -123,6 +136,7 @@ function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
     wavesB: group('wavesB'),
     endBoss: boss('endBoss'),
     viper: raw.viper === undefined ? undefined : parseWave(raw.viper, enemies, 'level.viper'),
+    starFlare,
   };
 }
 

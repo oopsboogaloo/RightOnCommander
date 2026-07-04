@@ -4,6 +4,7 @@ import { describe, it, expect } from 'vitest';
 import enemiesJson from '../../src/content/enemies.json';
 import level1Json from '../../src/content/level1.json';
 import level2Json from '../../src/content/level2.json';
+import level3Json from '../../src/content/level3.json';
 import { loadContent } from '../../src/sim/content/loadContent.js';
 
 describe('loadContent', () => {
@@ -31,13 +32,17 @@ describe('loadContent', () => {
     expect(level?.asteroidWaves?.[0].count).toBeGreaterThan(0);
   });
 
-  it('loads the full campaign (Level 1 + Level 2) as an ordered array', () => {
-    const { levels } = loadContent({ enemies: enemiesJson, levels: [level1Json, level2Json] });
-    expect(levels).toHaveLength(2);
+  it('loads the full campaign (Levels 1-3) as an ordered array', () => {
+    const { levels } = loadContent({ enemies: enemiesJson, levels: [level1Json, level2Json, level3Json] });
+    expect(levels).toHaveLength(3);
     expect(levels[0].name).toBe('Lave');
     expect(levels[1].name).toBe('Diso'); // [ROC-LORE-2]
     expect(levels[1].midBoss).toBe('python'); // [ROC-L2-3]
     expect(levels[1].endBoss).toBe('constrictor'); // [ROC-L2-4]
+    expect(levels[2].name).toBe('Leesti');
+    expect(levels[2].midBoss).toEqual(['anaconda', 'anaconda']); // [ROC-L3-3]
+    expect(levels[2].endBoss).toBe('cobra_ace'); // [ROC-L3-4]
+    expect(levels[2].starFlare?.zoneX).toBeGreaterThan(0); // [ROC-L3-1,2]
   });
 
   it('rejects a malformed asteroidWaves', () => {

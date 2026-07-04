@@ -36,6 +36,7 @@ import { stationButtons, buttonAt, drawStation, type StationAction } from '../re
 import enemies from '../content/enemies.json';
 import level1 from '../content/level1.json';
 import level2 from '../content/level2.json';
+import level3 from '../content/level3.json';
 import shipsJson from '../content/ships.json';
 import economyJson from '../content/economy.json';
 import cobra_mk3 from '../content/meshes/cobra_mk3.json';
@@ -49,6 +50,7 @@ import mamba from '../content/meshes/mamba.json';
 import fer_de_lance from '../content/meshes/fer_de_lance.json';
 import python from '../content/meshes/python.json';
 import constrictor from '../content/meshes/constrictor.json';
+import anaconda from '../content/meshes/anaconda.json';
 import coriolis from '../content/meshes/coriolis.json';
 import transporter from '../content/meshes/transporter.json';
 import asteroid from '../content/meshes/asteroid.json';
@@ -88,6 +90,7 @@ const MESHES: Record<string, Mesh> = {
   fer_de_lance,
   python,
   constrictor,
+  anaconda,
   coriolis,
   transporter,
   asteroid,
@@ -105,8 +108,8 @@ for (const [id, m] of Object.entries(MESHES)) {
   HULL_RADII[id] = hullRadius(meshSilhouette(m), SHIP_SCALE);
 }
 
-// The campaign, in play order. Level 3 joins this array once its content lands (task T7.2).
-const LEVELS = [level1, level2];
+// The campaign, in play order. Level 4 joins this array once its content lands (task T7.3).
+const LEVELS = [level1, level2, level3];
 const currentLevel = (): (typeof LEVELS)[number] => LEVELS[sim.state.levelIndex] ?? level1;
 const sim = createSim({ seed: 1, content: { enemies, levels: LEVELS, meshes: MESHES } });
 const renderer = new Renderer2D(ctx);
@@ -245,9 +248,13 @@ startGameLoop({
   step: () => {
     prev = curr;
     const events = sim.step(input.sample(DT));
-    // Dense-belt levels show the drifting asteroid backdrop; follows whichever level is active,
-    // not just the first. [ROC-L1-1]
-    renderer.showAsteroidBackdrop = (currentLevel() as { backdrop?: string }).backdrop === 'asteroids';
+    // Dense-belt levels show the drifting asteroid backdrop; star-surface levels show the star.
+    // Follows whichever level is active, not just the first. [ROC-L1-1, ROC-L3-1]
+    const lvl = currentLevel() as { backdrop?: string; starFlare?: { warnSec: number } };
+    renderer.showAsteroidBackdrop = lvl.backdrop === 'asteroids';
+    renderer.showStarBackdrop = lvl.backdrop === 'star';
+    const hazard = sim.state.hazard;
+    renderer.starFlareAlpha = lvl.starFlare && hazard && hazard.warnTtl > 0 ? hazard.warnTtl / lvl.starFlare.warnSec : 0;
     // Reveal the asteroid belt as we drop out of hyperspace, so it drifts into view — arriving
     // at the field. Idempotent. [ROC-L1-1]
     const ls = sim.state.levelState;

@@ -154,6 +154,8 @@ export class Renderer2D implements Renderer {
   private starfield: Starfield;
   private bgAsteroids = new BackgroundAsteroids();
   showAsteroidBackdrop = false; // set by the shell for asteroid-belt levels
+  showStarBackdrop = false; // set by the shell for the star-surface level [ROC-L3-1]
+  starFlareAlpha = 0; // 0..1, set by the shell while a flare is telegraphing [ROC-L3-2]
   camera: Camera;
 
   // Viewport mapping, refreshed each frame.
@@ -193,6 +195,27 @@ export class Renderer2D implements Renderer {
     if (this.showAsteroidBackdrop && this.bgAsteroids.isRevealed) {
       this.bgAsteroids.update(1 / 60, scroll);
       this.bgAsteroids.draw(ctx, this.w, this.h);
+    }
+    if (this.showStarBackdrop) this.drawStarBackdrop();
+  }
+
+  // A large white star with massive curvature, sitting mostly off the right edge of the field —
+  // most of its circle is off-screen, so what's visible reads as a huge, gently-curved limb
+  // rather than a small disc. Brightens briefly while a flare telegraphs. [ROC-L3-1,2]
+  private drawStarBackdrop(): void {
+    const { ctx } = this;
+    const r = this.h * 1.15;
+    const cx = this.w + r * 0.3;
+    const cy = this.h * 0.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    if (this.starFlareAlpha > 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * (1 + 0.04 * this.starFlareAlpha), 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${(this.starFlareAlpha * 0.5).toFixed(2)})`;
+      ctx.fill();
     }
   }
 

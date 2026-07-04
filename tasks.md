@@ -282,16 +282,19 @@ have nowhere to load into until the campaign can actually advance between levels
   unaffected.
   **Refs:** ROC-WITCH-1..4.
 
-- [ ] **T7.2 — Level 3 content (Star surface).**
+- [x] **T7.2 — Level 3 content (Star surface).**
   **Do:** `content/level3.json` — `wavesA`/`wavesB` with the ROC-ENM-12 L3 escalation (homing
   missiles some enemies carry, shootable per `ROC-MIS-5`/existing `missiles.ts`; check whether
   enemy-fired homing missiles are already supported by `systems/ai.ts`/`missiles.ts` or need a
   small extension — they're currently player-only per T4.4); `midBoss: ["anaconda", "anaconda"]`
-  (T7.0a) fought together; `endBoss: "generation_ship"`. New meshes: `anaconda.json`,
-  `generation_ship.json` — same blueprint-sourcing gap as T7.1 (add blueprint blocks to
-  `elite-ships.asm`, regenerate, `test_meshes.py`); the generation ship has no canonical Elite
-  blueprint, so it needs an original hand-authored mesh (large, slow-silhouette, distinct from the
-  saucer/wedge language of the rest of the roster) rather than a parser pass.
+  (T7.0a) fought together; `endBoss: "cobra_ace"` — an Elite-rated ace pilot in a fully-kitted
+  Cobra Mk III (military laser, beam lasers, missiles, matching shields), **v1.11, replacing the
+  originally-planned generation ship** so every boss in the roster stays a real Elite hull; reuses
+  the existing `cobra_mk3` mesh, no new mesh needed. `anaconda.json` sourced via
+  `tools/bbcelite_to_mesh.py` from user-supplied blueprint data (done). Enemy-fired homing missiles
+  are **not implemented** — the ace's "missiles" are approximated with a fast multi-shot aimed fire
+  cadence on the existing `strafe` boss framing; real enemy missile AI is future work, not blocking
+  this task.
   **Do (star hazard):** a right-side star hazard is primarily a render/backdrop concern (reuse the
   `showAsteroidBackdrop`-style flag pattern already in `platform/main.ts`/`level1.json`'s
   `"backdrop"` field — e.g. `"backdrop": "star"`) plus a small new sim-side hazard: periodic
@@ -299,8 +302,8 @@ have nowhere to load into until the campaign can actually advance between levels
   in a screen-relative danger zone near the star edge, dodgeable like enemy fire (ROC-ENM-11
   precedent). Keep this scoped — a timer + damage-zone check, not a new system category.
   **Done-when:** meshes schema-valid; **scenario test** drives level 3 headless start→dock,
-  asserting both Anacondas reached and killed before `WAVES_B`, generation ship reached and
-  killed; **unit test** for the flare hazard's damage timing/zone on a known star position.
+  asserting both Anacondas reached and killed before `WAVES_B`, the Cobra ace reached and killed;
+  **unit test** for the flare hazard's damage timing/zone on a known star position.
   **Refs:** ROC-L3-1..4.
 
 - [ ] **T7.3 — Level 4 (Alien warzone).** *(v1.10 — renamed; ordinary launch entry, no mid-boss, shorter pacing)* Thargoids + **saucer variants** + Thargon swarms (inert on parent death) + **broken Galactic Navy wrecks** as scenery/hazard; **mothership end**, no mid-boss. **Refs:** ROC-L4-0,1,1a,2,3,4; ROC-ENM-6.

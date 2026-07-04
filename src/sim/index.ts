@@ -30,6 +30,7 @@ import { gamestateSystem, DEFAULT_GAMESTATE } from './systems/gamestate.js';
 import { bossSystem } from './systems/boss.js';
 import { ecmSystem } from './systems/ecm.js';
 import { energyBankSystem } from './systems/energyBank.js';
+import { hazardsSystem } from './systems/hazards.js';
 import { loadContent } from './content/loadContent.js';
 
 // Fixed sim tick, in seconds. Must match the shell loop's DT (platform/loop.ts). [design §3]
@@ -168,6 +169,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
       colliderScale: SHIP_SCALE,
     });
     damageSystem(world, hits, SIM_DT);
+    hazardsSystem(world, SIM_DT, activeLevel?.starFlare); // Level 3's star flare, where present [ROC-L3-1,2]
     gamestateSystem(world, SIM_DT, {
       ...DEFAULT_GAMESTATE,
       colliderScale: SHIP_SCALE,
