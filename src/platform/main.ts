@@ -230,6 +230,16 @@ const SKIP_BUTTON = { w: 84, h: 28, marginX: 10, marginY: 100 };
 function skipButtonRect(w: number): { x: number; y: number; w: number; h: number } {
   return { x: w - SKIP_BUTTON.marginX - SKIP_BUTTON.w, y: SKIP_BUTTON.marginY, w: SKIP_BUTTON.w, h: SKIP_BUTTON.h };
 }
+
+// Pause: freezes the sim (no more steps) while the render loop keeps redrawing the frozen frame,
+// so the paused screen stays visible and responsive to a second tap. [dev cheat]
+let paused = false;
+const PAUSE_BUTTON_GAP = 8;
+const PAUSE_BUTTON = { w: SKIP_BUTTON.w, h: SKIP_BUTTON.h, marginX: SKIP_BUTTON.marginX, marginY: SKIP_BUTTON.marginY + SKIP_BUTTON.h + PAUSE_BUTTON_GAP };
+function pauseButtonRect(w: number): { x: number; y: number; w: number; h: number } {
+  return { x: w - PAUSE_BUTTON.marginX - PAUSE_BUTTON.w, y: PAUSE_BUTTON.marginY, w: PAUSE_BUTTON.w, h: PAUSE_BUTTON.h };
+}
+
 function inRect(px: number, py: number, r: { x: number; y: number; w: number; h: number }): boolean {
   return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
 }
@@ -253,6 +263,7 @@ function handleTapAt(px: number, py: number): void {
   }
 
   if (cheatUnlocked && inRect(px, py, skipButtonRect(w))) sim.cheatSkipLevel();
+  if (cheatUnlocked && inRect(px, py, pauseButtonRect(w))) paused = !paused;
 }
 
 canvas.addEventListener('mousedown', (e) => handleTapAt(e.offsetX, e.offsetY));
@@ -363,8 +374,10 @@ function drainFloaters(events: ReturnType<typeof sim.step>): void {
 
 startGameLoop({
   step: () => {
+    const frame = input.sample(DT); // always drain one-shot input edges, even while paused
+    if (paused) return;
     prev = curr;
-    const events = sim.step(input.sample(DT));
+    const events = sim.step(frame);
     // Dense-belt levels show the drifting asteroid backdrop. Follows whichever level is active,
     // not just the first. [ROC-L1-1]
     const lvl = currentLevel() as { backdrop?: string };
@@ -377,7 +390,7 @@ startGameLoop({
     drainFloaters(events);
   },
   render: (alpha) => {
-    renderer.beginFrame(sim.state.scroll); // sim-owned: 0 halts for bosses, >1 is hyperspace [ROC-BOSS-1, ROC-HYP-3]
+    renderer.beginFrame(paused ? 0 : sim.state.scroll); // sim-owned: 0 halts for bosses/pause, >1 is hyperspace [ROC-BOSS-1, ROC-HYP-3]
 
     // Docked: show the station shop instead of the play field. [ROC-STN-1]
     if (dockActive()) {
@@ -634,6 +647,23 @@ startGameLoop({
         font: '11px monospace',
         align: 'center',
       });
+    }
+
+    // Pause: same visibility as Skip Level, sits directly below it. [dev cheat]
+    if (cheatUnlocked && !dockActive()) {
+      const r = pauseButtonRect(w);
+      ctx!.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx!.lineWidth = 1;
+      ctx!.strokeRect(r.x, r.y, r.w, r.h);
+      renderer.drawText(paused ? 'RESUME' : 'PAUSE', { x: r.x + r.w / 2, y: r.y + r.h / 2 + 4 }, {
+        fill: 'rgba(255,255,255,0.85)',
+        font: '11px monospace',
+        align: 'center',
+      });
+    }
+
+    if (paused) {
+      renderer.drawText('PAUSED', { x: w / 2, y: h * 0.46 }, { fill: '#fff', font: '20px monospace', align: 'center' });
     }
 
     if (sim.state.mode === 'GAME_OVER') {
