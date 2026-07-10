@@ -179,6 +179,12 @@ let cheatSeq = 0;
 let cheatLastTapMs = 0;
 let cheatFlashTtl = 0;
 
+// Debug readout of the last corner-zone tap seen, so a failed unlock attempt is diagnosable from
+// the screen alone (no devtools needed) — e.g. on a phone where taps aren't landing where expected.
+let cheatDebugText = '';
+let cheatDebugTtl = 0;
+const CHEAT_DEBUG_SEC = 1.5;
+
 function cornerAt(px: number, py: number, w: number, h: number): Corner | null {
   const z = Math.min(w, h) * CORNER_FRAC;
   const top = py < z;
@@ -208,11 +214,14 @@ function tryCheatTap(px: number, py: number, w: number, h: number): void {
   if (corner === CORNER_ORDER[cheatSeq]) {
     cheatSeq += 1;
     cheatLastTapMs = now;
+    cheatDebugText = `${corner} ok (${cheatSeq}/${CORNER_ORDER.length})`;
     if (cheatSeq === CORNER_ORDER.length) activateCheat();
   } else {
+    cheatDebugText = `${corner} — expected ${CORNER_ORDER[cheatSeq]}, reset`;
     cheatSeq = corner === CORNER_ORDER[0] ? 1 : 0; // a fresh top-left tap restarts the sequence
     cheatLastTapMs = now;
   }
+  cheatDebugTtl = CHEAT_DEBUG_SEC;
 }
 
 // Skip Level: wipes whatever combat is underway and jumps straight to the docking approach — the
@@ -225,20 +234,37 @@ function inRect(px: number, py: number, r: { x: number; y: number; w: number; h:
   return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
 }
 
-canvas.addEventListener('pointerdown', (e) => {
+// Station taps and the cheat's corner detection both need a tap's local (canvas-space) x/y. Mouse
+// events carry that in offsetX/offsetY; touch events don't, so it's derived from the bounding
+// rect instead — same technique DomInput's own toField() uses for its flight-control targeting.
+// Listening on 'mousedown' + 'touchstart' directly (rather than the unified 'pointerdown') matches
+// DomInput's existing input handling, since pointer events aren't uniformly reliable for touch
+// across every mobile browser/WebView. [dev cheat]
+function handleTapAt(px: number, py: number): void {
   const w = canvas!.clientWidth || canvas!.width;
   const h = canvas!.clientHeight || canvas!.height;
 
-  tryCheatTap(e.offsetX, e.offsetY, w, h);
+  tryCheatTap(px, py, w, h);
 
   if (dockActive()) {
-    const btn = buttonAt(stationButtons(sim.state, stationCtx, w, h, launchArmed, selectedLaser), e.offsetX, e.offsetY);
+    const btn = buttonAt(stationButtons(sim.state, stationCtx, w, h, launchArmed, selectedLaser), px, py);
     if (btn && btn.enabled) runStationAction(btn.action);
     return;
   }
 
-  if (cheatUnlocked && inRect(e.offsetX, e.offsetY, skipButtonRect(w))) sim.cheatSkipLevel();
-});
+  if (cheatUnlocked && inRect(px, py, skipButtonRect(w))) sim.cheatSkipLevel();
+}
+
+canvas.addEventListener('mousedown', (e) => handleTapAt(e.offsetX, e.offsetY));
+canvas.addEventListener(
+  'touchstart',
+  (e) => {
+    const t = e.changedTouches[0];
+    const rect = canvas!.getBoundingClientRect();
+    handleTapAt(t.clientX - rect.left, t.clientY - rect.top);
+  },
+  { passive: true },
+);
 
 interface Pose {
   x: number;
@@ -328,6 +354,7 @@ function drainFloaters(events: ReturnType<typeof sim.step>): void {
   bombFlashTtl = Math.max(0, bombFlashTtl - DT);
   bombTextTtl = Math.max(0, bombTextTtl - DT);
   cheatFlashTtl = Math.max(0, cheatFlashTtl - DT);
+  cheatDebugTtl = Math.max(0, cheatDebugTtl - DT);
   for (let i = floaters.length - 1; i >= 0; i--) {
     floaters[i].age += DT;
     if (floaters[i].age >= floaters[i].ttl) floaters.splice(i, 1);
@@ -580,6 +607,17 @@ startGameLoop({
       renderer.drawText(`CHEAT ACTIVE — +${CHEAT_LIVES} lives, +${CHEAT_CREDITS.toLocaleString()}cr`, { x: w / 2, y: h * 0.2 }, {
         fill: `rgba(255,255,255,${a.toFixed(2)})`,
         font: '16px monospace',
+        align: 'center',
+      });
+    }
+
+    // Corner-tap debug readout: shows on every corner-zone tap, even before (and win-)unlock, so a
+    // failed attempt is diagnosable on-screen — no devtools needed, works on a phone. [dev cheat]
+    if (cheatDebugTtl > 0 && !cheatUnlocked) {
+      const a = Math.min(1, cheatDebugTtl / (CHEAT_DEBUG_SEC * 0.5));
+      renderer.drawText(cheatDebugText, { x: w / 2, y: h * 0.12 }, {
+        fill: `rgba(255,215,107,${a.toFixed(2)})`,
+        font: '13px monospace',
         align: 'center',
       });
     }
