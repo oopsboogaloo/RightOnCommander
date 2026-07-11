@@ -41,8 +41,8 @@
       "count": 6,
       "spacingMs": 380,
       "delayMs": 2300,
-      "durationMs": 6500,
-      "params": { "x0": -1.3 },
+      "durationMs": 12300,
+      "params": { "x0": -1.3, "z1": -1.8 },
       "fire": { "rate": 0.4, "aimed": true }
     },
     {
@@ -53,7 +53,7 @@
       "spacingMs": 320,
       "delayMs": 4600,
       "durationMs": 7000,
-      "params": { "cx": 0.2, "cz": 0.55, "r": 0.55, "turns": 1.5 },
+      "params": { "cx": 1.9, "cz": 0.55, "r": 0.9, "turns": 1 },
       "fire": { "rate": 0.35, "aimed": true }
     },
     {
@@ -108,8 +108,8 @@
       "count": 6,
       "spacingMs": 380,
       "delayMs": 16100,
-      "durationMs": 6500,
-      "params": { "x0": 1.3 },
+      "durationMs": 12300,
+      "params": { "x0": 1.3, "z1": -1.8 },
       "fire": { "rate": 0.35, "aimed": true }
     },
     {
@@ -156,7 +156,7 @@
       "spacingMs": 320,
       "delayMs": 2400,
       "durationMs": 7200,
-      "params": { "cx": -0.1, "cz": 0.55, "r": 0.55, "turns": 1.5 },
+      "params": { "cx": -1.9, "cz": 0.55, "r": 0.9, "turns": 1, "phase": 3.14159 },
       "fire": { "rate": 0.45, "aimed": true }
     },
     {
@@ -211,8 +211,8 @@
       "count": 7,
       "spacingMs": 380,
       "delayMs": 14100,
-      "durationMs": 6500,
-      "params": { "x0": -1.3 },
+      "durationMs": 12300,
+      "params": { "x0": -1.3, "z1": -1.8 },
       "fire": { "rate": 0.45, "aimed": true }
     },
     {
