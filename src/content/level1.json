@@ -87,6 +87,7 @@
       "spacingMs": 450,
       "delayMs": 6750,
       "durationMs": 6000,
+      "speed": 0.8,
       "params": {
         "amplitude": 0.8,
         "cycles": 3,
@@ -100,9 +101,10 @@
       "count": 4,
       "spacingMs": 450,
       "delayMs": 9450,
-      "durationMs": 6000,
+      "durationMs": 11300,
       "params": {
-        "x0": -1.2
+        "x0": -1.2,
+        "z1": -1.8
       }
     },
     {
@@ -126,9 +128,10 @@
       "count": 4,
       "spacingMs": 450,
       "delayMs": 13950,
-      "durationMs": 6000,
+      "durationMs": 11300,
       "params": {
-        "x0": 1.2
+        "x0": 1.2,
+        "z1": -1.8
       },
       "fire": {
         "rate": 0.25,
@@ -176,9 +179,10 @@
       "count": 5,
       "spacingMs": 450,
       "delayMs": 21600,
-      "durationMs": 6000,
+      "durationMs": 11300,
       "params": {
-        "x0": -1.2
+        "x0": -1.2,
+        "z1": -1.8
       }
     },
     {
@@ -243,7 +247,10 @@
       "count": 4,
       "spacingMs": 450,
       "delayMs": 2700,
-      "durationMs": 6000,
+      "durationMs": 11300,
+      "params": {
+        "z1": -1.8
+      },
       "fire": {
         "rate": 0.3,
         "aimed": true
@@ -282,9 +289,10 @@
       "count": 5,
       "spacingMs": 450,
       "delayMs": 10350,
-      "durationMs": 6000,
+      "durationMs": 11300,
       "params": {
-        "x0": -1.2
+        "x0": -1.2,
+        "z1": -1.8
       }
     },
     {
@@ -342,9 +350,10 @@
       "count": 4,
       "spacingMs": 450,
       "delayMs": 21600,
-      "durationMs": 6000,
+      "durationMs": 11300,
       "params": {
-        "x0": 1.2
+        "x0": 1.2,
+        "z1": -1.8
       },
       "fire": {
         "rate": 0.3,
@@ -375,9 +384,10 @@
       "count": 5,
       "spacingMs": 450,
       "delayMs": 26550,
-      "durationMs": 6000,
+      "durationMs": 11300,
       "params": {
-        "x0": -1.2
+        "x0": -1.2,
+        "z1": -1.8
       },
       "fire": {
         "rate": 0.35,
