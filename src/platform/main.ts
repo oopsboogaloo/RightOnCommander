@@ -386,6 +386,7 @@ function readPlayerPose(): Pose {
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 const PULSE_LEN = 0.18;
+const BOLT_FLASH_HZ = 10; // enemy-fire strobe rate (flips/sec), for visibility [dev tuning]
 const PICKUP_SCALE = 1 / 9; // canister/gem read as small props, not ship-sized [was 1/3]
 const GEM_SCALE = PICKUP_SCALE * 0.5; // -50% [tuning]
 const MINI_ASTEROID_SCALE = SPLINTER_HIT_SCALE; // matches the sim's splinter collision scale exactly
@@ -504,16 +505,21 @@ startGameLoop({
       switch (e.kind) {
         case 'projectile':
         case 'missile': {
-          // Missiles render as a small dart; pulses as a slightly longer streak. Enemy laser
-          // bolts render at half size so incoming fire reads as smaller than the player's own.
-          // Military bolts are shorter and thicker than a pulse. [ROC-LAS-5]
+          // Missiles render as a small dart; pulses as a slightly longer streak. Military bolts
+          // are shorter and thicker than a pulse. [ROC-LAS-5]
           const isEnemyBolt = e.kind === 'projectile' && e.team === 'enemy';
           const len = e.kind === 'missile' ? 0.09 : e.mil ? PULSE_LEN * 0.55 : isEnemyBolt ? PULSE_LEN * 0.5 : PULSE_LEN;
           const tail = sub(e.pos, scale(normalize(e.vel), len));
-          renderer.drawWorldLine(e.pos, tail, {
-            stroke: '#fff',
-            lineWidth: e.mil ? 4 : isEnemyBolt ? 1 : 2,
-          });
+          if (isEnemyBolt) {
+            // Incoming fire reads as a rapidly strobing white/black core inside a constant white
+            // outline (the outline alone stays visible through the black phase), thicker overall
+            // than before so it doesn't get lost against the starfield/HUD. [ROC-LAS-5 legibility]
+            const flashOn = Math.floor(now * BOLT_FLASH_HZ) % 2 === 0;
+            renderer.drawWorldLine(e.pos, tail, { stroke: '#fff', lineWidth: 5 });
+            renderer.drawWorldLine(e.pos, tail, { stroke: flashOn ? '#fff' : '#000', lineWidth: 3 });
+          } else {
+            renderer.drawWorldLine(e.pos, tail, { stroke: '#fff', lineWidth: e.mil ? 4 : 2 });
+          }
           break;
         }
         case 'particle':
