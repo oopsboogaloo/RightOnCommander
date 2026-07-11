@@ -13,7 +13,7 @@ export interface AiConfig {
 }
 
 export const DEFAULT_AI: AiConfig = {
-  shotSpeed: 2,
+  shotSpeed: 1.2, // 60% of previous [tuning]
   shotTtl: 3,
   shotDamage: 1,
 };
