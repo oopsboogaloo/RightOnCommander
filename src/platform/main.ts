@@ -4,6 +4,7 @@
 
 import { createSim, SHIP_SCALE } from '../sim/index.js';
 import { PLAYER_ID } from '../sim/world.js';
+import type { WorldSnapshot } from '../sim/snapshot.js';
 import { vec3, sub, scale, normalize, type Vec3 } from '../sim/math/vec3.js';
 import { Renderer2D } from '../render/renderer2d.js';
 import { modelMatrix } from '../render/project.js';
@@ -240,6 +241,99 @@ function pauseButtonRect(w: number): { x: number; y: number; w: number; h: numbe
   return { x: w - PAUSE_BUTTON.marginX - PAUSE_BUTTON.w, y: PAUSE_BUTTON.marginY, w: PAUSE_BUTTON.w, h: PAUSE_BUTTON.h };
 }
 
+// Rewind ~30s: replays ship/enemy positions, wave/hazard timers and RNG state, so an attack wave
+// can be re-watched exactly as it played out (the sim is deterministic, so spawns/drops after the
+// rewind point repeat identically) — but leaves progression (score, credits, lives, cargo hold)
+// alone, so rewinding never costs anything. Built on a rolling buffer of periodic snapshots rather
+// than the full sim.restore(), since only the "encounter" should roll back, not the ledger. [dev cheat]
+const REWIND_BUTTON = { w: SKIP_BUTTON.w, h: SKIP_BUTTON.h, marginX: SKIP_BUTTON.marginX, marginY: PAUSE_BUTTON.marginY + PAUSE_BUTTON.h + PAUSE_BUTTON_GAP };
+function rewindButtonRect(w: number): { x: number; y: number; w: number; h: number } {
+  return { x: w - REWIND_BUTTON.marginX - REWIND_BUTTON.w, y: REWIND_BUTTON.marginY, w: REWIND_BUTTON.w, h: REWIND_BUTTON.h };
+}
+
+const REWIND_SEC = 30;
+const SNAPSHOT_INTERVAL_SEC = 0.5;
+const SNAPSHOT_INTERVAL_FRAMES = Math.round(SNAPSHOT_INTERVAL_SEC / DT);
+const REWIND_FRAMES = Math.round(REWIND_SEC / DT);
+let rewindBuffer: { frame: number; snap: WorldSnapshot }[] = [];
+let lastSnapshotFrame = -Infinity;
+let lastSnapshotLevelIndex = -1;
+
+// Called once per unpaused sim step; only actually snapshots every SNAPSHOT_INTERVAL_SEC, and only
+// once the cheat is unlocked (no cost for the overwhelming majority of players who never trigger it).
+function captureRewindSnapshot(): void {
+  if (sim.state.levelIndex !== lastSnapshotLevelIndex) {
+    // A relaunch into a new level invalidates any buffered snapshots from the old one.
+    rewindBuffer = [];
+    lastSnapshotFrame = -Infinity;
+    lastSnapshotLevelIndex = sim.state.levelIndex;
+  }
+  if (!cheatUnlocked) return;
+  if (sim.state.frame - lastSnapshotFrame < SNAPSHOT_INTERVAL_FRAMES) return;
+  lastSnapshotFrame = sim.state.frame;
+  rewindBuffer.push({ frame: sim.state.frame, snap: sim.snapshot() });
+  const cutoff = sim.state.frame - REWIND_FRAMES - SNAPSHOT_INTERVAL_FRAMES;
+  while (rewindBuffer.length && rewindBuffer[0].frame < cutoff) rewindBuffer.shift();
+}
+
+// Restores everything about the encounter (entities, waves, hazard/level timers, RNG, and the
+// player's own combat state — position/hull/shield/loadout/missiles) but not progression: lives,
+// wallet/score and the cargo hold are left exactly as they are now.
+function partialRestore(snap: WorldSnapshot): void {
+  const w = sim.state;
+  w.frame = snap.frame;
+  w.difficulty = snap.difficulty;
+  w.entities = new Map(structuredClone(snap.entities).map((e) => [e.id, e]));
+  w.nextId = snap.nextId;
+  w.rngState = snap.rngState;
+  w.mode = snap.mode;
+  w.levelState = snap.levelState;
+  w.levelTimer = snap.levelTimer;
+  w.scroll = snap.scroll;
+  w.bossFadeTtl = snap.bossFadeTtl;
+  w.ecm = { ...snap.ecm };
+  w.hermitWaveId = snap.hermitWaveId;
+  w.waves = {
+    active: new Map(
+      snap.waves.active.map((rec) => [
+        rec.id,
+        {
+          members: new Set(rec.members),
+          total: rec.total,
+          bountySum: rec.bountySum,
+          killed: rec.killed,
+          escaped: rec.escaped,
+          spawn: rec.spawn ? { ...rec.spawn, params: { ...rec.spawn.params } } : null,
+          open: rec.open,
+          defId: rec.defId,
+        },
+      ]),
+    ),
+  };
+  w.asteroidWaves = snap.asteroidWaves.map((a) => ({ ...a }));
+
+  const lives = w.player.lives; // progression — not part of the encounter being replayed
+  w.player = structuredClone(snap.player);
+  w.player.lives = lives;
+
+  w.events = [];
+  w.pool = { projectiles: [], particles: [], missiles: [] }; // allocation cache; safe to drop
+}
+
+function cheatRewind(): void {
+  if (rewindBuffer.length === 0) return;
+  const targetFrame = sim.state.frame - REWIND_FRAMES;
+  let chosen = rewindBuffer[0];
+  for (const entry of rewindBuffer) {
+    if (entry.frame > targetFrame) break; // buffer is oldest-first; stop at the first entry beyond target
+    chosen = entry;
+  }
+  partialRestore(chosen.snap);
+  rewindBuffer = rewindBuffer.filter((e) => e.frame <= chosen.frame); // drop now-invalid "future" entries
+  curr = readPlayerPose();
+  prev = curr; // resync interpolation so the jump doesn't lerp from the old position
+}
+
 function inRect(px: number, py: number, r: { x: number; y: number; w: number; h: number }): boolean {
   return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
 }
@@ -264,6 +358,7 @@ function handleTapAt(px: number, py: number): void {
 
   if (cheatUnlocked && inRect(px, py, skipButtonRect(w))) sim.cheatSkipLevel();
   if (cheatUnlocked && inRect(px, py, pauseButtonRect(w))) paused = !paused;
+  if (cheatUnlocked && inRect(px, py, rewindButtonRect(w))) cheatRewind();
 }
 
 canvas.addEventListener('mousedown', (e) => handleTapAt(e.offsetX, e.offsetY));
@@ -388,6 +483,7 @@ startGameLoop({
     if (ls !== 'LAUNCH' && ls !== 'HYPERSPACE') renderer.revealAsteroidBelt();
     curr = readPlayerPose();
     drainFloaters(events);
+    captureRewindSnapshot();
   },
   render: (alpha) => {
     renderer.beginFrame(paused ? 0 : sim.state.scroll); // sim-owned: 0 halts for bosses/pause, >1 is hyperspace [ROC-BOSS-1, ROC-HYP-3]
@@ -664,6 +760,20 @@ startGameLoop({
 
     if (paused) {
       renderer.drawText('PAUSED', { x: w / 2, y: h * 0.46 }, { fill: '#fff', font: '20px monospace', align: 'center' });
+    }
+
+    // Rewind ~30s: same visibility as Skip Level/Pause, sits directly below Pause. [dev cheat]
+    if (cheatUnlocked && !dockActive()) {
+      const r = rewindButtonRect(w);
+      const enabled = rewindBuffer.length > 0;
+      ctx!.strokeStyle = enabled ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)';
+      ctx!.lineWidth = 1;
+      ctx!.strokeRect(r.x, r.y, r.w, r.h);
+      renderer.drawText('REWIND 30s', { x: r.x + r.w / 2, y: r.y + r.h / 2 + 4 }, {
+        fill: enabled ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)',
+        font: '11px monospace',
+        align: 'center',
+      });
     }
 
     if (sim.state.mode === 'GAME_OVER') {
