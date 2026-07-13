@@ -67,6 +67,8 @@ import rock_hermit from '../content/meshes/rock_hermit.json';
 import splinter from '../content/meshes/splinter.json';
 import canister from '../content/meshes/canister.json';
 import gem from '../content/meshes/gem.json';
+import missile_pickup from '../content/meshes/missile_pickup.json';
+import laser_pickup from '../content/meshes/laser_pickup.json';
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
 if (!canvas) throw new Error('gameCanvas element not found');
@@ -118,6 +120,8 @@ const MESHES: Record<string, Mesh> = {
   splinter,
   canister,
   gem,
+  missile_pickup,
+  laser_pickup,
 } as unknown as Record<string, Mesh>;
 
 // Per-mesh hullRadius(), matching what the sim precomputes internally from this same content —
@@ -392,13 +396,16 @@ const GEM_SCALE = PICKUP_SCALE * 0.5; // -50% [tuning]
 const MINI_ASTEROID_SCALE = SPLINTER_HIT_SCALE; // matches the sim's splinter collision scale exactly
 
 // Asteroid-mined loot (alloys/gems power-ups and their Metals/Crystals cargo, ROC-L1-3) reads as
-// a gem, not salvage; everything else (equipment power-ups, market cargo from ships) is a drifting
-// cargo canister.
+// a gem, not salvage; ship-upgrade power-ups (laser/missile) read as a distinctive tumbling coin,
+// sized and marked so they don't get lost among ordinary cargo; everything else (market cargo
+// from ships) is a drifting cargo canister.
 const GEM_COMMODITIES = new Set(['Metals', 'Crystals']);
+const SHIP_UPGRADE_MESH: Partial<Record<string, string>> = { laser: 'laser_pickup', missile: 'missile_pickup' };
+const SHIP_UPGRADE_MESH_IDS = new Set(Object.values(SHIP_UPGRADE_MESH));
 function pickupMeshId(pickup: { type: string; commodity?: string }): string {
   if (pickup.type === 'alloys' || pickup.type === 'gems') return 'gem';
   if (pickup.type === 'cargo' && pickup.commodity && GEM_COMMODITIES.has(pickup.commodity)) return 'gem';
-  return 'canister';
+  return SHIP_UPGRADE_MESH[pickup.type] ?? 'canister';
 }
 
 // White flash over the whole hull while a hull-damage hit is fresh. [ROC-DMG-6,6a]
@@ -542,7 +549,9 @@ startGameLoop({
           const m = MESHES[meshId];
           if (!m) break;
           const phase = e.id * 0.7; // per-entity offset so pickups don't spin in lockstep
-          const scale = meshId === 'gem' ? GEM_SCALE : PICKUP_SCALE;
+          // Ship-upgrade coins read at full ship size (a Sidewinder's scale); everything else
+          // stays a small prop.
+          const scale = meshId === 'gem' ? GEM_SCALE : SHIP_UPGRADE_MESH_IDS.has(meshId) ? SHIP_SCALE : PICKUP_SCALE;
           renderer.drawMesh(m, modelMatrix(e.pos, now * 1.1 + phase, now * 0.8 + phase * 1.3, scale));
           break;
         }

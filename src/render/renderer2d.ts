@@ -208,7 +208,7 @@ export class Renderer2D implements Renderer {
 
     ctx.lineJoin = 'round';
     ctx.lineWidth = (opts.lineWidth as number) ?? 1.5;
-    ctx.fillStyle = (opts.fill as string) ?? '#000';
+    const meshFill = (opts.fill as string) ?? '#000';
     ctx.strokeStyle = (opts.stroke as string) ?? '#fff';
 
     for (const face of prep.faces) {
@@ -219,6 +219,8 @@ export class Renderer2D implements Renderer {
         else ctx.lineTo(px.x, px.y);
       });
       ctx.closePath();
+      // A face's own fill (e.g. a pickup's embossed marking) overrides the mesh-wide fill.
+      ctx.fillStyle = face.fill ?? meshFill;
       ctx.fill(); // black fill occludes hulls behind (painter order) [ROC-VIS-2,5]
       ctx.stroke(); // white vector edges [ROC-VIS-1]
     }
