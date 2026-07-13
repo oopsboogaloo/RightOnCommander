@@ -46,6 +46,7 @@ export interface PreparedFace {
   loop: number[];
   depth: number; // mean camera-space depth, for the painter sort
   normalCam: Vec3;
+  fill?: string; // overrides the mesh-wide fill for just this face
 }
 
 export interface PreparedMesh {
@@ -80,7 +81,7 @@ export function prepareMesh(mesh: Mesh, model: Mat4, cam: Camera): PreparedMesh 
 
     if (isBackFace(normalCam, centroidCam)) continue;
     faceVisible[fi] = true;
-    faces.push({ loop: face.loop, depth: centroidCam.z, normalCam: normalize(normalCam) });
+    faces.push({ loop: face.loop, depth: centroidCam.z, normalCam: normalize(normalCam), fill: face.fill });
   }
 
   faces.sort((a, b) => b.depth - a.depth); // larger depth = farther = drawn first

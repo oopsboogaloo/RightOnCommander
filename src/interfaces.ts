@@ -25,7 +25,8 @@ export interface InputFrame {
 export interface Mesh {
   vertices: Vec3[];
   edges: [number, number][];
-  faces: { loop: number[]; normal: Vec3 }[];
+  faces: { loop: number[]; normal: Vec3; fill?: string }[]; // fill overrides the mesh-wide fill
+  // for just this face (e.g. a pickup's embossed marking)
   // Decorative line edges (gun barrel, cockpit/engine detail) that are not polygon
   // boundaries. Each is drawn only while one of its controlling faces is visible — Elite's
   // hidden-line rule, so the nose gun shows but the back detailing hides when culled.
