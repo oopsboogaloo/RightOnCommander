@@ -3,7 +3,7 @@
 
 import type { EnemyDef, WaveDef } from '../systems/waves.js';
 import type { LevelDef } from '../systems/levelstate.js';
-import type { AsteroidFieldDef } from '../systems/asteroids.js';
+import type { AsteroidFieldDef, GiantAsteroidDef, GiantAsteroidPhase } from '../systems/asteroids.js';
 import { PATTERNS } from '../systems/paths.js';
 
 export interface Content {
@@ -82,6 +82,21 @@ function parseAsteroidWave(raw: unknown, where: string): AsteroidFieldDef {
   };
 }
 
+const GIANT_ASTEROID_PHASES = ['asteroids', 'wavesA', 'asteroidsB', 'wavesB'] as const;
+
+function parseGiantAsteroid(raw: unknown, where: string): GiantAsteroidDef {
+  if (!isObj(raw)) throw new Error(`content: ${where} must be an object`);
+  const phase = raw.phase;
+  if (typeof phase !== 'string' || !GIANT_ASTEROID_PHASES.includes(phase as GiantAsteroidPhase)) {
+    throw new Error(`content: ${where}.phase must be one of ${GIANT_ASTEROID_PHASES.join(', ')}`);
+  }
+  return {
+    phase: phase as GiantAsteroidPhase,
+    x: num(raw.x, `${where}.x`),
+    delayMs: raw.delayMs === undefined ? undefined : num(raw.delayMs, `${where}.delayMs`),
+  };
+}
+
 function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
   if (!isObj(raw)) throw new Error('content: "level" must be an object');
   const oneBoss = (key: string, name: unknown): string => {
@@ -107,6 +122,13 @@ function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
     if (!Array.isArray(arr)) throw new Error(`content: "level.${key}" must be an array`);
     return arr.map((w, i) => parseAsteroidWave(w, `level.${key}[${i}]`));
   };
+  const giantAsteroidsRaw = raw.giantAsteroids;
+  if (giantAsteroidsRaw !== undefined && !Array.isArray(giantAsteroidsRaw)) {
+    throw new Error('content: "level.giantAsteroids" must be an array');
+  }
+  const giantAsteroids = Array.isArray(giantAsteroidsRaw)
+    ? giantAsteroidsRaw.map((g, i) => parseGiantAsteroid(g, `level.giantAsteroids[${i}]`))
+    : undefined;
   const facts = raw.facts;
   if (facts !== undefined && (!Array.isArray(facts) || facts.some((f) => typeof f !== 'string'))) {
     throw new Error('content: "level.facts" must be an array of strings');
@@ -119,6 +141,7 @@ function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
     asteroidWaves: asteroidGroup('asteroidWaves'),
     midAsteroids: asteroidGroup('midAsteroids'),
     combatAsteroids: asteroidGroup('combatAsteroids'),
+    giantAsteroids,
     wavesA: group('wavesA'),
     midBoss: bossOrPack('midBoss'),
     wavesB: group('wavesB'),

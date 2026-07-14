@@ -8,9 +8,11 @@ import { createRng } from '../../src/sim/rng.js';
 import { vec3 } from '../../src/sim/math/vec3.js';
 import {
   startAsteroidWaves,
+  startGiantAsteroids,
   asteroidFieldSystem,
   asteroidSplitSystem,
 } from '../../src/sim/systems/asteroids.js';
+import { applyDamage } from '../../src/sim/systems/damage.js';
 
 const DT = 1 / 120;
 const asteroids = (w: ReturnType<typeof makeWorld>) => [...w.entities.values()].filter((e) => e.kind === 'asteroid');
@@ -125,5 +127,52 @@ describe('asteroid field', () => {
     w.events = [{ type: 'destroyed', kind: 'asteroid', meshId: 'splinter', pos: vec3(), vel: vec3() }];
     asteroidSplitSystem(w, rng);
     expect(asteroids(w).length).toBe(0);
+  });
+});
+
+describe('giant asteroids', () => {
+  it('spawns a one-shot obstacle at its authored x position after delayMs, not a randomised field', () => {
+    const w = makeWorld(1);
+    const rng = createRng(1);
+    startGiantAsteroids(w, [{ phase: 'wavesA', x: 0.42, delayMs: 500 }]);
+
+    asteroidFieldSystem(w, rng, DT);
+    expect(asteroids(w).length).toBe(0); // not due yet
+
+    for (let i = 0; i < 61; i++) asteroidFieldSystem(w, rng, DT); // ~0.5s elapses
+    const giants = asteroids(w);
+    expect(giants.length).toBe(1);
+    expect(giants[0].pos.x).toBe(0.42);
+    expect(giants[0].meshId).toBe('giant_asteroid');
+    expect(giants[0].indestructible).toBe(true);
+    expect(giants[0].scale).toBe(5);
+    expect(w.giantAsteroids.length).toBe(0); // consumed, one-shot
+  });
+
+  it('spins slowly about yaw only (bank stays fixed) — flat against the screen, not a chaotic tumble', () => {
+    const w = makeWorld(1);
+    const rng = createRng(1);
+    startGiantAsteroids(w, [{ phase: 'wavesA', x: 0 }]);
+    asteroidFieldSystem(w, rng, DT);
+
+    const rock = asteroids(w)[0];
+    const bank0 = rock.bank;
+    expect(rock.tumble!.bankRate).toBe(0);
+    for (let i = 0; i < 60; i++) asteroidFieldSystem(w, rng, DT);
+    expect(rock.bank).toBe(bank0); // never rotates on this axis
+    expect(rock.yaw).not.toBe(0); // yaw did advance
+  });
+
+  it('is indestructible: applyDamage never reduces its hull, however much damage it takes', () => {
+    const w = makeWorld(1);
+    const rng = createRng(1);
+    startGiantAsteroids(w, [{ phase: 'wavesA', x: 0 }]);
+    asteroidFieldSystem(w, rng, DT);
+
+    const rock = asteroids(w)[0];
+    const hull0 = rock.hull;
+    applyDamage(w, rock, 99999);
+    expect(rock.hull).toBe(hull0);
+    expect(asteroids(w).length).toBe(1); // never destroyed/deleted
   });
 });

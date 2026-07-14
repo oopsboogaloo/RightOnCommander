@@ -18,6 +18,20 @@ export interface AsteroidFieldDef {
   xSpread?: number; // half-width of the spawn x range
 }
 
+// Which level phase a giant asteroid appears in — the same four phases that already schedule the
+// other (randomised) asteroid fields, so an authored obstacle can be placed anywhere across the
+// level. [ROC-GIANT-1]
+export type GiantAsteroidPhase = 'asteroids' | 'wavesA' | 'asteroidsB' | 'wavesB';
+
+// One authored giant asteroid: a fixed x position and a delay (from its phase's start) rather
+// than the randomised count/spacing/xSpread of a normal field — level geography, not a hazard
+// field. [ROC-GIANT-1]
+export interface GiantAsteroidDef {
+  phase: GiantAsteroidPhase;
+  x: number;
+  delayMs?: number;
+}
+
 const SPAWN_Z = 1.8; // matches enemy path entry [paths.ts]
 const CULL_Z = -1.9; // past the bottom edge — drifted off-field, quietly removed
 // A splinter's outward kick can point any direction (including one that cancels its inherited
@@ -28,6 +42,12 @@ const SPLINTER_TTL = 8;
 
 const LARGE = { hull: 3, bounty: 0, meshId: 'asteroid', colliderRx: 0.24, colliderRz: 0.24 };
 const SPLINTER = { hull: 1, bounty: 4, meshId: 'splinter', colliderRx: 0.11, colliderRz: 0.11 };
+// A giant asteroid reuses the same rock mesh, just drawn (and collided — the mesh silhouette
+// scales with it) 5x bigger, with thick white edges applied at render time by meshId. Slow,
+// flat, single-axis spin (yaw only — see boss.ts §4 rotation notes) rather than the small rocks'
+// chaotic yaw+bank tumble; indestructible, so it never fragments. [ROC-GIANT-1]
+const GIANT = { meshId: 'giant_asteroid', scale: 5, speed: 0.28 };
+const GIANT_YAW_RATE: [number, number] = [0.15, 0.25]; // rad/s — much slower than a normal tumble
 
 // A splinter reads better on screen as a small asteroid chunk than the authentic-but-oddly-
 // angular bbcelite splinter shape, so it's drawn (and collided) as the asteroid mesh at this
@@ -40,6 +60,34 @@ const randTumble = (rng: Rng, [lo, hi]: [number, number]): { yawRate: number; ba
   yawRate: rng.range(lo, hi) * randSign(rng),
   bankRate: rng.range(lo, hi) * randSign(rng),
 });
+
+// Register the pending authored giant asteroids for one level phase (see GiantAsteroidPhase);
+// each is one-shot — no count/spacing loop, just a single spawn at its delay. [ROC-GIANT-1]
+export function startGiantAsteroids(world: World, defs: GiantAsteroidDef[]): void {
+  for (const def of defs) {
+    world.giantAsteroids.push({ x: def.x, timer: (def.delayMs ?? 0) / 1000 });
+  }
+}
+
+function spawnGiant(world: World, rng: Rng, x: number): void {
+  const id = world.nextId++;
+  const e: Entity = {
+    id,
+    kind: 'asteroid',
+    pos: vec3(x, 0, SPAWN_Z),
+    vel: vec3(0, 0, -GIANT.speed),
+    yaw: rng.range(0, Math.PI * 2),
+    bank: 0,
+    hull: 999,
+    hullMax: 999,
+    bounty: 0,
+    meshId: GIANT.meshId,
+    scale: GIANT.scale,
+    indestructible: true,
+    tumble: { yawRate: rng.range(GIANT_YAW_RATE[0], GIANT_YAW_RATE[1]) * randSign(rng), bankRate: 0 },
+  };
+  world.entities.set(id, e);
+}
 
 // Register one or more asteroid waves; each spawns its members over the following steps,
 // sequenced by its own delayMs so the field can ramp up in bursts. [ROC-L1-1]
@@ -114,6 +162,20 @@ export function asteroidFieldSystem(world: World, rng: Rng, dt: number): void {
       spawnLarge(world, rng, field);
       field.pending--;
       field.timer += field.spacingSec;
+    }
+  }
+
+  if (world.giantAsteroids.length > 0) {
+    const ready: number[] = [];
+    for (let i = 0; i < world.giantAsteroids.length; i++) {
+      const g = world.giantAsteroids[i];
+      g.timer -= dt;
+      if (g.timer <= 0) ready.push(i);
+    }
+    for (let i = ready.length - 1; i >= 0; i--) {
+      const idx = ready[i];
+      spawnGiant(world, rng, world.giantAsteroids[idx].x);
+      world.giantAsteroids.splice(idx, 1);
     }
   }
 

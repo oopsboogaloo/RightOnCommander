@@ -37,6 +37,8 @@ export function applyDamage(
   damage: number,
   cfg: DamageConfig = DEFAULT_DAMAGE,
 ): void {
+  if (e.indestructible) return; // a giant asteroid: the hit is absorbed, nothing happens [ROC-GIANT-1]
+
   if ((e.shield ?? 0) > 0) {
     e.shield = (e.shield ?? 0) - 1; // remove one ring [ROC-DMG-2, ROC-DMG-5]
     e.shieldFlashTtl = cfg.shieldFlashDuration; // flash shield, not hull

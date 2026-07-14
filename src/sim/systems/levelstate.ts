@@ -16,7 +16,7 @@ import { vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
 import { type World } from '../world.js';
 import { startWave, type WaveDef, type WaveContext } from './waves.js';
-import { startAsteroidWaves, type AsteroidFieldDef } from './asteroids.js';
+import { startAsteroidWaves, startGiantAsteroids, type AsteroidFieldDef, type GiantAsteroidDef, type GiantAsteroidPhase } from './asteroids.js';
 import { bossPlacement } from './boss.js';
 
 export type LevelState =
@@ -42,6 +42,7 @@ export interface LevelDef {
   asteroidWaves?: AsteroidFieldDef[]; // opening asteroid waves, if the level has any [ROC-L1-1]
   midAsteroids?: AsteroidFieldDef[]; // a second dense field just before the mid-boss [ROC-L1-1]
   combatAsteroids?: AsteroidFieldDef[]; // a light trickle that drifts through the ship-wave groups
+  giantAsteroids?: GiantAsteroidDef[]; // fixed, indestructible obstacles placed across the level [ROC-GIANT-1]
   wavesA: WaveDef[];
   midBoss: string | string[]; // enemy name(s) spawned as a boss; multiple names fight together (e.g. a pair) [ROC-L3-3]
   wavesB: WaveDef[];
@@ -122,6 +123,12 @@ const asteroidFieldCleared = (world: World): boolean =>
 
 function startGroup(world: World, waves: WaveDef[], ctx: WaveContext): void {
   for (const w of waves) startWave(world, w, ctx);
+}
+
+// Register whichever authored giant asteroids belong to this phase, if any. [ROC-GIANT-1]
+function startPhaseGiants(world: World, level: LevelDef, phase: GiantAsteroidPhase): void {
+  const defs = level.giantAsteroids?.filter((g) => g.phase === phase);
+  if (defs?.length) startGiantAsteroids(world, defs);
 }
 
 interface StationAi {
@@ -227,14 +234,17 @@ export function enterLevelState(world: World, state: LevelState, level: LevelDef
       break;
     case 'ASTEROIDS':
       if (level.asteroidWaves) startAsteroidWaves(world, level.asteroidWaves);
+      startPhaseGiants(world, level, 'asteroids');
       break;
     case 'WAVES_A':
       startGroup(world, level.wavesA, ctx);
       if (level.combatAsteroids) startAsteroidWaves(world, level.combatAsteroids); // rocks amongst the ships
+      startPhaseGiants(world, level, 'wavesA');
       break;
     case 'ASTEROIDS_B':
       // A second dense field drifts through just before the mid-boss. [ROC-L1-1]
       if (level.midAsteroids) startAsteroidWaves(world, level.midAsteroids);
+      startPhaseGiants(world, level, 'asteroidsB');
       break;
     case 'MID_BOSS': {
       world.scroll = 0; // the fight is signalled by the scrolling stopping [ROC-BOSS-1]
@@ -249,6 +259,7 @@ export function enterLevelState(world: World, state: LevelState, level: LevelDef
     case 'WAVES_B':
       startGroup(world, level.wavesB, ctx);
       if (level.combatAsteroids) startAsteroidWaves(world, level.combatAsteroids);
+      startPhaseGiants(world, level, 'wavesB');
       break;
     case 'END_BOSS':
       // A strafe boss (the FdL) flies in from off-screen while the field keeps scrolling and halts

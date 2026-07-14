@@ -234,14 +234,19 @@ export function collisionSystem(world: World, cfg: CollisionConfig): CollisionHi
     }
   }
 
-  // Enemy fire -> the player. One target, so a direct test is cheaper than a hash. [ROC-DMG-6a]
+  // Enemy fire -> the player, or a giant (indestructible) asteroid in the way first — solid
+  // obstacles block shots from either side, not just the player's. [ROC-GIANT-2]
   const player = world.entities.get(PLAYER_ID);
-  if (player) {
-    for (const e of world.entities.values()) {
-      if (e.team !== 'enemy' || (e.kind !== 'projectile' && e.kind !== 'missile')) continue;
-      const { a, b } = sweptSegment(e, cfg.dt);
-      if (projectileHitsTarget(a, b, player, cfg)) hits.push({ projectile: e.id, target: PLAYER_ID });
+  const obstacles = targets.filter((t) => t.kind === 'asteroid' && t.indestructible);
+  for (const e of world.entities.values()) {
+    if (e.team !== 'enemy' || (e.kind !== 'projectile' && e.kind !== 'missile')) continue;
+    const { a, b } = sweptSegment(e, cfg.dt);
+    const blocker = obstacles.find((o) => projectileHitsTarget(a, b, o, cfg));
+    if (blocker) {
+      hits.push({ projectile: e.id, target: blocker.id });
+      continue;
     }
+    if (player && projectileHitsTarget(a, b, player, cfg)) hits.push({ projectile: e.id, target: PLAYER_ID });
   }
 
   return hits;
