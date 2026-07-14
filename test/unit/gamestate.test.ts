@@ -38,6 +38,15 @@ function addEnemyShip(w: ReturnType<typeof makeWorld>, pos = vec3(0, 0, 0)): Ent
   w.entities.set(id, e);
   return e;
 }
+function addGiantAsteroid(w: ReturnType<typeof makeWorld>, pos = vec3(0, 0, 0)): Entity {
+  const id = w.nextId++;
+  const e: Entity = {
+    id, kind: 'asteroid', pos, vel: vec3(), yaw: 0, bank: 0,
+    hull: 999, hullMax: 999, colliderRx: 0.5, colliderRz: 0.5, indestructible: true,
+  };
+  w.entities.set(id, e);
+  return e;
+}
 
 describe('player takes damage', () => {
   // Give the player a few shield rings independent of the starting hull's defaults.
@@ -249,6 +258,44 @@ describe('death, lives & respawn', () => {
     expect(w.player.lives).toBe(0);
     runOutPending(w);
     expect(w.mode).toBe('GAME_OVER');
+  });
+});
+
+// Giant asteroids (ROC-GIANT-1): fixed, indestructible obstacles — contact is instantly lethal to
+// whatever hits them, player or enemy, bypassing the normal graduated ram (which only costs one
+// shield ring/hull point and dents the rammer). The obstacle itself is untouched either way.
+describe('giant asteroids are lethal solid obstacles', () => {
+  it('destroys the player outright on contact, punching through shields instead of costing one ring', () => {
+    const w = makeWorld(1);
+    const p = w.entities.get(PLAYER_ID)!;
+    p.shield = 4;
+    p.shieldMax = 4;
+    p.hull = 2;
+    addGiantAsteroid(w, vec3(0, 0, 0)); // overlaps the player at the origin
+    gamestateSystem(w, DT, CFG);
+    expect(p.shield).toBe(0);
+    expect(p.hull).toBe(0); // instantly lethal, not a graduated hit
+  });
+
+  it('destroys an enemy or boss on contact, independent of the player and of its own shields', () => {
+    const w = makeWorld(1);
+    const enemy = addEnemyShip(w, vec3(0, 0, 0));
+    enemy.shield = 2;
+    enemy.shieldMax = 2;
+    enemy.hull = 50;
+    enemy.hullMax = 50;
+    addGiantAsteroid(w, vec3(0, 0, 0));
+    gamestateSystem(w, DT, CFG);
+    expect(w.entities.has(enemy.id)).toBe(false); // wrecked outright, shields didn't save it
+  });
+
+  it('is itself unaffected by any of these impacts', () => {
+    const w = makeWorld(1);
+    addEnemyShip(w, vec3(0, 0, 0));
+    const giant = addGiantAsteroid(w, vec3(0, 0, 0));
+    gamestateSystem(w, DT, CFG);
+    expect(w.entities.has(giant.id)).toBe(true);
+    expect(giant.hull).toBe(999);
   });
 });
 

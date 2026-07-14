@@ -104,6 +104,15 @@ function rams(player: Entity, e: Entity, cfg: GamestateConfig): boolean {
   return dx * dx + dz * dz <= (pr + er) * (pr + er);
 }
 
+// Zero the target's shields (an indestructible obstacle punches straight through) then deal
+// enough hull damage to guarantee destruction in one hit, regardless of current hull. The player
+// dies unconditionally on any hull hit once shields are down (damage.ts), so the exact amount
+// only matters for enemies/bosses. [ROC-GIANT-1]
+function destroyOnImpact(world: World, e: Entity): void {
+  e.shield = 0;
+  applyDamage(world, e, (e.hullMax ?? e.hull ?? 1) + 1);
+}
+
 // Restore the player to full and grant a window of invulnerability at `x,z`. Blinking is reserved
 // for this window alone — a ramming contact's i-frames set `invulnTtl` but never `respawnBlinkTtl`
 // — so a ship on screen blinking always means "just respawned", never "just took a hit". [ROC-LIFE-2b]
@@ -146,6 +155,22 @@ export function gamestateSystem(
 ): void {
   if (world.mode === 'GAME_OVER') return;
 
+  // Giant asteroids are level geography, not just a player hazard: any enemy or boss that flies
+  // into one is wrecked too, independent of the player's own state. [ROC-GIANT-1]
+  const obstacles = [...world.entities.values()].filter((e) => e.kind === 'asteroid' && e.indestructible);
+  if (obstacles.length > 0) {
+    for (const e of world.entities.values()) {
+      if (e.kind !== 'enemy' && e.kind !== 'boss') continue;
+      if ((e.hull ?? 0) <= 0) continue;
+      for (const g of obstacles) {
+        if (rams(e, g, cfg)) {
+          destroyOnImpact(world, e);
+          break;
+        }
+      }
+    }
+  }
+
   if (world.player.invulnTtl > 0) world.player.invulnTtl = Math.max(0, world.player.invulnTtl - dt);
   if (world.player.respawnBlinkTtl > 0) world.player.respawnBlinkTtl = Math.max(0, world.player.respawnBlinkTtl - dt);
 
@@ -177,8 +202,12 @@ export function gamestateSystem(
     for (const e of world.entities.values()) {
       if (e.kind !== 'enemy' && e.kind !== 'boss' && e.kind !== 'asteroid') continue;
       if (rams(player, e, cfg)) {
-        applyDamage(world, e, cfg.ramDamage); // the ram wrecks a fighter, dents a boss
-        applyDamage(world, player, cfg.contactDamage);
+        if (e.indestructible) {
+          destroyOnImpact(world, player); // no shield ring absorbs it — solid obstacles are lethal
+        } else {
+          applyDamage(world, e, cfg.ramDamage); // the ram wrecks a fighter, dents a boss
+          applyDamage(world, player, cfg.contactDamage);
+        }
         world.player.invulnTtl = cfg.contactInvuln;
         break;
       }

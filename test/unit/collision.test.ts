@@ -128,6 +128,17 @@ describe('collisionSystem', () => {
     addPulse(w, vec3(0, 0, 0), vec3(0, 0, 6)); // no targets present
     expect(collisionSystem(w, cfg())).toEqual([]);
   });
+
+  it('a giant (indestructible) asteroid blocks enemy fire too, not just the player fire it already stops', () => {
+    const w = makeWorld(1);
+    const giant = addEnemy(w, { kind: 'asteroid', pos: vec3(0, 0, 0.5), colliderRx: 0.5, colliderRz: 0.5, indestructible: true });
+    const id = w.nextId++;
+    const shot: Entity = { id, kind: 'projectile', team: 'enemy', pos: vec3(0, 0, 0.5), vel: vec3(0, 0, -6), yaw: 0, bank: 0, ttl: 1 };
+    w.entities.set(id, shot);
+
+    const hits = collisionSystem(w, cfg());
+    expect(hits).toEqual([{ projectile: shot.id, target: giant.id }]); // absorbed by the rock, never reaches the player
+  });
 });
 
 // Shield-hug rework: a shielded target's hitbox is the hull silhouette dilated by a small gap

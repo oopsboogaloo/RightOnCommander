@@ -53,6 +53,18 @@ describe('damageSystem', () => {
     expect(e.flashTtl!).toBeGreaterThan(0);
   });
 
+  it('an indestructible target absorbs the hit with zero effect — no hull/shield loss, no destroyed event', () => {
+    const w = makeWorld(1);
+    const giant = addEnemy(w, { kind: 'asteroid', shield: 0, hull: 999, hullMax: 999, indestructible: true });
+    const proj = addPulse(w, 99999);
+
+    damageSystem(w, [{ projectile: proj.id, target: giant.id }], DT);
+
+    expect(giant.hull).toBe(999); // untouched, however much damage the shot carried
+    expect(w.entities.has(proj.id)).toBe(false); // still consumed — the shot is blocked, not passed through
+    expect(w.events.some((e) => e.type === 'destroyed')).toBe(false);
+  });
+
   it('a missile that lands a hit pauses the next launch, same as one that expires', () => {
     const w = makeWorld(1);
     const enemy = addEnemy(w, { shield: 0, hull: 3, hullMax: 3 });

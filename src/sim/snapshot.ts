@@ -3,7 +3,7 @@
 // be stored or replayed. [ROC-TEST-4,5]
 
 import type { Entity } from './components.js';
-import type { AsteroidFieldState, PlayerState, WaveSpawnState, World } from './world.js';
+import type { AsteroidFieldState, GiantAsteroidSpawnState, PlayerState, WaveSpawnState, World } from './world.js';
 
 export interface WorldSnapshot {
   frame: number;
@@ -38,6 +38,7 @@ export interface WorldSnapshot {
   };
   unlocks: { eliteMode: boolean; thargoidShip: boolean };
   asteroidWaves: AsteroidFieldState[];
+  giantAsteroids: GiantAsteroidSpawnState[];
 }
 
 export function snapshot(world: World): WorldSnapshot {
@@ -74,6 +75,7 @@ export function snapshot(world: World): WorldSnapshot {
     },
     unlocks: { ...world.unlocks },
     asteroidWaves: world.asteroidWaves.map((w) => ({ ...w })),
+    giantAsteroids: world.giantAsteroids.map((g) => ({ ...g })),
   };
 }
 
@@ -117,6 +119,7 @@ export function restore(world: World, snap: WorldSnapshot): void {
   };
   world.unlocks = { ...snap.unlocks };
   world.asteroidWaves = snap.asteroidWaves.map((w) => ({ ...w }));
+  world.giantAsteroids = snap.giantAsteroids.map((g) => ({ ...g }));
   world.events = [];
   world.pool = { projectiles: [], particles: [], missiles: [] }; // allocation cache; safe to drop on restore
 }

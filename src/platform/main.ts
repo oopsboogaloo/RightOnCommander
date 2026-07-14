@@ -116,6 +116,7 @@ const MESHES: Record<string, Mesh> = {
   coriolis,
   transporter,
   asteroid,
+  giant_asteroid: asteroid, // same rock geometry, drawn/collided bigger via entity.scale [ROC-GIANT-1]
   rock_hermit,
   splinter,
   canister,
@@ -315,6 +316,7 @@ function partialRestore(snap: WorldSnapshot): void {
     ),
   };
   w.asteroidWaves = snap.asteroidWaves.map((a) => ({ ...a }));
+  w.giantAsteroids = snap.giantAsteroids.map((g) => ({ ...g }));
 
   const lives = w.player.lives; // progression — not part of the encounter being replayed
   w.player = structuredClone(snap.player);
@@ -586,8 +588,14 @@ startGameLoop({
           // authentic-but-oddly-angular bbcelite splinter shape, so it draws the asteroid mesh
           // at a fraction of the size instead.
           const isSplinter = e.meshId === 'splinter';
+          // A giant asteroid is a solid obstacle, not a shootable target — thick white edges mark
+          // it as such at a glance; its scale (matching the sim's silhouette-based collider) comes
+          // straight off the entity, same as any other scaled hull. [ROC-GIANT-1]
+          const isGiant = e.meshId === 'giant_asteroid';
           const m = isSplinter ? MESHES.asteroid : e.meshId ? MESHES[e.meshId] : undefined;
-          if (m) renderer.drawMesh(m, modelMatrix(e.pos, e.yaw, e.bank, isSplinter ? MINI_ASTEROID_SCALE : SHIP_SCALE), hullFlash(e));
+          const scale = isSplinter ? MINI_ASTEROID_SCALE : SHIP_SCALE * (e.scale ?? 1);
+          const opts = isGiant ? { fill: '#000', stroke: '#fff', lineWidth: 4 } : hullFlash(e);
+          if (m) renderer.drawMesh(m, modelMatrix(e.pos, e.yaw, e.bank, scale), opts);
           break;
         }
         default:

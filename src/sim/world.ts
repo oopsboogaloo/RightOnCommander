@@ -79,6 +79,13 @@ export interface AsteroidFieldState {
   xSpread: number; // half-width of the spawn x range
 }
 
+// One authored giant asteroid waiting to spawn at a fixed x position. Unlike AsteroidFieldState
+// these are one-shot (no count/spacing) — level geography, not a randomised field. [ROC-GIANT-1]
+export interface GiantAsteroidSpawnState {
+  x: number;
+  timer: number; // seconds until it spawns
+}
+
 export interface World {
   frame: number;
   rngState: number;
@@ -102,6 +109,7 @@ export interface World {
   rating: { kills: number; weightedTally: number; rank: string }; // [ROC-RTG-1]
   waves: { active: Map<number, WaveRecord> }; // [ROC-ECO-1a]
   asteroidWaves: AsteroidFieldState[]; // active/pending level-opening asteroid waves [ROC-L1-1]
+  giantAsteroids: GiantAsteroidSpawnState[]; // pending authored giant-asteroid spawns [ROC-GIANT-1]
   unlocks: { eliteMode: boolean; thargoidShip: boolean }; // [ROC-PROG-1,2]
   events: SimEvent[]; // drained by shell each step
   pool: { projectiles: Entity[]; particles: Entity[]; missiles: Entity[] }; // recycled; not serialised
@@ -167,6 +175,7 @@ export function makeWorld(seed: number): World {
     rating: { kills: 0, weightedTally: 0, rank: 'Harmless' },
     waves: { active: new Map<number, WaveRecord>() },
     asteroidWaves: [],
+    giantAsteroids: [],
     unlocks: { eliteMode: false, thargoidShip: false },
     events: [],
     pool: { projectiles: [], particles: [], missiles: [] },

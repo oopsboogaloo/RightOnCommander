@@ -39,6 +39,12 @@
       "xSpread": 0.9
     }
   ],
+  "giantAsteroids": [
+    { "phase": "asteroids", "x": 0.3, "delayMs": 5000 },
+    { "phase": "wavesA", "x": -0.35, "delayMs": 12000 },
+    { "phase": "asteroidsB", "x": 0.4, "delayMs": 2000 },
+    { "phase": "wavesB", "x": -0.3, "delayMs": 16000 }
+  ],
   "wavesA": [
     {
       "id": "l1a1",
