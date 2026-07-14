@@ -56,7 +56,7 @@ export const DEFAULT_WEAPONS: WeaponsConfig = {
   militaryDamage: 2,
   beamRange: 3,
   beamPeriod: 0.3,
-  beamDamage: 2.1, // +40%, then a further +50% [tuning]
+  beamDamage: 4, // [tuning]
   muzzleOffset: 0.25,
   muzzleGap: 0.03, // just clear of the hull silhouette, not floating off the nose
   muzzleSpread: 0.04, // half the previous gap: multi-laser mounts read as one fatter weapon, not two separate guns
