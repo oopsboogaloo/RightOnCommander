@@ -69,6 +69,7 @@ interface StrafeAi {
   rate: number; // read by aiSystem: aimed fire cadence (0 while entering) [ROC-FDL-4]
   aimed: boolean;
   cooldown: number;
+  slot?: number; // which boss of a multi-strafe-boss pack this is (0, 1, 2…) [ROC-L3-3]
 }
 
 interface EscortAi {
@@ -120,7 +121,7 @@ export function bossPlacement(behavior: string | undefined, slot = 0): {
     return {
       pos: { x: from.x, y: 0, z: from.z },
       yaw: Math.PI,
-      ai: { kind: 'strafe', state: 'entry', age: 0, from, s: 0, dir: 1, flip: 1.0, rate: 0, aimed: true, cooldown: 1 / FDL_FIRE_RATE },
+      ai: { kind: 'strafe', state: 'entry', age: 0, from, s: 0, dir: 1, flip: 1.0, rate: 0, aimed: true, cooldown: 1 / FDL_FIRE_RATE, slot },
     };
   }
   // Legacy static boss: up-screen, facing the player.
@@ -179,6 +180,18 @@ function findHermit(world: World): Entity | undefined {
 
 const escorts = (world: World): Entity[] =>
   [...world.entities.values()].filter((e) => e.kind === 'enemy' && (e.ai as EscortAi | undefined)?.kind === 'escort');
+
+// Other strafing bosses (already done entering) sharing this fight, e.g. the L3 Anaconda pair —
+// used to keep multiple strafe bosses from converging on the same arc position. [ROC-L3-3]
+const MIN_STRAFE_ARC_SEP = 0.4;
+function otherStrafeBosses(world: World, self: Entity): Entity[] {
+  const out: Entity[] = [];
+  for (const e of world.entities.values()) {
+    if (e.id === self.id) continue;
+    if (e.kind === 'boss' && (e.ai as StrafeAi | undefined)?.kind === 'strafe' && (e.ai as StrafeAi).state === 'strafe') out.push(e);
+  }
+  return out;
+}
 
 // Launch one adder: from the asteroid itself (spawning with the rock's current y-rotation, then
 // unwinding to flight attitude), or entering from a screen edge. [ROC-HERM-4,5]
@@ -295,7 +308,7 @@ function moveStrafe(world: World, e: Entity, rng: Rng, dt: number): void {
   if (ai.state === 'entry') {
     ai.age += dt;
     const k = smoothstep(Math.min(1, ai.age / FDL_ENTRY_SEC));
-    const target = trackPoint(FDL_TRACK, 0);
+    const target = trackPoint(FDL_TRACK, (ai.slot ?? 0) * SLOT_SPACING);
     const prev = { x: e.pos.x, z: e.pos.z };
     e.pos.x = ai.from.x + (target.x - ai.from.x) * k;
     e.pos.z = ai.from.z + (target.z - ai.from.z) * k;
@@ -306,7 +319,7 @@ function moveStrafe(world: World, e: Entity, rng: Rng, dt: number): void {
       ai.state = 'strafe';
       ai.rate = FDL_FIRE_RATE; // now it fires
       ai.cooldown = 1 / FDL_FIRE_RATE;
-      ai.s = 0;
+      ai.s = (ai.slot ?? 0) * SLOT_SPACING;
       world.scroll = 0; // the fight proper begins; halt the field [ROC-BOSS-1]
     }
     return;
@@ -317,6 +330,20 @@ function moveStrafe(world: World, e: Entity, rng: Rng, dt: number): void {
   if (ai.flip <= 0) {
     ai.dir = ai.dir === 1 ? -1 : 1;
     ai.flip = rng.range(FDL_FLIP_RANGE[0], FDL_FLIP_RANGE[1]);
+  }
+
+  // If another strafing boss (a multi-boss pack, e.g. the L3 Anacondas) has drifted too close
+  // along the track, steer away from it so the pair doesn't overlap. Deterministic: the
+  // higher-id boss always yields, so there's no oscillation between the two. [ROC-L3-3]
+  const perimeter = trackPerimeter(FDL_TRACK);
+  for (const other of otherStrafeBosses(world, e)) {
+    const otherAi = other.ai as StrafeAi;
+    const diff = (((ai.s - otherAi.s) % perimeter) + perimeter) % perimeter;
+    const sep = Math.min(diff, perimeter - diff);
+    if (sep < MIN_STRAFE_ARC_SEP && e.id > other.id) {
+      ai.dir = diff < perimeter / 2 ? 1 : -1;
+      ai.flip = Math.max(ai.flip, 0.4); // hold this heading a moment so it actually pulls away
+    }
   }
 
   const prev = { x: e.pos.x, z: e.pos.z };
