@@ -228,7 +228,7 @@
     {
       "id": "l2b8",
       "pattern": "vform",
-      "enemy": "chameleon",
+      "enemy": "sidewinder",
       "count": 6,
       "spacingMs": 400,
       "delayMs": 16000,
