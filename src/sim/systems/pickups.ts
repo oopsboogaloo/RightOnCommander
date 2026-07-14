@@ -7,7 +7,7 @@ import { type Vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
 import { PLAYER_ID, type World } from '../world.js';
 import { collectMissile } from './missiles.js';
-import { energyBombCap, firstFreeDirection } from './ships.js';
+import { energyBombCap, bestPickupSlot, type LaserType } from './ships.js';
 
 export interface PickupsConfig {
   scoopRadius: number; // player collection radius
@@ -35,15 +35,21 @@ function bankCargo(world: World, name: string, tons: number, pos: Vec3): void {
   world.events.push({ type: 'floatingText', category: 'cargo', text: `${cap(name)} ${tons}T`, pos: { ...pos } }); // [ROC-ECO-3]
 }
 
+// Levels 2/3 (a beam laser is the level-appropriate power-up) drop a beam; Level 1 drops a pulse.
+// [ROC-PWR-6 tuning]
+const pickupLaserType = (world: World): LaserType => (world.levelIndex >= 1 ? 'beam' : 'pulse');
+
 function fitLaser(world: World, pos: Vec3): void {
-  // Fill the first free hardpoint, preferring Front → Rear → Left → Right. [ROC-HP-4]
-  const dir = firstFreeDirection(world);
-  if (dir) {
-    world.player.lasers[dir].push('pulse');
-    world.events.push({ type: 'floatingText', category: 'fit', text: 'Laser', pos: { ...pos } });
+  const type = pickupLaserType(world);
+  const slot = bestPickupSlot(world, type);
+  if (!slot) {
+    bankCargo(world, 'laser', 1, pos); // nothing left to improve -> sellable
     return;
   }
-  bankCargo(world, 'laser', 1, pos); // all hardpoints full -> sellable
+  if (slot.index === undefined) world.player.lasers[slot.dir].push(type);
+  else world.player.lasers[slot.dir][slot.index] = type; // upgrades a weaker laser in place
+  const label = type === 'pulse' ? 'Laser' : `${cap(type)} Laser`;
+  world.events.push({ type: 'floatingText', category: 'fit', text: label, pos: { ...pos } });
 }
 
 function collect(world: World, pickup: Entity, player: Entity, cfg: PickupsConfig): void {

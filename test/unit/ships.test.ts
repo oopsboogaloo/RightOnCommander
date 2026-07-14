@@ -11,6 +11,7 @@ import {
   canFitLaser,
   nextShipId,
   equippedCount,
+  bestPickupSlot,
 } from '../../src/sim/systems/ships.js';
 
 const ships = loadShips(shipsJson);
@@ -34,6 +35,34 @@ describe('laser fitting rules', () => {
     expect(canFitLaser(w, 'left').ok).toBe(false); // Sidewinder has no left hardpoint
     expect(fitLaser(w, 'rear', 'pulse')).toBe(true);
     expect(canFitLaser(w, 'rear').ok).toBe(false); // rear full (1/1)
+  });
+});
+
+describe('bestPickupSlot: where a field pickup upgrades the loadout', () => {
+  it('prefers a genuinely free hardpoint over upgrading an occupied one, Front first', () => {
+    const w = makeWorld(1); // Sidewinder: front ['pulse'] with a spare slot, rear empty
+    expect(bestPickupSlot(w, 'beam')).toEqual({ dir: 'front' }); // the free front slot, no index to replace
+  });
+
+  it('upgrades a strictly weaker laser once its direction has no free capacity', () => {
+    const w = makeWorld(1);
+    w.player.hardpoints = { front: 1, rear: 0, left: 0, right: 0 };
+    w.player.lasers = { front: ['pulse'], rear: [], left: [], right: [] };
+    expect(bestPickupSlot(w, 'beam')).toEqual({ dir: 'front', index: 0 });
+  });
+
+  it('never targets a laser of equal or greater rank — falls through to the next direction', () => {
+    const w = makeWorld(1);
+    w.player.hardpoints = { front: 1, rear: 1, left: 0, right: 0 };
+    w.player.lasers = { front: ['military'], rear: [], left: [], right: [] };
+    expect(bestPickupSlot(w, 'beam')).toEqual({ dir: 'rear' }); // military left alone, rear is free
+  });
+
+  it('returns undefined once nothing anywhere is an improvement', () => {
+    const w = makeWorld(1);
+    w.player.hardpoints = { front: 1, rear: 1, left: 0, right: 0 };
+    w.player.lasers = { front: ['beam'], rear: ['military'], left: [], right: [] };
+    expect(bestPickupSlot(w, 'beam')).toBeUndefined();
   });
 });
 
