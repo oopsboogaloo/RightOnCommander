@@ -65,9 +65,20 @@ export function fitLaser(world: World, dir: Direction, type: LaserType): boolean
   return true;
 }
 
-// The empty hardpoint a picked-up weapon should fill: prefer Front → Rear → Left → Right. [ROC-HP-4]
-export function firstFreeDirection(world: World): Direction | undefined {
-  return DIRECTIONS.find((d) => freeInDirection(world, d) > 0);
+// Strength order for deciding whether a picked-up laser is an upgrade. [ROC-LAS-*]
+const LASER_RANK: Record<LaserType, number> = { pulse: 1, beam: 2, military: 3 };
+
+// The best hardpoint slot for a laser pickup of `type`: an empty hardpoint, or one currently
+// holding a strictly weaker laser — a field pickup only ever upgrades, never downgrades (a beam
+// pickup won't touch a military laser). Checked direction by direction, Front → Rear → Left →
+// Right, preferring a genuinely free hardpoint over an upgrade within each direction. [ROC-HP-4]
+export function bestPickupSlot(world: World, type: LaserType): { dir: Direction; index?: number } | undefined {
+  for (const dir of DIRECTIONS) {
+    if (freeInDirection(world, dir) > 0) return { dir };
+    const idx = world.player.lasers[dir].findIndex((l) => LASER_RANK[l as LaserType] < LASER_RANK[type]);
+    if (idx >= 0) return { dir, index: idx };
+  }
+  return undefined;
 }
 
 // Apply a hull's stats to the player. Lasers carry forward, clamped to each direction's new

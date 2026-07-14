@@ -83,6 +83,80 @@ describe('pickup collection', () => {
   });
 });
 
+describe('laser pickups: level-dependent type, upgrade-only fitting', () => {
+  it('Level 1 drops a pulse; Levels 2/3 drop a beam', () => {
+    const w1 = makeWorld(1);
+    player(w1).pos = vec3(0, 0, 0);
+    w1.levelIndex = 0;
+    addPickup(w1, 'laser');
+    pickupsSystem(w1, DT);
+    expect(w1.player.lasers.front).toEqual(['pulse', 'pulse']); // front's spare slot, still a pulse
+
+    const w2 = makeWorld(1);
+    player(w2).pos = vec3(0, 0, 0);
+    w2.levelIndex = 1; // Level 2
+    addPickup(w2, 'laser');
+    pickupsSystem(w2, DT);
+    expect(w2.player.lasers.front).toEqual(['pulse', 'beam']); // front's spare slot, now a beam
+
+    const w3 = makeWorld(1);
+    player(w3).pos = vec3(0, 0, 0);
+    w3.levelIndex = 2; // Level 3
+    addPickup(w3, 'laser');
+    pickupsSystem(w3, DT);
+    expect(w3.player.lasers.front).toEqual(['pulse', 'beam']);
+  });
+
+  it('upgrades a pulse in place once front has no free hardpoint left', () => {
+    const w = makeWorld(1);
+    player(w).pos = vec3(0, 0, 0);
+    w.levelIndex = 1;
+    w.player.hardpoints = { front: 1, rear: 1, left: 0, right: 0 };
+    w.player.lasers = { front: ['pulse'], rear: [], left: [], right: [] };
+    addPickup(w, 'laser');
+    pickupsSystem(w, DT);
+    expect(w.player.lasers.front).toEqual(['beam']); // upgraded in place, not appended elsewhere
+    expect(w.player.lasers.rear).toEqual([]); // the free rear slot wasn't touched — front took priority
+  });
+
+  it('never downgrades a military laser — falls through to the next direction instead', () => {
+    const w = makeWorld(1);
+    player(w).pos = vec3(0, 0, 0);
+    w.levelIndex = 1;
+    w.player.hardpoints = { front: 1, rear: 1, left: 0, right: 0 };
+    w.player.lasers = { front: ['military'], rear: [], left: [], right: [] };
+    addPickup(w, 'laser');
+    pickupsSystem(w, DT);
+    expect(w.player.lasers.front).toEqual(['military']); // untouched
+    expect(w.player.lasers.rear).toEqual(['beam']); // fell through to the free rear slot
+  });
+
+  it('skips a same-tier laser (no improvement) and moves on to the next direction', () => {
+    const w = makeWorld(1);
+    player(w).pos = vec3(0, 0, 0);
+    w.levelIndex = 1;
+    w.player.hardpoints = { front: 1, rear: 1, left: 0, right: 0 };
+    w.player.lasers = { front: ['beam'], rear: [], left: [], right: [] };
+    addPickup(w, 'laser');
+    pickupsSystem(w, DT);
+    expect(w.player.lasers.front).toEqual(['beam']); // a beam replacing a beam is not an improvement
+    expect(w.player.lasers.rear).toEqual(['beam']);
+  });
+
+  it('banks as sellable cargo once every hardpoint is already at or above the pickup tier', () => {
+    const w = makeWorld(1);
+    player(w).pos = vec3(0, 0, 0);
+    w.levelIndex = 1;
+    w.player.hardpoints = { front: 1, rear: 1, left: 0, right: 0 };
+    w.player.lasers = { front: ['beam'], rear: ['military'], left: [], right: [] };
+    addPickup(w, 'laser');
+    pickupsSystem(w, DT);
+    expect(w.player.lasers.front).toEqual(['beam']);
+    expect(w.player.lasers.rear).toEqual(['military']);
+    expect(w.cargo.laser).toBe(1); // nothing to improve -> sellable, same as a fully-full pulse pickup
+  });
+});
+
 describe('collectables are inert to weapons fire', () => {
   it('a projectile passing through a pickup neither destroys it nor is consumed', () => {
     const w = makeWorld(1);
