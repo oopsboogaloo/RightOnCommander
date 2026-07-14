@@ -77,11 +77,38 @@ const pincerPos = (t: number, p: PathParams): Vec3 => {
   return vec3(P(p, 'x0', 1.2) * Math.cos((t * Math.PI) / 2), 0, z0 + t * (P(p, 'z1', -0.2) - z0));
 };
 
-// Circle around a hold point.
+// Fly a straight line in from off-screen to the start of a circular loop, fly the loop, then fly
+// a straight line off-screen from wherever the loop ends — so a centre-screen circle still reads
+// as arriving and departing rather than materialising/vanishing mid-loop. [ROC-ENM-9]
 const orbitPos = (t: number, p: PathParams): Vec3 => {
-  const th = P(p, 'phase', 0) + t * TAU * P(p, 'turns', 1);
+  const cx = P(p, 'cx', 0);
+  const cz = P(p, 'cz', 0.6);
   const r = P(p, 'r', 0.5);
-  return vec3(P(p, 'cx', 0) + r * Math.cos(th), 0, P(p, 'cz', 0.6) + r * Math.sin(th));
+  const startAngle = P(p, 'phase', 0);
+  const endAngle = startAngle + P(p, 'turns', 1) * TAU;
+  const z0 = P(p, 'z0', 1.8); // entry: straight down from off-screen to the loop's start point
+  const z1 = P(p, 'z1', -1.8); // exit: straight down from the loop's end point to off-screen
+  const entryFrac = Math.max(0, P(p, 'entryFrac', 0.2));
+  const exitFrac = Math.max(0, P(p, 'exitFrac', 0.2));
+  const loopFrac = Math.max(0.01, 1 - entryFrac - exitFrac);
+
+  const startX = cx + r * Math.cos(startAngle);
+  const startZ = cz + r * Math.sin(startAngle);
+  if (t < entryFrac) {
+    const u = entryFrac > 0 ? t / entryFrac : 1;
+    return vec3(startX, 0, z0 + u * (startZ - z0));
+  }
+
+  if (t < entryFrac + loopFrac) {
+    const u = (t - entryFrac) / loopFrac;
+    const th = startAngle + u * (endAngle - startAngle);
+    return vec3(cx + r * Math.cos(th), 0, cz + r * Math.sin(th));
+  }
+
+  const endX = cx + r * Math.cos(endAngle);
+  const endZ = cz + r * Math.sin(endAngle);
+  const u = exitFrac > 0 ? (t - entryFrac - loopFrac) / exitFrac : 1;
+  return vec3(endX, 0, endZ + u * (z1 - endZ));
 };
 
 // Drop in from the top to a hold position, then hover.

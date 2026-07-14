@@ -53,7 +53,7 @@
       "spacingMs": 320,
       "delayMs": 4600,
       "durationMs": 7000,
-      "params": { "cx": 1.9, "cz": 0.55, "r": 0.9, "turns": 1 },
+      "params": { "cx": 0.2, "cz": 0.55, "r": 0.55, "turns": 1.5 },
       "fire": { "rate": 0.35, "aimed": true }
     },
     {
@@ -156,7 +156,7 @@
       "spacingMs": 320,
       "delayMs": 2400,
       "durationMs": 7200,
-      "params": { "cx": -1.9, "cz": 0.55, "r": 0.9, "turns": 1, "phase": 3.14159 },
+      "params": { "cx": -0.1, "cz": 0.55, "r": 0.55, "turns": 1.5 },
       "fire": { "rate": 0.45, "aimed": true }
     },
     {
@@ -175,7 +175,7 @@
       "pattern": "side_stream",
       "enemy": "fer_de_lance",
       "count": 2,
-      "spacingMs": 900,
+      "spacingMs": 1200,
       "delayMs": 7200,
       "durationMs": 7000,
       "speed": 0.7,
