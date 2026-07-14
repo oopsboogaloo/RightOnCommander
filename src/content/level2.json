@@ -248,17 +248,6 @@
       "fire": { "rate": 0.4, "aimed": true }
     },
     {
-      "id": "l2b10",
-      "pattern": "sine_column",
-      "enemy": "mamba",
-      "count": 6,
-      "spacingMs": 400,
-      "delayMs": 20400,
-      "durationMs": 6500,
-      "params": { "amplitude": 0.7, "cycles": 3 },
-      "fire": { "rate": 0.35, "aimed": true }
-    },
-    {
       "id": "l2b11",
       "pattern": "orbit",
       "enemy": "moray",
