@@ -10,18 +10,32 @@ import { collectMissile } from './missiles.js';
 import { energyBombCap, bestPickupSlot, type LaserType } from './ships.js';
 
 export interface PickupsConfig {
-  scoopRadius: number; // player collection radius
+  scoopMargin: number; // reach beyond the ship's own hull edge — a slight magnet, not a free-floating radius
+  fallbackHullRadius: number; // world-scale hull radius used when no mesh lookup is available
+  getHullRadius?: (meshId: string) => number | undefined; // precomputed hullRadius() per mesh
+  // (already scaled — same values collisionSystem/gamestateSystem use for shield-ring/ram sizing)
   shieldPerPickup: number; // shield rings restored by fuel/gems
   hullPerAlloy: number; // hull repaired by alloys
   driftSpeed: number; // pickups drift down-screen toward the player
 }
 
 export const DEFAULT_PICKUPS: PickupsConfig = {
-  scoopRadius: 0.35,
+  scoopMargin: 0.12,
+  fallbackHullRadius: 0.1, // roughly a Sidewinder's own hull radius
   shieldPerPickup: 1,
   hullPerAlloy: 4,
   driftSpeed: 0.5,
 };
+
+// The scoop's actual reach: the player's own hull radius (so a bigger ship scoops a bit wider,
+// matching its sprite) plus a small fixed margin — not the old flat 0.35, which was 2-4x any
+// ship's actual hull radius and made pickups feel like they were being sucked in from off the
+// hull entirely. [DEFECTS: pickup collision too generous]
+function scoopRadius(player: Entity, cfg: PickupsConfig): number {
+  const precomputed = player.meshId ? cfg.getHullRadius?.(player.meshId) : undefined;
+  const hull = (precomputed ?? cfg.fallbackHullRadius) * (player.scale ?? 1);
+  return hull + cfg.scoopMargin;
+}
 
 const dist2 = (a: Vec3, b: Vec3): number => (a.x - b.x) ** 2 + (a.z - b.z) ** 2;
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
@@ -125,8 +139,9 @@ export function pickupsSystem(world: World, dt: number, cfg: PickupsConfig = DEF
 
     // Collectables are inert to weapons fire — bullets and missiles pass straight through. Only
     // the player scoop collects them. [ROC-PWR-2a, ROC-CARGO-2]
-    if (player && dist2(player.pos, e.pos) <= cfg.scoopRadius ** 2) {
-      collect(world, e, player, cfg);
+    if (player) {
+      const r = scoopRadius(player, cfg);
+      if (dist2(player.pos, e.pos) <= r * r) collect(world, e, player, cfg);
     }
   }
 }

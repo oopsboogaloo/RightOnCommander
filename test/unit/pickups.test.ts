@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { makeWorld, PLAYER_ID } from '../../src/sim/world.js';
 import { vec3 } from '../../src/sim/math/vec3.js';
-import { pickupsSystem } from '../../src/sim/systems/pickups.js';
+import { pickupsSystem, DEFAULT_PICKUPS } from '../../src/sim/systems/pickups.js';
 import type { Entity, PickupType } from '../../src/sim/components.js';
 
 const DT = 1 / 120;
@@ -80,6 +80,35 @@ describe('pickup collection', () => {
     pickupsSystem(w, DT);
     expect(w.cargo['Gem-Stones']).toBe(1); // [ROC-CARGO-3]
     expect(w.events.some((e) => e.type === 'floatingText' && String(e.text).startsWith('Gem-Stones'))).toBe(true);
+  });
+});
+
+describe('scoop reach: scales with the ship\'s own hull, not a generous flat radius', () => {
+  it('does not collect from the old flat-0.35 range anymore — that was 2-4x any ship\'s hull radius', () => {
+    const w = makeWorld(1);
+    player(w).pos = vec3(0, 0, 0);
+    addPickup(w, 'fuel', vec3(0.3, 0, 0)); // inside the old radius, outside the fallback hull + margin
+    pickupsSystem(w, DT);
+    expect([...w.entities.values()].some((e) => e.kind === 'pickup')).toBe(true); // still drifting, uncollected
+  });
+
+  it('still collects once genuinely close to the hull', () => {
+    const w = makeWorld(1);
+    player(w).pos = vec3(0, 0, 0);
+    addPickup(w, 'fuel', vec3(0.15, 0, 0)); // within fallbackHullRadius(0.1) + scoopMargin(0.12)
+    pickupsSystem(w, DT);
+    expect([...w.entities.values()].some((e) => e.kind === 'pickup')).toBe(false); // collected
+  });
+
+  it('a bigger ship (larger hull radius) scoops a proportionally wider reach', () => {
+    const w = makeWorld(1);
+    const p = player(w);
+    p.pos = vec3(0, 0, 0);
+    p.meshId = 'cobra_mk3';
+    addPickup(w, 'fuel', vec3(0.25, 0, 0)); // beyond a Sidewinder's reach, within a Cobra's
+    const cfg = { ...DEFAULT_PICKUPS, getHullRadius: (id: string) => (id === 'cobra_mk3' ? 0.175 : undefined) };
+    pickupsSystem(w, DT, cfg);
+    expect([...w.entities.values()].some((e) => e.kind === 'pickup')).toBe(false); // collected
   });
 });
 
