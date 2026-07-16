@@ -157,6 +157,47 @@ describe('laser pickups: level-dependent type, upgrade-only fitting', () => {
   });
 });
 
+function addGiantAsteroid(w: ReturnType<typeof makeWorld>, pos = vec3(0, 0, 0)): Entity {
+  const id = w.nextId++;
+  const e: Entity = {
+    id, kind: 'asteroid', pos, vel: vec3(), yaw: 0, bank: 0,
+    hull: 999, hullMax: 999, colliderRx: 0.58, colliderRz: 0.58, indestructible: true,
+  };
+  w.entities.set(id, e);
+  return e;
+}
+
+describe('a giant asteroid crushes collectables that drift into it', () => {
+  it('destroys a plain collectable on contact instead of letting it drift through', () => {
+    const w = makeWorld(1);
+    player(w).pos = vec3(5, 0, 5); // far away — not scooped
+    addGiantAsteroid(w, vec3(0, 0, 0));
+    const pk = addPickup(w, 'fuel', vec3(0, 0, 0));
+    pickupsSystem(w, DT);
+    expect(w.entities.has(pk.id)).toBe(false);
+  });
+
+  it('destroys a cargo-commodity pickup the same way — cargo is not exempt', () => {
+    const w = makeWorld(1);
+    player(w).pos = vec3(5, 0, 5);
+    addGiantAsteroid(w, vec3(0, 0, 0));
+    const pk = addPickup(w, 'cargo', vec3(0.1, 0, 0.1));
+    pk.pickup!.commodity = 'Gold';
+    pickupsSystem(w, DT);
+    expect(w.entities.has(pk.id)).toBe(false);
+    expect(w.cargo.Gold).toBeUndefined(); // crushed, never collected
+  });
+
+  it('leaves a pickup untouched once it drifts clear of the giant asteroid', () => {
+    const w = makeWorld(1);
+    player(w).pos = vec3(5, 0, 5);
+    addGiantAsteroid(w, vec3(0, 0, 0));
+    const pk = addPickup(w, 'fuel', vec3(3, 0, 3)); // well outside its radius
+    pickupsSystem(w, DT);
+    expect(w.entities.has(pk.id)).toBe(true);
+  });
+});
+
 describe('collectables are inert to weapons fire', () => {
   it('a projectile passing through a pickup neither destroys it nor is consumed', () => {
     const w = makeWorld(1);

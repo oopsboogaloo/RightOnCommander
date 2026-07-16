@@ -84,6 +84,11 @@ function spawnGiant(world: World, rng: Rng, x: number): void {
     bounty: 0,
     meshId: GIANT.meshId,
     scale: GIANT.scale,
+    // Approximate radius (mesh max-extent * SHIP_SCALE * scale) for lightweight, mesh-unaware
+    // overlap checks (e.g. pickups.ts) — ship/bullet collision still uses the precise registered
+    // mesh silhouette elsewhere and ignores this. [ROC-GIANT-1]
+    colliderRx: 0.58,
+    colliderRz: 0.58,
     indestructible: true,
     tumble: { yawRate: rng.range(GIANT_YAW_RATE[0], GIANT_YAW_RATE[1]) * randSign(rng), bankRate: 0 },
   };

@@ -6,6 +6,7 @@ import type { AudioOut, Renderer, Storage, Clock, DrawOpts, Mesh, Vec2 } from '.
 export const nullRenderer: Renderer = {
   beginFrame() {},
   drawMesh(_mesh: Mesh, _xform: unknown, _opts?: DrawOpts) {},
+  drawSilhouette(_mesh: Mesh, _xform: unknown, _opts?: DrawOpts) {},
   drawLine(_a: Vec2, _b: Vec2, _opts?: DrawOpts) {},
   drawEllipse(_c: Vec2, _rx: number, _ry: number, _opts?: DrawOpts) {},
   drawParticles(_points: Vec2[], _opts?: DrawOpts) {},

@@ -240,6 +240,27 @@ export class Renderer2D implements Renderer {
     }
   }
 
+  // Outline-only draw: the 2D convex hull of the mesh's projected vertices (same technique as
+  // the shield ring's hull-hug), filled and stroked with no internal facet lines — a solid shape
+  // that reads purely by its outer edge and size, not its wireframe detail. [ROC-GIANT-1]
+  drawSilhouette(mesh: Mesh, xform: unknown, opts: DrawOpts = {}): void {
+    const model = xform as Mat4;
+    const prep = prepareMesh(mesh, model, this.camera);
+    const hullPx = convexHull(prep.projected.map((p) => this.toPixel(p)));
+    if (hullPx.length < 3) return;
+
+    const { ctx } = this;
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = (opts.lineWidth as number) ?? 1.5;
+    ctx.fillStyle = (opts.fill as string) ?? '#000';
+    ctx.strokeStyle = (opts.stroke as string) ?? '#fff';
+    ctx.beginPath();
+    hullPx.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
   // Project a world-space segment and stroke it (lasers, dock wireframe). [ROC-LAS-4]
   drawWorldLine(a: Vec3, b: Vec3, opts: DrawOpts = {}): void {
     const pa = this.toPixel(projectPoint(this.camera, a));
