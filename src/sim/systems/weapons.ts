@@ -172,8 +172,9 @@ export function weaponsSystem(
     world.player.fireCooldown = Math.max(0, world.player.fireCooldown - dt);
     world.player.militaryCooldown = Math.max(0, world.player.militaryCooldown - dt);
 
-    // Guns are disabled through the docking approach. [ROC-DCKG-2]
-    const firing = world.levelState !== 'DOCKING' && (input.firing || input.fireTapped);
+    // Guns are disabled through either docking approach — the end-of-level station or the
+    // mid-level trader. [ROC-DCKG-2, ROC-MDCK-1]
+    const firing = world.levelState !== 'DOCKING' && world.levelState !== 'MID_DOCKING' && (input.firing || input.fireTapped);
     const firePulse = firing && world.player.fireCooldown <= 0; // pulse cadence
     const fireMil = firing && world.player.militaryCooldown <= 0; // military cadence (2x)
     let firedPulse = false;

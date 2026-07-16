@@ -13,7 +13,12 @@ import { applyDamage } from '../../src/sim/systems/damage.js';
 const firing = (): InputFrame => ({ ...emptyInput(), firing: true });
 
 function runUntil(sim: Sim, pred: () => boolean, maxFrames = 30000, fire = true): void {
-  for (let i = 0; i < maxFrames && !pred(); i++) sim.step(fire ? firing() : emptyInput());
+  for (let i = 0; i < maxFrames && !pred(); i++) {
+    // Shop for nothing and leave straight away, so a bare "run to DOCK" doesn't get stuck at the
+    // mid-level trader. [ROC-MDCK-2]
+    if (sim.state.levelState === 'MID_DOCK') sim.midDockLaunch();
+    sim.step(fire ? firing() : emptyInput());
+  }
 }
 
 const content = {
@@ -96,10 +101,13 @@ describe('campaign progression', () => {
     expect(sim.state.levelState).toBe('MID_BOSS');
     expect(bosses()).toHaveLength(1);
 
-    // Kill the second: now the fight clears (through the RIGHT ON COMMANDER fade) into WAVES_B.
+    // Kill the second: now the fight clears (through the RIGHT ON COMMANDER fade) into the
+    // mid-level trader; leaving it (as if the player shopped and launched) reaches WAVES_B.
+    // [ROC-MDCK-1,2]
     applyDamage(sim.state, second, 999);
     runUntil(sim, () => sim.state.bossFadeTtl > 0, 30000, false);
-    runUntil(sim, () => sim.state.levelState !== 'MID_BOSS', 30000, false);
+    runUntil(sim, () => sim.state.levelState === 'MID_DOCK', 30000, false);
+    sim.midDockLaunch();
     expect(sim.state.levelState).toBe('WAVES_B');
   });
 });
