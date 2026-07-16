@@ -30,6 +30,7 @@ export interface GiantAsteroidDef {
   phase: GiantAsteroidPhase;
   x: number;
   delayMs?: number;
+  id?: string; // cheat-mode label (e.g. "g2") so it can be referred to precisely while playtesting
 }
 
 const SPAWN_Z = 1.8; // matches enemy path entry [paths.ts]
@@ -66,11 +67,11 @@ const randTumble = (rng: Rng, [lo, hi]: [number, number]): { yawRate: number; ba
 // each is one-shot — no count/spacing loop, just a single spawn at its delay. [ROC-GIANT-1]
 export function startGiantAsteroids(world: World, defs: GiantAsteroidDef[]): void {
   for (const def of defs) {
-    world.giantAsteroids.push({ x: def.x, timer: (def.delayMs ?? 0) / 1000 });
+    world.giantAsteroids.push({ x: def.x, timer: (def.delayMs ?? 0) / 1000, label: def.id ?? 'g?' });
   }
 }
 
-function spawnGiant(world: World, rng: Rng, x: number): void {
+function spawnGiant(world: World, rng: Rng, x: number, label: string): void {
   const id = world.nextId++;
   const e: Entity = {
     id,
@@ -90,6 +91,7 @@ function spawnGiant(world: World, rng: Rng, x: number): void {
     colliderRx: 0.58,
     colliderRz: 0.58,
     indestructible: true,
+    debugLabel: label,
     tumble: { yawRate: rng.range(GIANT_YAW_RATE[0], GIANT_YAW_RATE[1]) * randSign(rng), bankRate: 0 },
   };
   world.entities.set(id, e);
@@ -180,7 +182,7 @@ export function asteroidFieldSystem(world: World, rng: Rng, dt: number): void {
     }
     for (let i = ready.length - 1; i >= 0; i--) {
       const idx = ready[i];
-      spawnGiant(world, rng, world.giantAsteroids[idx].x);
+      spawnGiant(world, rng, world.giantAsteroids[idx].x, world.giantAsteroids[idx].label);
       world.giantAsteroids.splice(idx, 1);
     }
   }

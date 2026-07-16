@@ -84,6 +84,7 @@ export interface AsteroidFieldState {
 export interface GiantAsteroidSpawnState {
   x: number;
   timer: number; // seconds until it spawns
+  label: string; // cheat-mode identifier carried onto the spawned entity's debugLabel
 }
 
 export interface World {
