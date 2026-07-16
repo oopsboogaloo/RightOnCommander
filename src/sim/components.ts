@@ -66,7 +66,7 @@ export interface Entity {
   path?: unknown; // spline + t for enemies [ROC-ENM-2]
   ai?: unknown; // fire cadence, pattern, boss phase
   pickup?: { type: PickupType; commodity?: string }; // commodity set when type === 'cargo'
-  drops?: string; // power-up dropped on destruction (e.g. a guaranteed laser) [ROC-PWR-6]
+  drops?: string; // power-up type guaranteed on destruction, if any [ROC-PWR-6]
   cargoDrops?: number; // random cargo canisters shed on destruction (boss hauls) [ROC-HERM-10, ROC-FDL-5]
   ecm?: boolean; // boss ECM: detonates player missiles harmlessly while alive [ROC-BECM-1..4]
   missileImmune?: boolean; // player missiles won't lock onto or home toward this entity (Thargoids)

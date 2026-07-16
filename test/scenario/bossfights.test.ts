@@ -1,7 +1,7 @@
 // T5a.1/4 scenario: boss-fight framing through the full sim — the starfield scroll stops when a
 // boss fight begins, the kill emits bossKilled and holds the state while "RIGHT ON COMMANDER"
-// fades, then scrolling resumes into the next phase; the hermit pays 1,000 cr and sheds the
-// guaranteed laser plus 10 cargo canisters. [ROC-BOSS-1..4, ROC-HERM-9,10]
+// fades, then scrolling resumes into the next phase; the hermit pays 1,000 cr and sheds 10 cargo
+// canisters (no guaranteed laser drop — that's bought at a station now). [ROC-BOSS-1..4, ROC-HERM-9,10]
 
 import { describe, it, expect } from 'vitest';
 import { makeSim } from '../harness.js';
@@ -71,7 +71,7 @@ describe('boss-fight framing', () => {
     expect(sim.state.scroll).toBe(1); // scrolling resumed
   });
 
-  it('pays the hermit kill: 1,000 cr, the guaranteed laser, and 10 cargo canisters', () => {
+  it('pays the hermit kill: 1,000 cr and 10 cargo canisters, no guaranteed laser drop', () => {
     const sim = makeSim(1, content);
     runUntil(sim, () => sim.state.levelState === 'MID_BOSS', 30000, false);
     const before = sim.state.econ.wallet;
@@ -79,7 +79,7 @@ describe('boss-fight framing', () => {
 
     expect(sim.state.econ.wallet - before).toBeGreaterThanOrEqual(1000); // [ROC-HERM-10]
     const pickups = [...sim.state.entities.values()].filter((e) => e.kind === 'pickup');
-    expect(pickups.filter((p) => p.pickup?.type === 'laser')).toHaveLength(1); // [ROC-PWR-6]
+    expect(pickups.filter((p) => p.pickup?.type === 'laser')).toHaveLength(0); // bought at a station now
     expect(pickups.filter((p) => p.pickup?.type === 'cargo').length).toBeGreaterThanOrEqual(10); // [ROC-HERM-10]
   });
 
