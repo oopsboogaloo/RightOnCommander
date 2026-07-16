@@ -45,22 +45,15 @@ const fitAction = { front: 'fitFront', rear: 'fitRear', left: 'fitLeft', right: 
 
 export function stationButtons(world: World, ctx: StationContext, w: number, h: number, launchArmed: boolean, selected: LaserType): StationButton[] {
   const { prices, ships } = ctx;
-  // The mid-level trader doesn't carry hulls — no ship purchases there, everything else is fair
-  // game. [ROC-MDCK-3]
-  const isMidDock = world.levelState === 'MID_DOCK';
   const next = nextShipId(ships, world.player.shipClass);
   const cargoTons = Object.values(world.cargo).reduce((n, t) => n + t, 0);
   const laserPrice = prices.lasers[selected];
 
   const defs: { label: string; enabled: boolean; action: StationAction }[] = [
     { label: `Sell Cargo (${cargoTons}T)`, enabled: cargoTons > 0, action: 'sell' },
-    ...(isMidDock
-      ? []
-      : [
-          next
-            ? { label: `Buy ${ships.ships[next].name}  ${ships.ships[next].price}cr`, enabled: affordable(world, ships.ships[next].price), action: 'buyShip' as StationAction }
-            : { label: 'Top ship owned', enabled: false, action: 'buyShip' as StationAction },
-        ]),
+    next
+      ? { label: `Buy ${ships.ships[next].name}  ${ships.ships[next].price}cr`, enabled: affordable(world, ships.ships[next].price), action: 'buyShip' }
+      : { label: 'Top ship owned', enabled: false, action: 'buyShip' },
     // Pick a laser type, then fit it to any free direction (so side/rear lasers are buyable). [ROC-STN-4]
     { label: `Laser type: ${cap(selected)}  (${laserPrice}cr)`, enabled: true, action: 'laserType' },
     ...DIRECTIONS.map((dir) => {
@@ -138,7 +131,7 @@ export function drawStation(
     { fill: '#8ad', font: '18px monospace', align: 'center' },
   );
   renderer.drawText(
-    isMidDock ? 'Independent trader, mid-run. No new hulls carried.' : 'Lave, a safe agricultural world.',
+    isMidDock ? 'Independent trader, mid-run.' : 'Lave, a safe agricultural world.',
     { x: w / 2, y: 52 },
     { fill: '#567', font: '12px monospace', align: 'center' },
   );

@@ -13,10 +13,10 @@
 //     -> MID_DOCKING -> MID_DOCK -> WAVES_B -> END_BOSS -> [VIPER_INTERCEPT] -> DOCKING -> DOCK
 //
 // MID_DOCKING/MID_DOCK is a second, mid-level shop stop: a transporter trader (not the full
-// Coriolis) scrolls in the same way the end-of-level station does, and the shop opens — minus new
-// ship purchases, since a trader doesn't carry hulls. It's terminal exactly like DOCK: the shell
-// must call the sim's midDockLaunch() (mirroring relaunch()) once the player is done shopping, to
-// resume WAVES_B in place — no level restart, no campaign advance. [ROC-MDCK-1..3]
+// Coriolis) scrolls in the same way the end-of-level station does, and the shop opens — the same
+// full menu, ship purchases included. It's terminal exactly like DOCK: the shell must call the
+// sim's midDockLaunch() (mirroring relaunch()) once the player is done shopping, to resume
+// WAVES_B in place — no level restart, no campaign advance. [ROC-MDCK-1..3]
 
 import { vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
