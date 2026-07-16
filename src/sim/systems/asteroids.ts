@@ -43,10 +43,11 @@ const SPLINTER_TTL = 8;
 const LARGE = { hull: 3, bounty: 0, meshId: 'asteroid', colliderRx: 0.24, colliderRz: 0.24 };
 const SPLINTER = { hull: 1, bounty: 4, meshId: 'splinter', colliderRx: 0.11, colliderRz: 0.11 };
 // A giant asteroid reuses the same rock mesh, just drawn (and collided — the mesh silhouette
-// scales with it) 5x bigger, with thick white edges applied at render time by meshId. Slow,
+// scales with it) much bigger, rendered as a plain black-fill/white-outline shape (no damage
+// flash — it never takes damage) so its sheer size, not decoration, reads as "obstacle". Slow,
 // flat, single-axis spin (yaw only — see boss.ts §4 rotation notes) rather than the small rocks'
 // chaotic yaw+bank tumble; indestructible, so it never fragments. [ROC-GIANT-1]
-const GIANT = { meshId: 'giant_asteroid', scale: 5, speed: 0.28 };
+const GIANT = { meshId: 'giant_asteroid', scale: 5.5, speed: 0.28 };
 const GIANT_YAW_RATE: [number, number] = [0.15, 0.25]; // rad/s — much slower than a normal tumble
 
 // A splinter reads better on screen as a small asteroid chunk than the authentic-but-oddly-

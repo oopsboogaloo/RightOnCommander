@@ -156,11 +156,17 @@ export function gamestateSystem(
   if (world.mode === 'GAME_OVER') return;
 
   // Giant asteroids are level geography, not just a player hazard: any enemy or boss that flies
-  // into one is wrecked too, independent of the player's own state. [ROC-GIANT-1]
+  // into one is wrecked too, independent of the player's own state — and an ordinary (drifting)
+  // asteroid that drifts into one smashes apart the same way it would if shot, fragmenting a
+  // large rock into splinters via the normal destroy pipeline. [ROC-GIANT-1,4]
   const obstacles = [...world.entities.values()].filter((e) => e.kind === 'asteroid' && e.indestructible);
   if (obstacles.length > 0) {
     for (const e of world.entities.values()) {
-      if (e.kind !== 'enemy' && e.kind !== 'boss') continue;
+      if (e.kind === 'asteroid') {
+        if (e.indestructible) continue; // a giant doesn't smash itself or another giant
+      } else if (e.kind !== 'enemy' && e.kind !== 'boss') {
+        continue;
+      }
       if ((e.hull ?? 0) <= 0) continue;
       for (const g of obstacles) {
         if (rams(e, g, cfg)) {
