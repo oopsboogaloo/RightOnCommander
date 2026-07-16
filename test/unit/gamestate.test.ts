@@ -297,6 +297,28 @@ describe('giant asteroids are lethal solid obstacles', () => {
     expect(w.entities.has(giant.id)).toBe(true);
     expect(giant.hull).toBe(999);
   });
+
+  it('smashes an ordinary drifting asteroid that touches it, same as any other obstacle contact', () => {
+    const w = makeWorld(1);
+    const id = w.nextId++;
+    const rock: Entity = {
+      id, kind: 'asteroid', pos: vec3(0, 0, 0), vel: vec3(0, 0, -0.28), yaw: 0, bank: 0,
+      hull: 3, hullMax: 3, colliderRx: 0.24, colliderRz: 0.24,
+    };
+    w.entities.set(id, rock);
+    addGiantAsteroid(w, vec3(0, 0, 0));
+    gamestateSystem(w, DT, CFG);
+    expect(w.entities.has(rock.id)).toBe(false); // smashed apart on contact
+  });
+
+  it('never smashes another giant asteroid — only ordinary ones are destructible', () => {
+    const w = makeWorld(1);
+    const giantA = addGiantAsteroid(w, vec3(0, 0, 0));
+    const giantB = addGiantAsteroid(w, vec3(0, 0, 0));
+    gamestateSystem(w, DT, CFG);
+    expect(w.entities.has(giantA.id)).toBe(true);
+    expect(w.entities.has(giantB.id)).toBe(true);
+  });
 });
 
 // Shield-hug rework: ramming uses hull silhouette vs hull silhouette (each dilated by its own

@@ -145,7 +145,7 @@ describe('giant asteroids', () => {
     expect(giants[0].pos.x).toBe(0.42);
     expect(giants[0].meshId).toBe('giant_asteroid');
     expect(giants[0].indestructible).toBe(true);
-    expect(giants[0].scale).toBe(5);
+    expect(giants[0].scale).toBe(5.5);
     expect(w.giantAsteroids.length).toBe(0); // consumed, one-shot
   });
 

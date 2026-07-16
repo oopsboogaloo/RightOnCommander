@@ -588,14 +588,14 @@ startGameLoop({
           // authentic-but-oddly-angular bbcelite splinter shape, so it draws the asteroid mesh
           // at a fraction of the size instead.
           const isSplinter = e.meshId === 'splinter';
-          // A giant asteroid is a solid obstacle, not a shootable target — thick white edges mark
-          // it as such at a glance; its scale (matching the sim's silhouette-based collider) comes
-          // straight off the entity, same as any other scaled hull. [ROC-GIANT-1]
-          const isGiant = e.meshId === 'giant_asteroid';
+          // A giant asteroid is a solid, indestructible obstacle — its scale (matching the sim's
+          // silhouette-based collider) comes straight off the entity, same as any other scaled
+          // hull, and it draws with the same plain black-fill/white-outline look as any rock (it
+          // never flashes, since it never takes damage — sheer size is what reads "obstacle").
+          // [ROC-GIANT-1]
           const m = isSplinter ? MESHES.asteroid : e.meshId ? MESHES[e.meshId] : undefined;
           const scale = isSplinter ? MINI_ASTEROID_SCALE : SHIP_SCALE * (e.scale ?? 1);
-          const opts = isGiant ? { fill: '#000', stroke: '#fff', lineWidth: 4 } : hullFlash(e);
-          if (m) renderer.drawMesh(m, modelMatrix(e.pos, e.yaw, e.bank, scale), opts);
+          if (m) renderer.drawMesh(m, modelMatrix(e.pos, e.yaw, e.bank, scale), hullFlash(e));
           break;
         }
         default:
