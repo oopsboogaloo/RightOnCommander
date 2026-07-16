@@ -188,7 +188,7 @@ function deleteStations(world: World): void {
   for (const e of [...world.entities.values()]) if (e.kind === 'station') world.entities.delete(e.id);
 }
 
-function spawnBoss(world: World, name: string, ctx: WaveContext, drops?: string, slot = 0): void {
+function spawnBoss(world: World, name: string, ctx: WaveContext, slot = 0): void {
   const def = ctx.enemies[name];
   if (!def) throw new Error(`unknown boss '${name}'`);
   const place = bossPlacement(def.behavior, slot);
@@ -209,7 +209,6 @@ function spawnBoss(world: World, name: string, ctx: WaveContext, drops?: string,
     scale: def.scale,
     colliderRx: def.colliderRx,
     colliderRz: def.colliderRz,
-    drops,
     cargoDrops: def.cargoDrops,
     ecm: def.ecm, // boss ECM: player missiles detonate harmlessly [ROC-BECM-*]
     port: place.port,
@@ -281,8 +280,9 @@ export function enterLevelState(world: World, state: LevelState, level: LevelDef
       // every one of them is dead — `bossCleared` already checks for *any* `boss`-kind entity, so
       // no change is needed there. [ROC-L3-3]
       const midBosses = Array.isArray(level.midBoss) ? level.midBoss : [level.midBoss];
-      // The guaranteed laser drop is one-per-fight, not one-per-boss, so only the first carries it. [ROC-PWR-6]
-      midBosses.forEach((name, i) => spawnBoss(world, name, ctx, i === 0 ? 'laser' : undefined, i));
+      // No guaranteed laser drop — lasers are bought at the station (mid-level trader included)
+      // now, not farmed off a boss kill. [ROC-PWR-6]
+      midBosses.forEach((name, i) => spawnBoss(world, name, ctx, i));
       break;
     }
     case 'MID_DOCKING':

@@ -1,6 +1,6 @@
-// Drops: spawn pickups when a ship is destroyed. Two paths — an explicit `drops` power-up (e.g.
-// the mid-boss's guaranteed laser), and a random cargo commodity that enemies sometimes shed.
-// Cargo is inert to fire (ROC-PWR-2a); it is only scooped. [tasks T5.2, ROC-PWR-6, ROC-CARGO-1,4,5]
+// Drops: spawn pickups when a ship is destroyed. Two paths — an explicit `drops` power-up (guaranteed
+// by content, if any is set), and a random cargo commodity that enemies sometimes shed. Cargo is
+// inert to fire (ROC-PWR-2a); it is only scooped. [tasks T5.2, ROC-PWR-6, ROC-CARGO-1,4,5]
 
 import { vec3, type Vec3 } from '../math/vec3.js';
 import type { PickupType } from '../components.js';

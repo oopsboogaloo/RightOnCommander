@@ -1,7 +1,7 @@
-// T5.2/T5a scenario: Level 1 plays start -> dock, reaching both bosses; the hermit drops the
-// guaranteed laser plus its cargo haul and bounty. Drives the real content + systems headless,
-// with the player destroying everything and then docking through the aligned port.
-// [ROC-L1-1..5, ROC-PWR-6, ROC-HERM-10, ROC-DCKG-3]
+// T5.2/T5a scenario: Level 1 plays start -> dock, reaching both bosses; the hermit pays its
+// cargo haul and bounty (no guaranteed laser drop — that's bought at a station now). Drives the
+// real content + systems headless, with the player destroying everything and then docking
+// through the aligned port. [ROC-L1-1..5, ROC-HERM-10, ROC-DCKG-3]
 
 import { describe, it, expect } from 'vitest';
 import enemiesJson from '../../src/content/enemies.json';
@@ -19,7 +19,7 @@ import { dropsSystem } from '../../src/sim/systems/drops.js';
 const DT = 1 / 120;
 
 describe('Level 1', () => {
-  it('plays through to dock, reaching both bosses and dropping a laser', () => {
+  it('plays through to dock, reaching both bosses', () => {
     const { enemies, levels } = loadContent({ enemies: enemiesJson, levels: [level1Json] });
     const level = levels[0];
     expect(level).toBeDefined();
@@ -30,7 +30,6 @@ describe('Level 1', () => {
     startLevel(w, level!, ctx);
 
     const states = new Set<string>([w.levelState]);
-    let laserDropped = false;
     let hermitBounty = 0;
     let docked = false;
 
@@ -62,7 +61,6 @@ describe('Level 1', () => {
       // so a state entered and left within one iteration still shows up. [ROC-MDCK-1,2]
       if (w.levelState === 'MID_DOCK') enterLevelState(w, 'WAVES_B', level!, ctx);
 
-      if ([...w.entities.values()].some((e) => e.kind === 'pickup' && e.pickup?.type === 'laser')) laserDropped = true;
       for (const ev of w.events) {
         if (ev.type === 'destroyed' && ev.meshId === 'rock_hermit' && ev.kind === 'boss') hermitBounty = ev.bounty as number;
         if (ev.type === 'dock') docked = true;
@@ -78,7 +76,6 @@ describe('Level 1', () => {
     expect(states.has('MID_DOCK')).toBe(true);
     expect(states.has('END_BOSS')).toBe(true);
     expect(states.has('DOCKING')).toBe(true); // station approach [ROC-DCKG-1]
-    expect(laserDropped).toBe(true); // guaranteed mid-boss laser [ROC-PWR-6]
     expect(hermitBounty).toBe(1000); // hermit kill award [ROC-HERM-10]
     expect(docked).toBe(true);
   });
