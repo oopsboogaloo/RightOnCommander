@@ -1,6 +1,6 @@
-// The station menu: full at the end-of-level Coriolis, but the mid-level trader doesn't carry
-// hulls, so ship purchases are left off its menu — everything else (cargo, lasers, equipment,
-// launch) is still there. [ROC-MDCK-3]
+// The station menu: the mid-level trader carries the same full menu as the end-of-level
+// Coriolis, ship purchases included — the earlier "no new hulls at the trader" restriction
+// proved too harsh and was dropped. [ROC-MDCK-3]
 
 import { describe, it, expect } from 'vitest';
 import shipsJson from '../../src/content/ships.json';
@@ -20,20 +20,20 @@ describe('station menu', () => {
     expect(buttons.some((b) => b.action === 'buyShip')).toBe(true);
   });
 
-  it('never offers a ship purchase at the mid-level trader', () => {
+  it('also offers a ship purchase at the mid-level trader', () => {
     const w = makeWorld(1);
     w.levelState = 'MID_DOCK';
     const buttons = stationButtons(w, ctx, 800, 600, false, 'pulse');
-    expect(buttons.some((b) => b.action === 'buyShip')).toBe(false);
+    expect(buttons.some((b) => b.action === 'buyShip')).toBe(true);
   });
 
-  it('still offers everything else at the mid-level trader', () => {
+  it('offers the same full menu at both', () => {
     const w = makeWorld(1);
     w.levelState = 'MID_DOCK';
     const buttons = stationButtons(w, ctx, 800, 600, false, 'pulse');
     const actions = buttons.map((b) => b.action);
     expect(actions).toEqual(
-      expect.arrayContaining(['sell', 'laserType', 'fitFront', 'fitRear', 'fitLeft', 'fitRight', 'ecm', 'bomb', 'bank', 'life', 'missile', 'launch']),
+      expect.arrayContaining(['sell', 'buyShip', 'laserType', 'fitFront', 'fitRear', 'fitLeft', 'fitRight', 'ecm', 'bomb', 'bank', 'life', 'missile', 'launch']),
     );
   });
 });

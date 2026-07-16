@@ -1,7 +1,7 @@
 // Mid-level trader: a transporter (50% larger than the ones fought in waves) stands in for a
 // full station between the mid-boss and wavesB — same "scroll in, hold, open the shop" backdrop
-// mechanic as the end-of-level Coriolis, just no ship purchases. Leaving it resumes wavesB in the
-// same level/run, not a level restart. [ROC-MDCK-1,2,3]
+// mechanic, and the same full menu, as the end-of-level Coriolis. Leaving it resumes wavesB in
+// the same level/run, not a level restart. [ROC-MDCK-1,2,3]
 
 import { describe, it, expect } from 'vitest';
 import { makeSim, emptyInput } from '../harness.js';
