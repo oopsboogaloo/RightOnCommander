@@ -30,6 +30,19 @@ function removePickup(world: World, e: Entity): void {
   world.entities.delete(e.id);
 }
 
+// A giant (indestructible) asteroid crushes any collectable — cargo included — that drifts into
+// it, just like it wrecks a ship. A cheap circle test against the entity's own approximate
+// radius is enough here (unlike ship/bullet collision, this doesn't need the precise silhouette).
+// [ROC-GIANT-1]
+function crushedByGiantAsteroid(world: World, e: Entity): boolean {
+  for (const g of world.entities.values()) {
+    if (g.kind !== 'asteroid' || !g.indestructible) continue;
+    const r = Math.max(g.colliderRx ?? 0.5, g.colliderRz ?? 0.5);
+    if (dist2(e.pos, g.pos) <= r * r) return true;
+  }
+  return false;
+}
+
 function bankCargo(world: World, name: string, tons: number, pos: Vec3): void {
   world.cargo[name] = (world.cargo[name] ?? 0) + tons;
   world.events.push({ type: 'floatingText', category: 'cargo', text: `${cap(name)} ${tons}T`, pos: { ...pos } }); // [ROC-ECO-3]
@@ -101,6 +114,11 @@ export function pickupsSystem(world: World, dt: number, cfg: PickupsConfig = DEF
     e.pos.z -= cfg.driftSpeed * dt; // drift toward the player
     e.ttl = (e.ttl ?? 0) - dt;
     if (e.ttl <= 0) {
+      removePickup(world, e);
+      continue;
+    }
+
+    if (crushedByGiantAsteroid(world, e)) {
       removePickup(world, e);
       continue;
     }
