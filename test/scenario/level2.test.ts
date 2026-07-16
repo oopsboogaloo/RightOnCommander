@@ -12,7 +12,7 @@ import { makeWorld, PLAYER_ID } from '../../src/sim/world.js';
 import { createRng } from '../../src/sim/rng.js';
 import { waveSystem } from '../../src/sim/systems/waves.js';
 import { asteroidFieldSystem, asteroidSplitSystem } from '../../src/sim/systems/asteroids.js';
-import { startLevel, levelStateSystem } from '../../src/sim/systems/levelstate.js';
+import { startLevel, levelStateSystem, enterLevelState } from '../../src/sim/systems/levelstate.js';
 import { bossSystem } from '../../src/sim/systems/boss.js';
 import { applyDamage } from '../../src/sim/systems/damage.js';
 import { dropsSystem } from '../../src/sim/systems/drops.js';
@@ -69,6 +69,10 @@ describe('Level 2', () => {
       }
 
       states.add(w.levelState);
+
+      // Shop for nothing at the mid-level trader and leave straight away — recorded above first,
+      // so a state entered and left within one iteration still shows up. [ROC-MDCK-1,2]
+      if (w.levelState === 'MID_DOCK') enterLevelState(w, 'WAVES_B', level!, ctx);
       for (const ev of w.events) if (ev.type === 'dock') docked = true;
     }
 
@@ -77,6 +81,7 @@ describe('Level 2', () => {
     expect(states.has('INFO')).toBe(true);
     expect(states.has('ASTEROIDS')).toBe(true); // dense opening field [ROC-L2-2]
     expect(states.has('MID_BOSS')).toBe(true);
+    expect(states.has('MID_DOCK')).toBe(true); // mid-level trader stop [ROC-MDCK-1]
     expect(states.has('END_BOSS')).toBe(true);
     expect(states.has('DOCKING')).toBe(true);
     expect(midBossMeshId).toBe('python'); // [ROC-L2-3]

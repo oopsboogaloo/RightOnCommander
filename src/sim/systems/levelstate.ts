@@ -10,7 +10,13 @@
 // ROC-L1-1, ROC-BOSS-1..4, ROC-HYP-1..5, ROC-DCKG-1..4, ROC-WITCH-1..4]
 //
 //   LAUNCH -> HYPERSPACE -> [WITCHSPACE_COMBAT] -> INFO -> [ASTEROIDS] -> WAVES_A -> MID_BOSS
-//     -> WAVES_B -> END_BOSS -> [VIPER_INTERCEPT] -> DOCKING -> DOCK
+//     -> MID_DOCKING -> MID_DOCK -> WAVES_B -> END_BOSS -> [VIPER_INTERCEPT] -> DOCKING -> DOCK
+//
+// MID_DOCKING/MID_DOCK is a second, mid-level shop stop: a transporter trader (not the full
+// Coriolis) scrolls in the same way the end-of-level station does, and the shop opens — minus new
+// ship purchases, since a trader doesn't carry hulls. It's terminal exactly like DOCK: the shell
+// must call the sim's midDockLaunch() (mirroring relaunch()) once the player is done shopping, to
+// resume WAVES_B in place — no level restart, no campaign advance. [ROC-MDCK-1..3]
 
 import { vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
@@ -28,6 +34,8 @@ export type LevelState =
   | 'WAVES_A'
   | 'ASTEROIDS_B'
   | 'MID_BOSS'
+  | 'MID_DOCKING'
+  | 'MID_DOCK'
   | 'WAVES_B'
   | 'END_BOSS'
   | 'VIPER_INTERCEPT'
@@ -105,6 +113,19 @@ export const DOCK_SETTLE_SEC = 1.2; // beat after the station is fully in view b
 // The departure Coriolis the player launches from, pointing up-screen. [ROC-HYP-1]
 const DEPART_STATION = { scale: 2, spawnZ: -0.35, speed: 0.55, cullZ: -2.4 };
 
+// The mid-level trader: a transporter freighter standing in for a full station between the
+// mid-boss and wavesB — same "scroll in, hold, open the shop" backdrop as the end-of-level
+// Coriolis (spawnStation/stationTick/dockingCheck are all shared), just a different hull and no
+// slow roll — it sits still, facing up-screen, the whole time it's docked against. 50% larger
+// than the wave transporters the player fights (which draw at 1x). [ROC-MDCK-1]
+const MID_DOCK_TRADER = {
+  meshId: 'transporter',
+  scale: 1.5,
+  spawnZ: 2.4,
+  holdZ: 0.55,
+  approachSpeed: 0.4,
+};
+
 // ---- helpers ----------------------------------------------------------------
 
 const hasKind = (world: World, kind: Entity['kind']): boolean => {
@@ -137,7 +158,15 @@ interface StationAi {
   holdZ?: number;
 }
 
-function spawnStation(world: World, ai: StationAi, pos: { x: number; z: number }, vz: number, yaw: number): Entity {
+function spawnStation(
+  world: World,
+  ai: StationAi,
+  pos: { x: number; z: number },
+  vz: number,
+  yaw: number,
+  meshId = 'coriolis',
+  scale = DOCK_STATION.scale,
+): Entity {
   const id = world.nextId++;
   const e: Entity = {
     id,
@@ -146,8 +175,8 @@ function spawnStation(world: World, ai: StationAi, pos: { x: number; z: number }
     vel: vec3(0, 0, vz),
     yaw,
     bank: 0,
-    meshId: 'coriolis',
-    scale: DOCK_STATION.scale,
+    meshId,
+    scale,
     port: true,
     ai,
   };
@@ -256,6 +285,25 @@ export function enterLevelState(world: World, state: LevelState, level: LevelDef
       midBosses.forEach((name, i) => spawnBoss(world, name, ctx, i === 0 ? 'laser' : undefined, i));
       break;
     }
+    case 'MID_DOCKING':
+      // Same mechanic as the end-of-level DOCKING approach — scrolls into view and holds, no
+      // collision, no fly-in — just the trader's hull and a fixed up-screen facing instead of the
+      // Coriolis's slow roll. [ROC-MDCK-1]
+      world.levelTimer = DOCK_SETTLE_SEC;
+      spawnStation(
+        world,
+        { kind: 'dock', spin: 0, holdZ: MID_DOCK_TRADER.holdZ },
+        { x: 0, z: MID_DOCK_TRADER.spawnZ },
+        -MID_DOCK_TRADER.approachSpeed,
+        0,
+        MID_DOCK_TRADER.meshId,
+        MID_DOCK_TRADER.scale,
+      );
+      break;
+    case 'MID_DOCK':
+      deleteStations(world);
+      world.events.push({ type: 'midDock' }); // [ROC-MDCK-1]
+      break;
     case 'WAVES_B':
       startGroup(world, level.wavesB, ctx);
       if (level.combatAsteroids) startAsteroidWaves(world, level.combatAsteroids);
@@ -316,8 +364,9 @@ function stationTick(world: World, dt: number): void {
 }
 
 // The station is a backdrop now: once it has scrolled in and is holding, wait a beat and open the
-// shop. No collision, no fly-in. [ROC-DCKG-1]
-function dockingCheck(world: World, dt: number, level: LevelDef, ctx: WaveContext): void {
+// shop. No collision, no fly-in. Shared by the end-of-level Coriolis (DOCKING -> DOCK) and the
+// mid-level trader (MID_DOCKING -> MID_DOCK). [ROC-DCKG-1, ROC-MDCK-1]
+function dockingCheck(world: World, dt: number, level: LevelDef, ctx: WaveContext, next: LevelState, doneEvent: string): void {
   let station: Entity | undefined;
   for (const e of world.entities.values()) {
     if (e.kind === 'station' && (e.ai as StationAi).kind === 'dock') station = e;
@@ -326,8 +375,8 @@ function dockingCheck(world: World, dt: number, level: LevelDef, ctx: WaveContex
   if (!station || station.vel.z !== 0) return;
   world.levelTimer -= dt;
   if (world.levelTimer <= 0) {
-    world.events.push({ type: 'docked' });
-    enterLevelState(world, 'DOCK', level, ctx);
+    world.events.push({ type: doneEvent });
+    enterLevelState(world, next, level, ctx);
   }
 }
 
@@ -414,8 +463,13 @@ export function levelStateSystem(world: World, dt: number, level: LevelDef, ctx:
       if (asteroidFieldCleared(world)) enterLevelState(world, 'MID_BOSS', level, ctx);
       break;
     case 'MID_BOSS':
-      tickBossFade(() => enterLevelState(world, 'WAVES_B', level, ctx));
+      tickBossFade(() => enterLevelState(world, 'MID_DOCKING', level, ctx));
       break;
+    case 'MID_DOCKING':
+      dockingCheck(world, dt, level, ctx, 'MID_DOCK', 'midDocked');
+      break;
+    case 'MID_DOCK':
+      break; // terminal — the shell calls sim.midDockLaunch() to resume WAVES_B [ROC-MDCK-2]
     case 'WAVES_B':
       if (groupCleared(world)) enterLevelState(world, 'END_BOSS', level, ctx);
       break;
@@ -428,7 +482,7 @@ export function levelStateSystem(world: World, dt: number, level: LevelDef, ctx:
       if (groupCleared(world)) enterLevelState(world, 'DOCKING', level, ctx);
       break;
     case 'DOCKING':
-      dockingCheck(world, dt, level, ctx);
+      dockingCheck(world, dt, level, ctx, 'DOCK', 'docked');
       break;
     case 'DOCK':
       break; // terminal — gamestate takes over at the station

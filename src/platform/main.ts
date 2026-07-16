@@ -145,7 +145,10 @@ const stationCtx: StationContext = { ships: loadShips(shipsJson), prices: econom
 let launchArmed = false;
 let selectedLaser: LaserType = 'pulse';
 const LASER_CYCLE: LaserType[] = ['pulse', 'beam', 'military'];
-const dockActive = (): boolean => sim.state.levelState === 'DOCK';
+// The station shop overlay covers both the end-of-level Coriolis and the mid-level trader.
+// [ROC-MDCK-1]
+const dockActive = (): boolean => sim.state.levelState === 'DOCK' || sim.state.levelState === 'MID_DOCK';
+const midDockActive = (): boolean => sim.state.levelState === 'MID_DOCK';
 
 function runStationAction(action: StationAction): void {
   const w = sim.state;
@@ -164,7 +167,11 @@ function runStationAction(action: StationAction): void {
     case 'missile': upgradeMissile(w, stationCtx); break;
     case 'launch':
       if (!launchArmed) { launchArmed = true; break; } // first tap arms the confirm [ROC-STN-6]
-      if (launch(w, true).ok) { sim.relaunch(); launchArmed = false; }
+      if (launch(w, true).ok) {
+        if (midDockActive()) sim.midDockLaunch(); // resume WAVES_B in place, no restart [ROC-MDCK-2]
+        else sim.relaunch();
+        launchArmed = false;
+      }
       break;
   }
 }

@@ -39,6 +39,9 @@ const content = {
 function runUntil(sim: Sim, pred: () => boolean, maxFrames = 30000, fire = true): SimEvent[] {
   const seen: SimEvent[] = [];
   for (let i = 0; i < maxFrames && !pred(); i++) {
+    // Shop for nothing and leave straight away, so a bare "run past the mid-boss" isn't stuck
+    // waiting at the trader. [ROC-MDCK-2]
+    if (sim.state.levelState === 'MID_DOCK') sim.midDockLaunch();
     seen.push(...sim.step(fire ? firing() : emptyInput()));
   }
   return seen;
@@ -60,7 +63,10 @@ describe('boss-fight framing', () => {
     expect(sim.state.levelState).toBe('MID_BOSS'); // held for the fade [ROC-BOSS-4]
     expect(sim.state.scroll).toBe(0); // still parked while the text fades
 
-    runUntil(sim, () => sim.state.levelState !== 'MID_BOSS');
+    // The fade hands off to the mid-level trader, not straight to part 2 — leaving it (as if the
+    // player shopped and launched) is what actually reaches WAVES_B. [ROC-MDCK-1,2]
+    runUntil(sim, () => sim.state.levelState === 'MID_DOCK');
+    sim.midDockLaunch();
     expect(sim.state.levelState).toBe('WAVES_B'); // part 2 plays after a mid-boss [ROC-BOSS-4]
     expect(sim.state.scroll).toBe(1); // scrolling resumed
   });

@@ -32,7 +32,12 @@ const content = {
 };
 
 function runUntil(sim: Sim, pred: () => boolean, maxFrames = 30000, fire = false): void {
-  for (let i = 0; i < maxFrames && !pred(); i++) sim.step(fire ? firing() : emptyInput());
+  for (let i = 0; i < maxFrames && !pred(); i++) {
+    // Shop for nothing and leave straight away, so runs that just want past the mid-boss aren't
+    // stuck waiting at the trader. [ROC-MDCK-2]
+    if (sim.state.levelState === 'MID_DOCK') sim.midDockLaunch();
+    sim.step(fire ? firing() : emptyInput());
+  }
 }
 
 function runOutRespawn(sim: Sim): void {

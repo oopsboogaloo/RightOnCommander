@@ -64,6 +64,7 @@ export interface Sim {
   snapshot(): WorldSnapshot;
   restore(snap: WorldSnapshot): void;
   relaunch(): void; // leave the station for a fresh level run, keeping ship/wallet/lives [ROC-STN-6]
+  midDockLaunch(): void; // leave the mid-level trader: resume WAVES_B in place, no restart [ROC-MDCK-2]
   cheatSkipLevel(): void; // dev cheat: wipe the current combat and jump straight to docking
 }
 
@@ -212,6 +213,22 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
       }
       world.player.invulnTtl = 0;
       world.mode = '';
+    },
+    midDockLaunch: (): void => {
+      // Leave the mid-level trader: resume WAVES_B in the same level, same run — no restart, no
+      // campaign advance — just the same repair-and-reset the real station gives on relaunch.
+      // [ROC-MDCK-2]
+      const lvl = currentLevel();
+      if (!lvl) return;
+      enterLevelState(world, 'WAVES_B', lvl, waveCtx);
+      const p = world.entities.get(PLAYER_ID);
+      if (p) {
+        p.pos = vec3(0, 0, 0);
+        p.vel = vec3(0, 0, 0);
+        p.hull = p.hullMax ?? p.hull;
+        p.shield = p.shieldMax ?? 0;
+      }
+      world.player.invulnTtl = 0;
     },
     cheatSkipLevel: (): void => {
       // Skip past whatever combat is underway straight to the docking approach — the level ends

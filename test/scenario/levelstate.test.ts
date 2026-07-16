@@ -1,14 +1,14 @@
 // T5.1/T5a scenario: the level FSM runs LAUNCH -> HYPERSPACE -> INFO -> WAVES_A -> MID_BOSS ->
-// WAVES_B -> END_BOSS -> [VIPER_INTERCEPT] -> DOCKING -> DOCK headless, with the player
-// clearing every wave and boss, then flying into the station's aligned port. [ROC-LVL-1,2,
-// ROC-BOSS-4, ROC-HYP-*, ROC-DCKG-3]
+// MID_DOCKING -> MID_DOCK -> WAVES_B -> END_BOSS -> [VIPER_INTERCEPT] -> DOCKING -> DOCK headless,
+// with the player clearing every wave and boss, then flying into the station's aligned port.
+// [ROC-LVL-1,2, ROC-BOSS-4, ROC-HYP-*, ROC-DCKG-3, ROC-MDCK-1,2]
 
 import { describe, it, expect } from 'vitest';
 import { makeWorld, PLAYER_ID } from '../../src/sim/world.js';
 import { createRng } from '../../src/sim/rng.js';
 import { waveSystem, type WaveContext } from '../../src/sim/systems/waves.js';
 import { asteroidFieldSystem } from '../../src/sim/systems/asteroids.js';
-import { startLevel, levelStateSystem, type LevelDef } from '../../src/sim/systems/levelstate.js';
+import { startLevel, levelStateSystem, enterLevelState, type LevelDef } from '../../src/sim/systems/levelstate.js';
 
 const DT = 1 / 120;
 
@@ -41,8 +41,8 @@ const level: LevelDef = {
 };
 
 // One frame of "the player wins": kill every enemy/boss, and when docking, fly straight into
-// the aligned port.
-function playerWins(w: ReturnType<typeof makeWorld>): void {
+// the aligned port. At the mid-level trader, shop for nothing and leave straight away. [ROC-MDCK-1,2]
+function playerWins(w: ReturnType<typeof makeWorld>, def: LevelDef, wctx: WaveContext): void {
   for (const e of [...w.entities.values()]) {
     if (e.kind === 'enemy' || e.kind === 'boss' || e.kind === 'asteroid') w.entities.delete(e.id);
   }
@@ -54,6 +54,7 @@ function playerWins(w: ReturnType<typeof makeWorld>): void {
       p.pos = { ...st.pos };
     }
   }
+  if (w.levelState === 'MID_DOCK') enterLevelState(w, 'WAVES_B', def, wctx);
 }
 
 // Drive the FSM to DOCK. Returns the distinct state order.
@@ -74,8 +75,11 @@ function runToDock(contraband: boolean, withField = false): string[] {
     waveSystem(w, rng, DT, ctx);
     if (withField) asteroidFieldSystem(w, rng, DT);
     levelStateSystem(w, DT, def, ctx);
-    playerWins(w);
+    // Record right after the FSM step, before playerWins can immediately advance past a
+    // same-frame terminal state (MID_DOCK) — otherwise a state entered and left within one
+    // iteration would never show up in the sequence at all. [ROC-MDCK-1]
     record();
+    playerWins(w, def, ctx);
   }
   return seq;
 }
@@ -89,6 +93,8 @@ describe('level FSM', () => {
       'INFO',
       'WAVES_A',
       'MID_BOSS',
+      'MID_DOCKING',
+      'MID_DOCK',
       'WAVES_B',
       'END_BOSS',
       'DOCKING',
@@ -104,6 +110,8 @@ describe('level FSM', () => {
       'INFO',
       'WAVES_A',
       'MID_BOSS',
+      'MID_DOCKING',
+      'MID_DOCK',
       'WAVES_B',
       'END_BOSS',
       'VIPER_INTERCEPT',
@@ -121,6 +129,8 @@ describe('level FSM', () => {
       'ASTEROIDS',
       'WAVES_A',
       'MID_BOSS',
+      'MID_DOCKING',
+      'MID_DOCK',
       'WAVES_B',
       'END_BOSS',
       'DOCKING',
@@ -137,7 +147,7 @@ describe('level FSM', () => {
       waveSystem(w, rng, DT, ctx);
       levelStateSystem(w, DT, level, ctx);
       if (w.events.some((e) => e.type === 'dock')) docked = true;
-      playerWins(w);
+      playerWins(w, level, ctx);
       w.events = [];
     }
     expect(w.levelState).toBe('DOCK');
