@@ -24,7 +24,7 @@ import { asteroidFieldSystem, asteroidSplitSystem } from './systems/asteroids.js
 import { aiSystem } from './systems/ai.js';
 import { missilesSystem } from './systems/missiles.js';
 import { dropsSystem } from './systems/drops.js';
-import { pickupsSystem } from './systems/pickups.js';
+import { pickupsSystem, DEFAULT_PICKUPS } from './systems/pickups.js';
 import { startLevel, enterLevelState, levelStateSystem, type LevelDef } from './systems/levelstate.js';
 import { gamestateSystem, DEFAULT_GAMESTATE } from './systems/gamestate.js';
 import { bossSystem } from './systems/boss.js';
@@ -178,7 +178,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     energyBankSystem(world, SIM_DT); // very slow passive shield regen, if fitted [ROC-BANK-1,2]
     asteroidSplitSystem(world, rng);
     dropsSystem(world, rng);
-    pickupsSystem(world, SIM_DT);
+    pickupsSystem(world, SIM_DT, { ...DEFAULT_PICKUPS, getHullRadius: (id) => hullRadii[id] });
     economySystem(world);
     particlesSystem(world, rng, SIM_DT, DEFAULT_PARTICLES, fragGeom);
 
