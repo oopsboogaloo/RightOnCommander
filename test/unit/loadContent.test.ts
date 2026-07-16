@@ -23,8 +23,8 @@ describe('loadContent', () => {
     expect(level?.endBoss).toBe('fer_de_lance_boss');
     expect(level?.name).toBe('Lave'); // hyperspace destination [ROC-HYP-2]
     expect(level?.facts?.length).toBeGreaterThan(0); // info-card facts [ROC-HYP-5]
-    expect(level?.wavesA.length).toBe(13);
-    expect(level?.wavesB.length).toBe(13);
+    expect(level?.wavesA.length).toBe(37);
+    expect(level?.wavesB.length).toBe(37);
     expect(enemies.transporter.hull).toBe(12); // tanky, unarmed freighter [ROC-TR-3]
     // Waves are sequenced by delayMs (the loader must preserve it, not just startWave).
     expect(level?.wavesA[1].delayMs).toBeGreaterThan(0);
