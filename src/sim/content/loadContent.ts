@@ -84,7 +84,7 @@ function parseAsteroidWave(raw: unknown, where: string): AsteroidFieldDef {
 
 const GIANT_ASTEROID_PHASES = ['asteroids', 'wavesA', 'asteroidsB', 'wavesB'] as const;
 
-function parseGiantAsteroid(raw: unknown, where: string): GiantAsteroidDef {
+function parseGiantAsteroid(raw: unknown, index: number, where: string): GiantAsteroidDef {
   if (!isObj(raw)) throw new Error(`content: ${where} must be an object`);
   const phase = raw.phase;
   if (typeof phase !== 'string' || !GIANT_ASTEROID_PHASES.includes(phase as GiantAsteroidPhase)) {
@@ -94,6 +94,10 @@ function parseGiantAsteroid(raw: unknown, where: string): GiantAsteroidDef {
     phase: phase as GiantAsteroidPhase,
     x: num(raw.x, `${where}.x`),
     delayMs: raw.delayMs === undefined ? undefined : num(raw.delayMs, `${where}.delayMs`),
+    // Defaults to a sequential label (g1, g2, ...) across the whole level's giantAsteroids list,
+    // so every obstacle can be referred to precisely in cheat mode without needing to author one
+    // explicitly. [ROC-GIANT-1, dev cheat]
+    id: typeof raw.id === 'string' ? raw.id : `g${index + 1}`,
   };
 }
 
@@ -127,7 +131,7 @@ function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
     throw new Error('content: "level.giantAsteroids" must be an array');
   }
   const giantAsteroids = Array.isArray(giantAsteroidsRaw)
-    ? giantAsteroidsRaw.map((g, i) => parseGiantAsteroid(g, `level.giantAsteroids[${i}]`))
+    ? giantAsteroidsRaw.map((g, i) => parseGiantAsteroid(g, i, `level.giantAsteroids[${i}]`))
     : undefined;
   const facts = raw.facts;
   if (facts !== undefined && (!Array.isArray(facts) || facts.some((f) => typeof f !== 'string'))) {

@@ -191,6 +191,13 @@ let cheatDebugText = '';
 let cheatDebugTtl = 0;
 const CHEAT_DEBUG_SEC = 1.5;
 
+// Wave-authoring clock: milliseconds elapsed since the current level state began, so a delayMs
+// worth adding to a level's content JSON (wavesA/wavesB/asteroidWaves/giantAsteroids all measure
+// delayMs from their own phase's start, not the level as a whole) can just be read straight off
+// the screen while playtesting. Resets on every level-state transition. [dev cheat]
+let cheatClockMs = 0;
+let cheatClockState = '';
+
 function cornerAt(px: number, py: number, w: number, h: number): Corner | null {
   const z = Math.min(w, h) * CORNER_FRAC;
   const top = py < z;
@@ -254,6 +261,12 @@ function pauseButtonRect(w: number): { x: number; y: number; w: number; h: numbe
 const REWIND_BUTTON = { w: SKIP_BUTTON.w, h: SKIP_BUTTON.h, marginX: SKIP_BUTTON.marginX, marginY: PAUSE_BUTTON.marginY + PAUSE_BUTTON.h + PAUSE_BUTTON_GAP };
 function rewindButtonRect(w: number): { x: number; y: number; w: number; h: number } {
   return { x: w - REWIND_BUTTON.marginX - REWIND_BUTTON.w, y: REWIND_BUTTON.marginY, w: REWIND_BUTTON.w, h: REWIND_BUTTON.h };
+}
+
+// Non-tappable readout, stacked below the buttons above. [dev cheat]
+const CLOCK_READOUT = { w: SKIP_BUTTON.w, h: SKIP_BUTTON.h, marginX: SKIP_BUTTON.marginX, marginY: REWIND_BUTTON.marginY + REWIND_BUTTON.h + PAUSE_BUTTON_GAP };
+function clockReadoutRect(w: number): { x: number; y: number; w: number; h: number } {
+  return { x: w - CLOCK_READOUT.marginX - CLOCK_READOUT.w, y: CLOCK_READOUT.marginY, w: CLOCK_READOUT.w, h: CLOCK_READOUT.h };
 }
 
 const REWIND_SEC = 30;
@@ -491,6 +504,14 @@ startGameLoop({
     // at the field. Idempotent. [ROC-L1-1]
     const ls = sim.state.levelState;
     if (ls !== 'LAUNCH' && ls !== 'HYPERSPACE') renderer.revealAsteroidBelt();
+    if (cheatUnlocked) {
+      if (ls !== cheatClockState) {
+        cheatClockState = ls;
+        cheatClockMs = 0;
+      } else {
+        cheatClockMs += DT * 1000;
+      }
+    }
     curr = readPlayerPose();
     drainFloaters(events);
     captureRewindSnapshot();
@@ -645,18 +666,24 @@ startGameLoop({
       renderer.drawWorldText(vec3(f.x, 0, f.z), f.text, { fill: col, font: '13px monospace', align: 'center', dy: -18 - u * 34 });
     }
 
-    // Cheat mode: label the lead ship of each active content-authored wave with its WaveDef.id,
-    // so the wave being pointed at can be named precisely. [dev cheat]
+    // Cheat mode: label every live member of each active content-authored wave with its
+    // WaveDef.id, so the wave being pointed at can be named precisely regardless of which of its
+    // ships is on screen. [dev cheat]
     if (cheatUnlocked) {
       for (const rec of sim.state.waves.active.values()) {
         if (!rec.defId) continue;
-        let lead: Entity | undefined;
         for (const id of rec.members) {
           const e = sim.state.entities.get(id);
-          if (e && (!lead || e.id < lead.id)) lead = e;
+          if (!e) continue;
+          renderer.drawWorldText(e.pos, rec.defId, { fill: 'rgba(255,215,107,0.9)', font: '13px monospace', align: 'center', dy: -24 });
         }
-        if (!lead) continue;
-        renderer.drawWorldText(lead.pos, rec.defId, { fill: 'rgba(255,215,107,0.9)', font: '10px monospace', align: 'center', dy: -22 });
+      }
+
+      // Giant asteroids get the same treatment via their own authored id, so an obstacle can be
+      // referred to precisely too (e.g. "g2 needs to move left"). [ROC-GIANT-1, dev cheat]
+      for (const e of sim.state.entities.values()) {
+        if (e.kind !== 'asteroid' || !e.indestructible || !e.debugLabel) continue;
+        renderer.drawWorldText(e.pos, e.debugLabel, { fill: 'rgba(255,215,107,0.9)', font: '13px monospace', align: 'center', dy: -24 });
       }
     }
 
@@ -800,6 +827,22 @@ startGameLoop({
       renderer.drawText('REWIND 30s', { x: r.x + r.w / 2, y: r.y + r.h / 2 + 4 }, {
         fill: enabled ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)',
         font: '11px monospace',
+        align: 'center',
+      });
+    }
+
+    // Wave-authoring clock: elapsed ms since the current level state began — read this off the
+    // screen and drop it straight into a new wave/asteroid entry's delayMs. [dev cheat]
+    if (cheatUnlocked && !dockActive()) {
+      const r = clockReadoutRect(w);
+      renderer.drawText(sim.state.levelState, { x: r.x + r.w / 2, y: r.y + r.h / 2 - 3 }, {
+        fill: 'rgba(255,215,107,0.85)',
+        font: '9px monospace',
+        align: 'center',
+      });
+      renderer.drawText(`${Math.round(cheatClockMs)}ms`, { x: r.x + r.w / 2, y: r.y + r.h / 2 + 11 }, {
+        fill: 'rgba(255,215,107,0.85)',
+        font: '13px monospace',
         align: 'center',
       });
     }

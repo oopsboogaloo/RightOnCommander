@@ -134,7 +134,7 @@ describe('giant asteroids', () => {
   it('spawns a one-shot obstacle at its authored x position after delayMs, not a randomised field', () => {
     const w = makeWorld(1);
     const rng = createRng(1);
-    startGiantAsteroids(w, [{ phase: 'wavesA', x: 0.42, delayMs: 500 }]);
+    startGiantAsteroids(w, [{ phase: 'wavesA', x: 0.42, delayMs: 500, id: 'g2' }]);
 
     asteroidFieldSystem(w, rng, DT);
     expect(asteroids(w).length).toBe(0); // not due yet
@@ -146,6 +146,7 @@ describe('giant asteroids', () => {
     expect(giants[0].meshId).toBe('giant_asteroid');
     expect(giants[0].indestructible).toBe(true);
     expect(giants[0].scale).toBe(5.5);
+    expect(giants[0].debugLabel).toBe('g2'); // carries its authored id for cheat-mode labelling
     expect(w.giantAsteroids.length).toBe(0); // consumed, one-shot
   });
 

@@ -31,6 +31,30 @@ describe('loadContent', () => {
     expect(level?.wavesA[2].delayMs).toBeGreaterThan(level!.wavesA[1].delayMs!);
     expect(level?.asteroidWaves?.length).toBeGreaterThan(0); // opening asteroid waves [ROC-L1-1]
     expect(level?.asteroidWaves?.[0].count).toBeGreaterThan(0);
+    // Sequential default ids across the whole level's giantAsteroids list, for cheat-mode
+    // labelling — Level 1's content doesn't author explicit ids. [ROC-GIANT-1, dev cheat]
+    expect(level?.giantAsteroids?.map((g) => g.id)).toEqual(['g1', 'g2', 'g3', 'g4']);
+  });
+
+  it('defaults giant-asteroid ids sequentially but keeps an explicit one when authored', () => {
+    const { levels } = loadContent({
+      enemies: { grunt: { hull: 1, bounty: 1 } },
+      levels: [
+        {
+          id: 'x',
+          wavesA: [],
+          midBoss: 'grunt',
+          wavesB: [],
+          endBoss: 'grunt',
+          giantAsteroids: [
+            { phase: 'wavesA', x: 0 },
+            { phase: 'wavesB', x: 0, id: 'rocky' },
+            { phase: 'wavesA', x: 0 },
+          ],
+        },
+      ],
+    });
+    expect(levels[0].giantAsteroids?.map((g) => g.id)).toEqual(['g1', 'rocky', 'g3']);
   });
 
   it('loads the full campaign (Levels 1-3) as an ordered array', () => {
