@@ -46,7 +46,7 @@ function fireShot(world: World, ex: number, ez: number, aimed: boolean, cfg: AiC
 
 export function aiSystem(world: World, dt: number, cfg: AiConfig = DEFAULT_AI): void {
   for (const e of [...world.entities.values()]) {
-    if ((e.kind !== 'enemy' && e.kind !== 'boss') || !e.ai) continue;
+    if ((e.kind !== 'enemy' && e.kind !== 'boss') || !e.ai || e.dying) continue;
     const ai = e.ai as AiState;
     if (ai.rate <= 0) continue;
 

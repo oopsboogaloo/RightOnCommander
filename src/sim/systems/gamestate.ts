@@ -207,6 +207,7 @@ export function gamestateSystem(
   if (world.player.invulnTtl <= 0 && (player.hull ?? 0) > 0) {
     for (const e of world.entities.values()) {
       if (e.kind !== 'enemy' && e.kind !== 'boss' && e.kind !== 'asteroid') continue;
+      if (e.dying) continue; // already flashing out — no more contact damage either way
       if (rams(player, e, cfg)) {
         if (e.indestructible) {
           destroyOnImpact(world, player); // no shield ring absorbs it — solid obstacles are lethal

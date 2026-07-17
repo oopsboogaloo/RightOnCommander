@@ -60,7 +60,7 @@ const angleOf = (x: number, z: number): number => Math.atan2(x, z); // matches y
 // Thargoids jam missile lock-on entirely: never a homing target, never counted as "on screen"
 // for the fire-only-with-a-target gate. [ROC-MIS-*, Thargoid tuning]
 const missileTargetable = (e: Entity): boolean =>
-  (e.kind === 'enemy' || e.kind === 'boss') && !e.missileImmune;
+  (e.kind === 'enemy' || e.kind === 'boss') && !e.missileImmune && !e.dying;
 
 function nearestEnemy(world: World, from: Vec3): Entity | undefined {
   let best: Entity | undefined;

@@ -209,7 +209,9 @@ export function collisionSystem(world: World, cfg: CollisionConfig): CollisionHi
 
   const targets: Entity[] = [];
   for (const e of world.entities.values()) {
-    if (e.kind === 'enemy' || e.kind === 'boss' || e.kind === 'asteroid') targets.push(e);
+    // A dying entity (lethally hit, mid white-flash) is already spent — further shots pass
+    // through rather than re-triggering it. [ROC-DMG-6a]
+    if ((e.kind === 'enemy' || e.kind === 'boss' || e.kind === 'asteroid') && !e.dying) targets.push(e);
   }
 
   // Player fire -> enemy targets, via the spatial-hash broadphase.

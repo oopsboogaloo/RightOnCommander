@@ -43,6 +43,7 @@ export interface Entity {
   hullMax?: number;
   flashTtl?: number; // white damage flash timer [ROC-DMG-6a]
   shieldFlashTtl?: number;
+  dying?: boolean; // lethally hit, flashing white for flashTtl before its explosion actually fires [ROC-DMG-6a]
   thrust?: boolean; // engine-flame flag: thrusting up-screen [ROC-MOV-4]
   ttl?: number; // remaining lifetime in seconds (projectiles, particles, fragments)
   ttlMax?: number; // initial ttl, for fade [ROC-DMG-6]

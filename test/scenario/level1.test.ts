@@ -13,7 +13,7 @@ import { waveSystem } from '../../src/sim/systems/waves.js';
 import { asteroidFieldSystem, asteroidSplitSystem } from '../../src/sim/systems/asteroids.js';
 import { startLevel, levelStateSystem, enterLevelState } from '../../src/sim/systems/levelstate.js';
 import { bossSystem } from '../../src/sim/systems/boss.js';
-import { applyDamage } from '../../src/sim/systems/damage.js';
+import { applyDamage, tickFlashes } from '../../src/sim/systems/damage.js';
 import { dropsSystem } from '../../src/sim/systems/drops.js';
 
 const DT = 1 / 120;
@@ -42,6 +42,7 @@ describe('Level 1', () => {
       for (const e of [...w.entities.values()]) {
         if (e.kind === 'enemy' || e.kind === 'boss' || e.kind === 'asteroid') applyDamage(w, e, 999); // player destroys it
       }
+      tickFlashes(w, DT); // let a lethal hit's brief white-flash beat run out, same as a real step [ROC-DMG-6a]
       asteroidSplitSystem(w, rng);
       dropsSystem(w, rng);
 

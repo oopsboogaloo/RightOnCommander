@@ -11,7 +11,7 @@ import { vec3 } from '../../src/sim/math/vec3.js';
 import type { Entity } from '../../src/sim/components.js';
 import { gamestateSystem, DEFAULT_GAMESTATE, MAX_LIVES, PLAYER_EXPLOSION_SEC } from '../../src/sim/systems/gamestate.js';
 import { collisionSystem, meshSilhouette } from '../../src/sim/systems/collision.js';
-import { damageSystem } from '../../src/sim/systems/damage.js';
+import { damageSystem, tickFlashes } from '../../src/sim/systems/damage.js';
 import { SHIP_SCALE } from '../../src/sim/index.js';
 import type { Mesh } from '../../src/interfaces.js';
 import type { Pt } from '../../src/sim/math/geom2.js';
@@ -25,6 +25,11 @@ const RESPAWN_STEPS = Math.ceil((PLAYER_EXPLOSION_SEC + DEFAULT_GAMESTATE.respaw
 const runOutPending = (w: ReturnType<typeof makeWorld>): void => {
   for (let i = 0; i < RESPAWN_STEPS; i++) gamestateSystem(w, DT, CFG);
 };
+
+// A lethal hit on a non-player entity flashes white for a beat before its explosion actually
+// fires (tickFlashes, called every real step); tests that destroy something directly via
+// applyDamage/gamestateSystem run this once, well past the flash, to settle that beat. [ROC-DMG-6a]
+const settleDeaths = (w: ReturnType<typeof makeWorld>): void => tickFlashes(w, 1);
 
 function addEnemyShot(w: ReturnType<typeof makeWorld>, pos = vec3(0, 0, 0)): Entity {
   const id = w.nextId++;
@@ -103,6 +108,7 @@ describe('player takes damage', () => {
     const w = makeWorld(1);
     const fighter = addEnemyShip(w, vec3(0, 0, 0)); // hull 3 < ramDamage 4
     gamestateSystem(w, DT, CFG);
+    settleDeaths(w);
     expect(w.entities.has(fighter.id)).toBe(false); // destroyed by the ram
 
     const w2 = makeWorld(1);
@@ -187,6 +193,7 @@ describe('death, lives & respawn', () => {
     const boss: Entity = { id: w.nextId++, kind: 'boss', pos: vec3(0, 0, 0.5), vel: vec3(), yaw: 0, bank: 0, hull: 1, hullMax: 40 };
     w.entities.set(boss.id, boss);
     gamestateSystem(w, DT, CFG);
+    settleDeaths(w);
     expect(w.entities.has(boss.id)).toBe(false); // 1 hull, 50% rounds to at least 1 -> destroyed
   });
 
@@ -286,6 +293,7 @@ describe('giant asteroids are lethal solid obstacles', () => {
     enemy.hullMax = 50;
     addGiantAsteroid(w, vec3(0, 0, 0));
     gamestateSystem(w, DT, CFG);
+    settleDeaths(w);
     expect(w.entities.has(enemy.id)).toBe(false); // wrecked outright, shields didn't save it
   });
 
@@ -308,6 +316,7 @@ describe('giant asteroids are lethal solid obstacles', () => {
     w.entities.set(id, rock);
     addGiantAsteroid(w, vec3(0, 0, 0));
     gamestateSystem(w, DT, CFG);
+    settleDeaths(w);
     expect(w.entities.has(rock.id)).toBe(false); // smashed apart on contact
   });
 
