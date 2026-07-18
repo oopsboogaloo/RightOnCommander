@@ -260,11 +260,14 @@ function pauseButtonRect(w: number): { x: number; y: number; w: number; h: numbe
   return { x: w - PAUSE_BUTTON.marginX - PAUSE_BUTTON.w, y: PAUSE_BUTTON.marginY, w: PAUSE_BUTTON.w, h: PAUSE_BUTTON.h };
 }
 
-// Rewind ~30s: replays ship/enemy positions, wave/hazard timers and RNG state, so an attack wave
-// can be re-watched exactly as it played out (the sim is deterministic, so spawns/drops after the
-// rewind point repeat identically) — but leaves progression (score, credits, lives, cargo hold)
-// alone, so rewinding never costs anything. Built on a rolling buffer of periodic snapshots rather
-// than the full sim.restore(), since only the "encounter" should roll back, not the ledger. [dev cheat]
+// Rewind ~30s per press, chainable: each press jumps back REWIND_SEC from wherever you are now,
+// so repeated presses walk back through REWIND_HISTORY_SEC of real history rather than exhausting
+// the buffer after one jump. Replays ship/enemy positions, wave/hazard timers and RNG state, so an
+// attack wave can be re-watched exactly as it played out (the sim is deterministic, so spawns/drops
+// after the rewind point repeat identically) — but leaves progression (score, credits, lives,
+// cargo hold) alone, so rewinding never costs anything. Built on a rolling buffer of periodic
+// snapshots rather than the full sim.restore(), since only the "encounter" should roll back, not
+// the ledger. [dev cheat]
 const REWIND_BUTTON = { w: SKIP_BUTTON.w, h: SKIP_BUTTON.h, marginX: SKIP_BUTTON.marginX, marginY: PAUSE_BUTTON.marginY + PAUSE_BUTTON.h + PAUSE_BUTTON_GAP };
 function rewindButtonRect(w: number): { x: number; y: number; w: number; h: number } {
   return { x: w - REWIND_BUTTON.marginX - REWIND_BUTTON.w, y: REWIND_BUTTON.marginY, w: REWIND_BUTTON.w, h: REWIND_BUTTON.h };
@@ -276,10 +279,15 @@ function clockReadoutRect(w: number): { x: number; y: number; w: number; h: numb
   return { x: w - CLOCK_READOUT.marginX - CLOCK_READOUT.w, y: CLOCK_READOUT.marginY, w: CLOCK_READOUT.w, h: CLOCK_READOUT.h };
 }
 
-const REWIND_SEC = 30;
+const REWIND_SEC = 30; // seconds jumped back per press
+// Total history retained — was == REWIND_SEC, so a press consumed almost the whole buffer and a
+// second press right after had nothing left to jump to. 10x deeper lets ten 30s presses chain
+// back to back. [dev cheat]
+const REWIND_HISTORY_SEC = REWIND_SEC * 10;
 const SNAPSHOT_INTERVAL_SEC = 0.5;
 const SNAPSHOT_INTERVAL_FRAMES = Math.round(SNAPSHOT_INTERVAL_SEC / DT);
 const REWIND_FRAMES = Math.round(REWIND_SEC / DT);
+const REWIND_HISTORY_FRAMES = Math.round(REWIND_HISTORY_SEC / DT);
 let rewindBuffer: { frame: number; snap: WorldSnapshot }[] = [];
 let lastSnapshotFrame = -Infinity;
 let lastSnapshotLevelIndex = -1;
@@ -297,8 +305,16 @@ function captureRewindSnapshot(): void {
   if (sim.state.frame - lastSnapshotFrame < SNAPSHOT_INTERVAL_FRAMES) return;
   lastSnapshotFrame = sim.state.frame;
   rewindBuffer.push({ frame: sim.state.frame, snap: sim.snapshot() });
-  const cutoff = sim.state.frame - REWIND_FRAMES - SNAPSHOT_INTERVAL_FRAMES;
+  const cutoff = sim.state.frame - REWIND_HISTORY_FRAMES - SNAPSHOT_INTERVAL_FRAMES;
   while (rewindBuffer.length && rewindBuffer[0].frame < cutoff) rewindBuffer.shift();
+}
+
+// Seconds of history currently held, oldest snapshot to now — how far back the next press can
+// actually reach (may be less than REWIND_SEC just after unlocking, or right after a previous
+// rewind pruned everything past its landing point). [dev cheat]
+function rewindAvailableSec(): number {
+  if (rewindBuffer.length === 0) return 0;
+  return (sim.state.frame - rewindBuffer[0].frame) * DT;
 }
 
 // Restores everything about the encounter (entities, waves, hazard/level timers, RNG, and the
@@ -824,14 +840,19 @@ startGameLoop({
       renderer.drawText('PAUSED', { x: w / 2, y: h * 0.46 }, { fill: '#fff', font: '20px monospace', align: 'center' });
     }
 
-    // Rewind ~30s: same visibility as Skip Level/Pause, sits directly below Pause. [dev cheat]
+    // Rewind: same visibility as Skip Level/Pause, sits directly below Pause. Labelled with the
+    // seconds the next press will actually jump — capped at REWIND_SEC, but shows less whenever
+    // that's all the buffer currently holds — so it's never ambiguous whether a press will land
+    // short (or do nothing at all). [dev cheat]
     if (cheatUnlocked && !dockActive()) {
       const r = rewindButtonRect(w);
-      const enabled = rewindBuffer.length > 0;
+      const availableSec = rewindAvailableSec();
+      const enabled = availableSec >= SNAPSHOT_INTERVAL_SEC;
+      const jumpSec = Math.round(Math.min(REWIND_SEC, availableSec));
       ctx!.strokeStyle = enabled ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)';
       ctx!.lineWidth = 1;
       ctx!.strokeRect(r.x, r.y, r.w, r.h);
-      renderer.drawText('REWIND 30s', { x: r.x + r.w / 2, y: r.y + r.h / 2 + 4 }, {
+      renderer.drawText(`REWIND ${enabled ? jumpSec : REWIND_SEC}s`, { x: r.x + r.w / 2, y: r.y + r.h / 2 + 4 }, {
         fill: enabled ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)',
         font: '11px monospace',
         align: 'center',
