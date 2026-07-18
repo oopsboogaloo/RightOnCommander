@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
 import { makeWorld } from '../../src/sim/world.js';
 import { vec3 } from '../../src/sim/math/vec3.js';
-import { applyDamage } from '../../src/sim/systems/damage.js';
+import { applyDamage, tickFlashes } from '../../src/sim/systems/damage.js';
 import type { Entity, EntityKind } from '../../src/sim/components.js';
 
 function target(over: Partial<Entity> = {}): Entity {
@@ -64,6 +64,10 @@ describe('damage & shields', () => {
           if (!w.entities.has(e.id)) break;
           w.events = [];
           applyDamage(w, e, 1);
+          // A lethal hit flashes white for a beat before its explosion actually fires (tickFlashes,
+          // called every real step) — force that beat to pass so a fatal hit still destroys within
+          // this same iteration, matching the old immediate-destroy semantics. [ROC-DMG-6a]
+          tickFlashes(w, 1);
           hitsUntilGone++;
           destroyedEvents += w.events.filter((ev) => ev.type === 'destroyed').length;
         }

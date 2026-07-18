@@ -115,8 +115,15 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
   }
 
   // Muzzles start at the hull surface (+ a small gap), matching the rendered/collided size, and
-  // beam hit radii use the same scale. [ROC-LAS-6]
-  const weaponsCfg = { ...DEFAULT_WEAPONS, colliderScale: SHIP_SCALE, getHullExtent: (id: string) => hullExtents[id] };
+  // beam hits use the same hull silhouette (and shield-ring gap) as pulse/military bolts, not a
+  // plain circle. [ROC-LAS-6]
+  const weaponsCfg = {
+    ...DEFAULT_WEAPONS,
+    colliderScale: SHIP_SCALE,
+    getHullExtent: (id: string) => hullExtents[id],
+    getSilhouette: (id: string) => silhouettes[id],
+    getHullRadius: (id: string) => hullRadii[id],
+  };
 
   // Wipe the current combat (used before any level/phase restart).
   function clearCombat(): void {

@@ -14,6 +14,8 @@ import type { Entity } from '../components.js';
 import { type Vec3, vec3, add, scale } from '../math/vec3.js';
 import { PLAYER_ID, type World } from '../world.js';
 import { applyDamage } from './damage.js';
+import { type Pt, rayEntryDistanceToConvexPolygon, rayEntryDistanceToEllipse } from '../math/geom2.js';
+import { transformSilhouette, hullRadius, shieldGap } from './collision.js';
 
 export interface WeaponsConfig {
   pulseRate: number; // shots per second per trigger
@@ -32,6 +34,8 @@ export interface WeaponsConfig {
   muzzleSpread: number; // lateral gap between multiple lasers in one direction
   colliderScale: number; // matches the rendered hull size (SHIP_SCALE); scales beam hit radii
   getHullExtent?: (meshId: string) => HullExtent | undefined; // per-mount reach to the hull edge
+  getSilhouette?: (meshId: string) => Pt[] | undefined; // local-space hull silhouettes, for the beam ray
+  getHullRadius?: (meshId: string) => number | undefined; // precomputed hullRadius() per mesh
 }
 
 // How far a ship's silhouette reaches from its centre along each firing axis — the nose, tail and
@@ -58,7 +62,11 @@ export const DEFAULT_WEAPONS: WeaponsConfig = {
   beamPeriod: 0.3,
   beamDamage: 3, // 10 DPS [tuning]
   muzzleOffset: 0.25,
-  muzzleGap: 0.03, // just clear of the hull silhouette, not floating off the nose
+  // Clear of the hull silhouette by enough that a fresh bolt's rendered trail (PULSE_LEN in
+  // platform/main.ts) doesn't dip back behind the muzzle into the hull on its first few frames,
+  // before it's actually travelled that far — was 0.03, read as firing from behind the hull on a
+  // small ship like the Sidewinder. [ROC-LAS-* tuning]
+  muzzleGap: 0.08,
   muzzleSpread: 0.04, // half the previous gap: multi-laser mounts read as one fatter weapon, not two separate guns
   colliderScale: 1,
 };
@@ -114,21 +122,45 @@ function spawnBolt(world: World, origin: Vec3, dir: Vec3, speed: number, ttl: nu
   e.mil = mil;
 }
 
-// The nearest enemy/boss/asteroid the beam ray meets ahead of the muzzle, by ray-vs-collider-circle.
-function beamHit(world: World, origin: Vec3, dir: Vec3, range: number, colliderScale: number): { e: Entity; t: number } | null {
+// The nearest enemy/boss/asteroid the beam ray meets ahead of the muzzle, by ray-vs-hull-
+// silhouette (the same hull outline pulses/military bolts collide against, not a fixed circle —
+// a beam used to stop short of, or reach past, an irregular asteroid's actual edge). Shielded
+// targets are hit at their ring's outward gap, matching the shielded hit test in collision.ts.
+// Falls back to a ray-vs-ellipse test for a meshless entity (or missing content). [ROC-LAS-6]
+function beamHit(world: World, origin: Vec3, dir: Vec3, range: number, cfg: WeaponsConfig): { e: Entity; t: number } | null {
+  const o: Pt = { x: origin.x, y: origin.z };
+  const d: Pt = { x: dir.x, y: dir.z };
+  const scale = cfg.colliderScale;
   let best: Entity | null = null;
   let bestT = range;
   for (const e of world.entities.values()) {
     if (e.kind !== 'enemy' && e.kind !== 'boss' && e.kind !== 'asteroid') continue;
-    const r = Math.max(e.colliderRx ?? 0.2, e.colliderRz ?? 0.2) * colliderScale * (e.scale ?? 1);
-    const lx = e.pos.x - origin.x;
-    const lz = e.pos.z - origin.z;
-    const tca = lx * dir.x + lz * dir.z; // projection onto the ray
-    if (tca < -r) continue; // fully behind the muzzle
-    const d2 = lx * lx + lz * lz - tca * tca; // squared distance from centre to the ray
-    if (d2 > r * r) continue; // ray misses the circle
-    const t = Math.max(0, tca - Math.sqrt(r * r - d2)); // entry distance (0 if muzzle is inside)
-    if (t < bestT) {
+    const entScale = e.scale ?? 1;
+    const meshId = e.hitMeshId ?? e.meshId;
+    const meshScale = e.hitScale ?? scale * entScale;
+    const local = meshId ? cfg.getSilhouette?.(meshId) : undefined;
+
+    let t: number | null;
+    if (local && local.length >= 3) {
+      const scaled = meshScale === 1 ? local : local.map((p) => ({ x: p.x * meshScale, y: p.y * meshScale }));
+      const poly = transformSilhouette(scaled, e.pos.x, e.pos.z, e.yaw);
+      const gap =
+        (e.shield ?? 0) > 0
+          ? shieldGap(
+              e.hitScale === undefined
+                ? (cfg.getHullRadius?.(meshId!) ?? hullRadius(local, scale)) * entScale
+                : hullRadius(local, meshScale),
+              e.shield ?? 0,
+            )
+          : 0;
+      t = rayEntryDistanceToConvexPolygon(o, d, poly, bestT, gap);
+    } else {
+      const fallback = 0.2;
+      const rx = (e.colliderRx ?? fallback) * scale * entScale;
+      const rz = (e.colliderRz ?? fallback) * scale * entScale;
+      t = rayEntryDistanceToEllipse(o, d, { x: e.pos.x, y: e.pos.z }, rx, rz, bestT);
+    }
+    if (t !== null && t < bestT) {
       bestT = t;
       best = e;
     }
@@ -139,7 +171,7 @@ function beamHit(world: World, origin: Vec3, dir: Vec3, range: number, colliderS
 // One continuous beam this step: trace it, record the segment to draw, and accrue contact damage
 // (1 per beamPeriod of fire). [ROC-LAS-6]
 function fireBeam(world: World, origin: Vec3, dir: Vec3, dt: number, cfg: WeaponsConfig): void {
-  const hit = beamHit(world, origin, dir, cfg.beamRange, cfg.colliderScale);
+  const hit = beamHit(world, origin, dir, cfg.beamRange, cfg);
   const reach = hit ? hit.t : cfg.beamRange;
   const bx = origin.x + dir.x * reach;
   const bz = origin.z + dir.z * reach;

@@ -21,11 +21,33 @@ export const DEFAULT_DAMAGE: DamageConfig = {
   heavyDamageFraction: 0.34,
 };
 
-// Decay the flash timers each step.
+// Fire the explosion a dying (non-player) entity's lethal hit deferred: the same 'destroyed'
+// event + sfx damage.ts used to push immediately, now delayed until its white flash has actually
+// had a chance to render. [ROC-DMG-6a]
+function finalizeDeath(world: World, e: Entity): void {
+  world.events.push({
+    type: 'destroyed',
+    id: e.id,
+    kind: e.kind,
+    pos: { ...e.pos },
+    vel: { ...e.vel },
+    yaw: e.yaw,
+    meshId: e.meshId,
+    scale: e.scale,
+    bounty: e.bounty ?? 0,
+    drops: e.drops,
+    cargoDrops: e.cargoDrops,
+  });
+  world.events.push({ type: 'sfx', id: 'explode_small' });
+  world.entities.delete(e.id);
+}
+
+// Decay the flash timers each step, finalizing any entity whose lethal-hit flash has run out.
 export function tickFlashes(world: World, dt: number): void {
-  for (const e of world.entities.values()) {
+  for (const e of [...world.entities.values()]) {
     if (e.flashTtl) e.flashTtl = Math.max(0, e.flashTtl - dt);
     if (e.shieldFlashTtl) e.shieldFlashTtl = Math.max(0, e.shieldFlashTtl - dt);
+    if (e.dying && (e.flashTtl ?? 0) <= 0) finalizeDeath(world, e);
   }
 }
 
@@ -38,6 +60,7 @@ export function applyDamage(
   cfg: DamageConfig = DEFAULT_DAMAGE,
 ): void {
   if (e.indestructible) return; // a giant asteroid: the hit is absorbed, nothing happens [ROC-GIANT-1]
+  if (e.dying) return; // already exploding — a shot landing on the corpse is a no-op [ROC-DMG-6a]
 
   if ((e.shield ?? 0) > 0) {
     e.shield = (e.shield ?? 0) - 1; // remove one ring [ROC-DMG-2, ROC-DMG-5]
@@ -56,8 +79,16 @@ export function applyDamage(
   world.events.push({ type: 'fragments', pos: { ...e.pos }, vel: { ...e.vel }, meshId: e.meshId });
 
   if ((e.hull ?? 0) <= 0) {
-    // No bounty/drops for the player; gamestate resolves the life/respawn and keeps the entity
-    // (we reuse it on respawn), so only non-player wrecks are deleted here. [T6.4, ROC-LIFE-*]
+    // Enemies/bosses/asteroids: hold off on the bang. flashTtl (just set above) plays out first —
+    // so a one-hit kill still visibly flashes white for an instant, making the hit read — then
+    // finalizeDeath() (tickFlashes) fires the 'destroyed' event and removes it. [ROC-DMG-6a]
+    if (e.kind === 'enemy' || e.kind === 'boss' || e.kind === 'asteroid') {
+      e.dying = true;
+      return;
+    }
+    // The player has no bounty/drops; gamestate resolves the life/respawn and keeps the entity
+    // (reused on respawn). Everything else (e.g. a shot-down missile) has no meaningful "flash
+    // then explode" beat, so both fire their explosion immediately, as before. [T6.4, ROC-LIFE-*]
     const isPlayer = e.kind === 'player';
     world.events.push({
       type: 'destroyed',

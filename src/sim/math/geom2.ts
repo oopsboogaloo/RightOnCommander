@@ -126,6 +126,89 @@ export function convexPolygonsDistanceSq(a: Pt[], b: Pt[]): number {
   return min;
 }
 
+// Nearest distance along a ray (from `origin`, unit-ish direction `dir`) to where it enters a
+// convex polygon dilated outward by `gap` (0 for the bare hull) — the same shape the shielded
+// hit test in collision.ts treats as solid, but for a ray instead of a short swept segment.
+// Cyrus-Beck clipping: each edge's outward half-plane bounds the ray's parameter t; the ray hits
+// the (possibly gap-expanded) polygon over [tEnter, tExit], entering at 0 if already inside. Null
+// if the ray misses entirely or the entry is beyond maxDist. [ROC-LAS-6]
+export function rayEntryDistanceToConvexPolygon(
+  origin: Pt,
+  dir: Pt,
+  poly: Pt[],
+  maxDist: number,
+  gap = 0,
+): number | null {
+  if (poly.length < 3) return null;
+
+  let cx = 0;
+  let cy = 0;
+  for (const p of poly) {
+    cx += p.x;
+    cy += p.y;
+  }
+  cx /= poly.length;
+  cy /= poly.length;
+
+  let tEnter = 0;
+  let tExit = maxDist;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    const ex = b.x - a.x;
+    const ey = b.y - a.y;
+    const elen = Math.hypot(ex, ey) || 1;
+    let nx = ey / elen;
+    let ny = -ex / elen;
+    if (nx * (cx - a.x) + ny * (cy - a.y) > 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    const numerator = nx * (a.x - origin.x) + ny * (a.y - origin.y) + gap;
+    const denominator = nx * dir.x + ny * dir.y;
+    if (Math.abs(denominator) < 1e-12) {
+      if (numerator < 0) return null; // parallel to this edge and outside its half-plane
+      continue;
+    }
+    const t = numerator / denominator;
+    if (denominator < 0) {
+      if (t > tEnter) tEnter = t;
+    } else if (t < tExit) {
+      tExit = t;
+    }
+  }
+  if (tEnter > tExit || tEnter > maxDist) return null;
+  return tEnter;
+}
+
+// Nearest distance along a ray to where it enters an ellipse (mapped to a unit circle). Mirrors
+// segmentIntersectsEllipse's transform, but solves for the entry point of an unbounded ray
+// instead of a yes/no test against a fixed segment. [ROC-LAS-6]
+export function rayEntryDistanceToEllipse(
+  origin: Pt,
+  dir: Pt,
+  c: Pt,
+  rx: number,
+  ry: number,
+  maxDist: number,
+): number | null {
+  const ox = (origin.x - c.x) / rx;
+  const oy = (origin.y - c.y) / ry;
+  const dx = dir.x / rx;
+  const dy = dir.y / ry;
+  const a = dx * dx + dy * dy;
+  if (a < 1e-12) return null;
+  const b = 2 * (ox * dx + oy * dy);
+  const cc = ox * ox + oy * oy - 1;
+  const disc = b * b - 4 * a * cc;
+  if (disc < 0) return null;
+  const sq = Math.sqrt(disc);
+  let t = (-b - sq) / (2 * a);
+  if (t < 0) t = (-b + sq) / (2 * a);
+  if (t < 0 || t > maxDist) return null;
+  return t;
+}
+
 // Convex hull (Andrew's monotone chain), returned counter-clockwise. Used to precompute a
 // hull's 2D silhouette. [design §8]
 export function convexHull(points: Pt[]): Pt[] {
