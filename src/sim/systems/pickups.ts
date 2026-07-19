@@ -7,6 +7,7 @@ import { type Vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
 import { PLAYER_ID, type World } from '../world.js';
 import { collectMissile } from './missiles.js';
+import { CLOAK_PICKUP_SEC } from './cloak.js';
 import { energyBombCap, bestPickupSlot, type LaserType } from './ships.js';
 
 export interface PickupsConfig {
@@ -111,6 +112,10 @@ function collect(world: World, pickup: Entity, player: Entity, cfg: PickupsConfi
       break;
     case 'life':
       world.player.lives = Math.min(5, world.player.lives + 1);
+      break;
+    case 'cloak':
+      world.player.cloakTtl = CLOAK_PICKUP_SEC; // [ROC-CLK-4]
+      world.events.push({ type: 'sfx', id: 'pickup' });
       break;
     case 'cargo':
       bankCargo(world, pickup.pickup!.commodity ?? 'Cargo', 1, pos); // display the type [ROC-CARGO-3]

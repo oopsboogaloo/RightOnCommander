@@ -29,6 +29,7 @@ import { startLevel, enterLevelState, levelStateSystem, type LevelDef } from './
 import { gamestateSystem, DEFAULT_GAMESTATE } from './systems/gamestate.js';
 import { bossSystem } from './systems/boss.js';
 import { ecmSystem } from './systems/ecm.js';
+import { cloakSystem } from './systems/cloak.js';
 import { energyBankSystem } from './systems/energyBank.js';
 import { loadContent } from './content/loadContent.js';
 
@@ -163,6 +164,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     weaponsSystem(world, input, SIM_DT, weaponsCfg);
     missilesSystem(world, SIM_DT);
     ecmSystem(world, SIM_DT); // boss ECM pops player missiles after its fuse [ROC-BECM-*]
+    cloakSystem(world, SIM_DT); // Cougar cloak cycle + player cloak-device countdown [ROC-CLK-*]
     waveSystem(world, rng, SIM_DT, waveCtx);
     asteroidFieldSystem(world, rng, SIM_DT);
     aiSystem(world, SIM_DT);

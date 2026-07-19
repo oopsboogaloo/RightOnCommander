@@ -226,6 +226,10 @@ export function particlesSystem(
       burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.fragmentCount), cfg);
     } else if (ev.type === 'beamHit') {
       spawnBeamSparks(world, rng, ev.pos as XYZ, cfg);
+    } else if (ev.type === 'decloak') {
+      // The Cougar rematerialising: a showier burst than an ordinary hit, reading as a distinct
+      // "special effect" rather than routine damage feedback. [ROC-CLK-2]
+      burst(world, rng, ev.pos as XYZ, randInt(rng, cfg.explosionCount), cfg);
     }
   }
 

@@ -21,5 +21,6 @@
   "python": { "hull": 80, "shield": 8, "bounty": 500, "meshId": "python", "scale": 1.4, "behavior": "strafe", "ecm": true, "cargoDrops": 10, "colliderRx": 0.45, "colliderRz": 0.5 },
   "constrictor": { "hull": 30, "shield": 14, "bounty": 1500, "meshId": "constrictor", "scale": 1.6, "behavior": "strafe", "ecm": true, "cargoDrops": 10, "colliderRx": 0.4, "colliderRz": 0.35 },
   "anaconda": { "hull": 22, "shield": 6, "bounty": 450, "meshId": "anaconda", "scale": 1.3, "behavior": "strafe", "ecm": true, "cargoDrops": 10, "colliderRx": 0.35, "colliderRz": 0.45 },
-  "cobra_ace": { "hull": 26, "shield": 20, "bounty": 2000, "meshId": "cobra_mk3", "scale": 1.4, "behavior": "strafe", "ecm": true, "cargoDrops": 10, "colliderRx": 0.45, "colliderRz": 0.3 }
+  "cobra_ace": { "hull": 26, "shield": 20, "bounty": 2000, "meshId": "cobra_mk3", "scale": 1.4, "behavior": "strafe", "ecm": true, "cargoDrops": 10, "colliderRx": 0.45, "colliderRz": 0.3 },
+  "cougar": { "hull": 60, "shield": 6, "bounty": 1200, "meshId": "cougar", "colliderRx": 0.34, "colliderRz": 0.34, "missileImmune": true, "drops": "cloak", "cloakCycle": { "visibleSec": 4, "transitionSec": 1, "cloakedSec": 5 } }
 }

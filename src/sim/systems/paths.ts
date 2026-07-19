@@ -111,6 +111,42 @@ const orbitPos = (t: number, p: PathParams): Vec3 => {
   return vec3(endX, 0, endZ + u * (z1 - endZ));
 };
 
+// Lissajous wander within the play field, entering and exiting straight off-screen (same
+// entry/loop/exit shape as orbitPos) — used by the rare, tough solo Cougar to "fly around" the
+// field the way the hermit's adder escorts do, but as a self-contained timed path rather than an
+// open-ended boss escort. [ROC-CLK-*]
+const wanderPos = (t: number, p: PathParams): Vec3 => {
+  const cx = P(p, 'cx', 0);
+  const cz = P(p, 'cz', 0.3);
+  const ax = P(p, 'ax', 0.45);
+  const az = P(p, 'az', 0.3);
+  const wx = P(p, 'wx', 1.8); // x cycles completed over the whole wander phase
+  const wz = P(p, 'wz', 2.3); // z cycles — a different count from wx keeps the path Lissajous, not a closed loop
+  const px = P(p, 'px', 0);
+  const pz = P(p, 'pz', 0);
+  const z0 = P(p, 'z0', 1.8); // entry: straight down from off-screen to the wander band
+  const z1 = P(p, 'z1', 1.8); // exit: straight back up off-screen
+  const entryFrac = Math.max(0, P(p, 'entryFrac', 0.15));
+  const exitFrac = Math.max(0, P(p, 'exitFrac', 0.15));
+  const wanderFrac = Math.max(0.01, 1 - entryFrac - exitFrac);
+
+  const wanderAt = (u: number): Vec3 =>
+    vec3(cx + ax * Math.sin(wx * u * TAU + px), 0, cz + az * Math.sin(wz * u * TAU + pz));
+
+  if (t < entryFrac) {
+    const u = entryFrac > 0 ? t / entryFrac : 1;
+    const start = wanderAt(0);
+    return vec3(start.x, 0, z0 + u * (start.z - z0));
+  }
+  if (t < entryFrac + wanderFrac) {
+    const u = (t - entryFrac) / wanderFrac;
+    return wanderAt(u);
+  }
+  const end = wanderAt(1);
+  const u = exitFrac > 0 ? (t - entryFrac - wanderFrac) / exitFrac : 1;
+  return vec3(end.x, 0, end.z + u * (z1 - end.z));
+};
+
 // Drop in from the top to a hold position, then hover.
 const dropHoldPos = (t: number, p: PathParams): Vec3 => {
   const z0 = P(p, 'z0', 1.8);
@@ -128,6 +164,7 @@ export const PATTERNS: Record<string, PatternFn> = {
   pincer: withTangent(pincerPos),
   orbit: withTangent(orbitPos),
   drop_hold: withTangent(dropHoldPos),
+  wander: withTangent(wanderPos),
 };
 
 export const getPattern = (name: string): PatternFn | undefined => PATTERNS[name];

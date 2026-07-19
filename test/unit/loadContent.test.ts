@@ -19,6 +19,9 @@ describe('loadContent', () => {
     expect(enemies.hermit.behavior).toBe('hermit');
     expect(enemies.hermit.meshId).toBe('rock_hermit'); // bespoke rock-hermit hull with a modelled bay [ROC-HERM-1]
     expect(enemies.thargoid.missileImmune).toBe(true); // ECM jams player missile lock-on [Thargoid tuning]
+    expect(enemies.cougar.missileImmune).toBe(true); // [ROC-CLK-3]
+    expect(enemies.cougar.drops).toBe('cloak'); // guaranteed cloak-device drop [ROC-CLK-4]
+    expect(enemies.cougar.cloakCycle).toEqual({ visibleSec: 4, transitionSec: 1, cloakedSec: 5 }); // [ROC-CLK-1]
     expect(level?.midBoss).toBe('hermit');
     expect(level?.endBoss).toBe('fer_de_lance_boss');
     expect(level?.name).toBe('Lave'); // hyperspace destination [ROC-HYP-2]
@@ -101,6 +104,18 @@ describe('loadContent', () => {
         enemies: { grunt: { hull: 1, bounty: 1 } },
         levels: [{ id: 'x', wavesA: [{ pattern: 'spiral', enemy: 'grunt', count: 1, spacingMs: 0 }], midBoss: 'grunt', wavesB: [], endBoss: 'grunt' }],
       }),
+    ).toThrow();
+  });
+
+  it('rejects an enemy with an unknown drops type', () => {
+    expect(() =>
+      loadContent({ enemies: { grunt: { hull: 1, bounty: 1, drops: 'nope' } }, levels: [] }),
+    ).toThrow();
+  });
+
+  it('rejects an enemy with a malformed cloakCycle', () => {
+    expect(() =>
+      loadContent({ enemies: { grunt: { hull: 1, bounty: 1, cloakCycle: { visibleSec: 4 } } }, levels: [] }),
     ).toThrow();
   });
 

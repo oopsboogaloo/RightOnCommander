@@ -4,11 +4,19 @@
 // forfeits it). [tasks T4.2, design §10, ROC-ENM-1,7,8, ROC-ECO-1a,1b]
 
 import { vec3 } from '../math/vec3.js';
-import type { Entity } from '../components.js';
+import type { CloakState, Entity, PickupType } from '../components.js';
 import type { Rng } from '../rng.js';
 import type { World, WaveRecord } from '../world.js';
 import { getPattern, yawFromTangent, type PathParams } from './paths.js';
 import { difficultyScale, scaledCount } from './difficulty.js';
+
+// Cloak cycle timings for a cloak-capable enemy (the Cougar): repeats visible -> cloaking ->
+// cloaked -> decloaking -> visible for as long as it's alive. [ROC-CLK-1,2,3]
+export interface CloakCycleDef {
+  visibleSec: number;
+  transitionSec: number;
+  cloakedSec: number;
+}
 
 export interface EnemyDef {
   hull: number;
@@ -22,6 +30,8 @@ export interface EnemyDef {
   behavior?: 'hermit' | 'strafe'; // boss movement/escort archetype [ROC-HERM-*, ROC-FDL-3]
   cargoDrops?: number; // random cargo canisters shed on destruction [ROC-HERM-10, ROC-FDL-5]
   missileImmune?: boolean; // player missiles won't lock onto or home toward this enemy type
+  drops?: PickupType; // guaranteed power-up on destruction (e.g. the Cougar's cloak device)
+  cloakCycle?: CloakCycleDef; // periodic cloak/decloak (the Cougar) [ROC-CLK-1,2,3]
 }
 
 // Wave-as-data: pattern, enemy and stats are orthogonal. [ROC-ENM-7,8]
@@ -103,6 +113,10 @@ function spawnMember(world: World, waveId: number, rec: WaveRecord, ctx: WaveCon
   const shield = Math.round((def.shield ?? 0) * scale.shield);
   const fireRate = s.fireRate > 0 ? s.fireRate * scale.fireRate : 0;
 
+  const cloak: CloakState | undefined = def.cloakCycle
+    ? { phase: 'visible', timer: def.cloakCycle.visibleSec, ...def.cloakCycle }
+    : undefined;
+
   const e: Entity = {
     id,
     kind: 'enemy',
@@ -120,6 +134,8 @@ function spawnMember(world: World, waveId: number, rec: WaveRecord, ctx: WaveCon
     colliderRx: def.colliderRx,
     colliderRz: def.colliderRz,
     missileImmune: def.missileImmune,
+    drops: def.drops,
+    cloak,
     waveId,
     path,
     ai: fireRate > 0 ? { rate: fireRate, aimed: s.fireAimed, cooldown: 1 / fireRate } : undefined,

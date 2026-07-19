@@ -770,6 +770,17 @@
       "durationMs": 8000,
       "speed": 0.45,
       "params": { "x0": -1.05, "x1": 1.05, "z0": 1, "z1": 0.7, "arc": 0.2 }
+    },
+    {
+      "id": "l3aC",
+      "pattern": "wander",
+      "enemy": "cougar",
+      "count": 1,
+      "spacingMs": 0,
+      "delayMs": 95000,
+      "durationMs": 30000,
+      "params": { "cx": 0, "cz": 0.35, "ax": 0.95, "az": 0.6, "wx": 4, "wz": 5 },
+      "fire": { "rate": 0.4, "aimed": true }
     }
   ],
   "midBoss": ["anaconda", "anaconda"],

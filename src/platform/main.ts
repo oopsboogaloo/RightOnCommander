@@ -69,6 +69,7 @@ import canister from '../content/meshes/canister.json';
 import gem from '../content/meshes/gem.json';
 import missile_pickup from '../content/meshes/missile_pickup.json';
 import laser_pickup from '../content/meshes/laser_pickup.json';
+import cougar from '../content/meshes/cougar.json';
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
 if (!canvas) throw new Error('gameCanvas element not found');
@@ -123,6 +124,7 @@ const MESHES: Record<string, Mesh> = {
   gem,
   missile_pickup,
   laser_pickup,
+  cougar,
 } as unknown as Record<string, Mesh>;
 
 // Per-mesh hullRadius(), matching what the sim precomputes internally from this same content —
@@ -466,6 +468,49 @@ function drawShield(e: Entity, mesh: Mesh | undefined, model: Mat4): void {
   });
 }
 
+// Cloaked-hull opacity for the current phase/timer: fully opaque while visible, near-transparent
+// while fully cloaked, ramping smoothly through the two transition phases. Render-only — the
+// entity stays fully damageable and on-screen throughout (cloak never affects collision). [ROC-CLK-1,2,3]
+const CLOAK_MIN_OPACITY = 0.14;
+function cloakOpacity(c: NonNullable<Entity['cloak']>): number {
+  const span = 1 - CLOAK_MIN_OPACITY;
+  switch (c.phase) {
+    case 'visible':
+      return 1;
+    case 'cloaked':
+      return CLOAK_MIN_OPACITY;
+    case 'cloaking':
+      return 1 - span * (1 - c.timer / c.transitionSec);
+    case 'decloaking':
+      return CLOAK_MIN_OPACITY + span * (1 - c.timer / c.transitionSec);
+  }
+}
+
+// A cloaked/transitioning hull reads as a faint, wobbling distortion rather than a solid ship —
+// jittered per-frame (wall-clock, like the starfield) so it visibly warps instead of just fading.
+const CLOAK_JITTER = 0.02; // world units
+function drawCloakedShip(e: Entity, m: Mesh, model: Mat4, now: number): void {
+  const c = e.cloak!;
+  const opacity = cloakOpacity(c);
+  const distorted = c.phase !== 'visible';
+  let drawM = model;
+  if (distorted) {
+    const jx = Math.sin(now * 23 + e.id) * CLOAK_JITTER;
+    const jz = Math.cos(now * 19 + e.id * 1.7) * CLOAK_JITTER;
+    drawM = modelMatrix(vec3(e.pos.x + jx, e.pos.y, e.pos.z + jz), e.yaw, e.bank, SHIP_SCALE * (e.scale ?? 1));
+  }
+  if ((e.flashTtl ?? 0) > 0) {
+    renderer.drawMesh(m, drawM, { fill: '#fff', stroke: '#fff' }); // a landed hit still reads through the cloak
+  } else {
+    renderer.drawMesh(m, drawM, {
+      fill: `rgba(0,0,0,${(opacity * 0.85).toFixed(2)})`,
+      stroke: `rgba(255,255,255,${opacity.toFixed(2)})`,
+      lineWidth: distorted ? 1 : 1.5,
+    });
+  }
+  if (!distorted) drawShield(e, m, drawM);
+}
+
 let prev = readPlayerPose();
 let curr = prev;
 
@@ -618,8 +663,12 @@ startGameLoop({
           const m = e.meshId ? MESHES[e.meshId] : undefined;
           if (m) {
             const model = modelMatrix(e.pos, e.yaw, e.bank, SHIP_SCALE * (e.scale ?? 1)); // [ROC-FDL-1]
-            renderer.drawMesh(m, model, hullFlash(e));
-            drawShield(e, m, model);
+            if (e.cloak) {
+              drawCloakedShip(e, m, model, now);
+            } else {
+              renderer.drawMesh(m, model, hullFlash(e));
+              drawShield(e, m, model);
+            }
           }
           // The docking bay is modelled into the hull mesh now (hermit + station), so it just
           // rolls with the hull; the invisible dock/damage footprint lives in the sim. [ROC-DCKG-1]
@@ -886,8 +935,9 @@ startGameLoop({
       const missileStr = ps.missileGrade > 0 ? `Missile L${ps.missileGrade} ${Math.ceil(ps.missileTimer)}s` : 'Missile -';
       const bombCap = energyBombCap(ps.shipClass);
       const bankStr = ps.energyBank ? `Bank ${Math.ceil(ps.energyBankTimer)}s` : 'Bank -';
+      const cloakStr = ps.cloakTtl > 0 ? `   Cloak ${Math.ceil(ps.cloakTtl)}s` : '';
       renderer.drawText(
-        `Shield ${player.shield ?? 0}/${player.shieldMax ?? 0}   ${missileStr}   Bomb ${ps.energyBombs}/${bombCap}   ${bankStr}`,
+        `Shield ${player.shield ?? 0}/${player.shieldMax ?? 0}   ${missileStr}   Bomb ${ps.energyBombs}/${bombCap}   ${bankStr}${cloakStr}`,
         { x: w / 2, y: h - 32 },
         { fill: '#9ab', font: '12px monospace', align: 'center' },
       );
