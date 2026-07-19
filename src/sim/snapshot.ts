@@ -3,7 +3,7 @@
 // be stored or replayed. [ROC-TEST-4,5]
 
 import type { Entity } from './components.js';
-import type { AsteroidFieldState, GiantAsteroidSpawnState, PlayerState, WaveSpawnState, World } from './world.js';
+import type { AsteroidFieldState, ClearFieldDef, GiantAsteroidSpawnState, PlayerState, WaveSpawnState, World } from './world.js';
 
 export interface WorldSnapshot {
   frame: number;
@@ -34,6 +34,7 @@ export interface WorldSnapshot {
       spawn: WaveSpawnState | null;
       open?: boolean;
       defId?: string;
+      clearField?: ClearFieldDef;
     }[];
   };
   unlocks: { eliteMode: boolean; thargoidShip: boolean };
@@ -71,6 +72,7 @@ export function snapshot(world: World): WorldSnapshot {
         spawn: rec.spawn ? { ...rec.spawn, params: { ...rec.spawn.params } } : null,
         open: rec.open,
         defId: rec.defId,
+        clearField: rec.clearField,
       })),
     },
     unlocks: { ...world.unlocks },
@@ -113,6 +115,7 @@ export function restore(world: World, snap: WorldSnapshot): void {
           spawn: rec.spawn ? { ...rec.spawn, params: { ...rec.spawn.params } } : null,
           open: rec.open,
           defId: rec.defId,
+          clearField: rec.clearField,
         },
       ]),
     ),

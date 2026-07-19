@@ -788,7 +788,8 @@
       "delayMs": 100000,
       "durationMs": 28000,
       "params": { "cx": 0, "cz": 0.35, "ax": 0.9, "az": 0.55, "wx": 4, "wz": 5 },
-      "fire": { "rate": 0.35, "aimed": true }
+      "fire": { "rate": 0.7, "aimed": true },
+      "clearField": { "beforeMs": 3000, "afterMs": 6000 }
     }
   ],
   "midBoss": "python",

@@ -55,6 +55,15 @@ export interface WaveSpawnState {
   spawnedIndex: number; // how many have spawned (for per-member variation)
   fireRate: number; // enemy shots/sec (0 = doesn't fire) [ROC-ENM-11]
   fireAimed: boolean; // aim at the player vs fire straight down
+  sinceSpawnSec: number; // seconds since this wave's most recent member spawn (Infinity if none
+  // have spawned yet) — drives a solo encounter's post-appearance clear window [ROC-CLK-5,6]
+}
+
+// A solo encounter (the Cougar) clears every other wave's members for a window around its own
+// appearance, so the player fights it alone. [ROC-CLK-5,6]
+export interface ClearFieldDef {
+  beforeMs: number; // clear other waves starting this long before it spawns
+  afterMs: number; // ...and keep the field clear this long after it spawns
 }
 
 export interface WaveRecord {
@@ -67,6 +76,7 @@ export interface WaveRecord {
   open?: boolean; // still accepting members (open-ended boss escorts); never resolves while
   // open, so an empty moment mid-fight doesn't award the bonus early [ROC-HERM-12]
   defId?: string; // the content-authored WaveDef.id (e.g. "l3a1"), for the cheat-mode wave label
+  clearField?: ClearFieldDef; // this wave is a solo encounter that clears the field around itself
 }
 
 // Pending-spawn schedule for one wave of the level-opening asteroid field (drifting rocks that

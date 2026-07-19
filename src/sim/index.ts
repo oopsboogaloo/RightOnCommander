@@ -167,7 +167,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     cloakSystem(world, SIM_DT); // Cougar cloak cycle + player cloak-device countdown [ROC-CLK-*]
     waveSystem(world, rng, SIM_DT, waveCtx);
     asteroidFieldSystem(world, rng, SIM_DT);
-    aiSystem(world, SIM_DT);
+    aiSystem(world, rng, SIM_DT);
     bossSystem(world, rng, SIM_DT, waveCtx); // hermit spin/escorts + FdL strafe track [ROC-HERM-*, ROC-FDL-*]
     const activeLevel = currentLevel();
     if (activeLevel) levelStateSystem(world, SIM_DT, activeLevel, waveCtx);

@@ -77,3 +77,69 @@ describe('wave spawning', () => {
     expect(e.cloak).toEqual({ phase: 'visible', timer: 4, visibleSec: 4, transitionSec: 1, cloakedSec: 5 });
   });
 });
+
+describe('clearField: a solo encounter clears the field around its own appearance', () => {
+  const soloCtx: WaveContext = {
+    enemies: {
+      grunt: { hull: 2, bounty: 10 },
+      solo: { hull: 5, bounty: 50 },
+    },
+  };
+  const run = (w: ReturnType<typeof makeWorld>, seconds: number) => {
+    const steps = Math.round(seconds / DT);
+    for (let i = 0; i < steps; i++) waveSystem(w, rng, DT, soloCtx);
+  };
+  // Regular wave: one grunt/sec, 10 total. Solo wave: appears at t=3s, clearField opens the
+  // window 1.2s before it spawns and holds it 1.5s after (so window = [1.8s, 4.5s]).
+  const startBoth = (w: ReturnType<typeof makeWorld>) => {
+    startWave(w, { id: 'a', pattern: 'vform', enemy: 'grunt', count: 10, spacingMs: 1000, durationMs: 1e7 }, soloCtx);
+    startWave(
+      w,
+      {
+        id: 'b',
+        pattern: 'vform',
+        enemy: 'solo',
+        count: 1,
+        spacingMs: 0,
+        delayMs: 3000,
+        durationMs: 1e7,
+        clearField: { beforeMs: 1200, afterMs: 1500 },
+      },
+      soloCtx,
+    );
+  };
+  const grunts = (w: ReturnType<typeof makeWorld>) => enemies(w).filter((e) => e.hull === 2);
+  const solos = (w: ReturnType<typeof makeWorld>) => enemies(w).filter((e) => e.hull === 5);
+  const regularRec = (w: ReturnType<typeof makeWorld>) => [...w.waves.active.values()].find((r) => r.defId === 'a')!;
+
+  it('sweeps the other wave\'s existing members the moment the window opens, forfeiting its bonus', () => {
+    const w = makeWorld(1);
+    startBoth(w);
+    run(w, 1.8 - 2 * DT); // just before the window opens
+    expect(grunts(w).length).toBe(2); // spawned at t=0 and t=1
+    expect(regularRec(w).escaped).toBe(false);
+
+    run(w, 4 * DT); // cross into the window
+    expect(grunts(w).length).toBe(0); // cleared
+    expect(regularRec(w).escaped).toBe(true); // forfeits wave A's own bonus
+  });
+
+  it('pauses (not cancels) the other wave\'s remaining spawns for the whole window', () => {
+    const w = makeWorld(1);
+    startBoth(w);
+    run(w, 3 + 2 * DT); // through the solo's own appearance, with headroom against fp rounding
+    expect(solos(w).length).toBe(1); // it appeared on schedule
+    expect(grunts(w).length).toBe(0); // still suppressed — none of the t=2..4s grunts fired
+
+    run(w, 1); // still inside the after-window (closes at 4.5s)
+    expect(grunts(w).length).toBe(0);
+  });
+
+  it('resumes the paused wave exactly where it left off once the window closes', () => {
+    const w = makeWorld(1);
+    startBoth(w);
+    run(w, 4.5); // window closes
+    run(w, 1); // the grunt that was 0.2s from spawning when suppressed fires shortly after
+    expect(grunts(w).length).toBeGreaterThan(0);
+  });
+});
