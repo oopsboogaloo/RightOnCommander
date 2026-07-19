@@ -25,7 +25,18 @@ export type PickupType =
   | 'ecm'
   | 'bomb'
   | 'life'
-  | 'cargo'; // a tradeable commodity (see `commodity`) [ROC-CARGO-1]
+  | 'cargo' // a tradeable commodity (see `commodity`) [ROC-CARGO-1]
+  | 'cloak'; // cloaking device: 15s of immunity from aimed enemy fire [ROC-CLK-*]
+
+export type CloakPhase = 'visible' | 'cloaking' | 'cloaked' | 'decloaking';
+
+export interface CloakState {
+  phase: CloakPhase;
+  timer: number; // seconds remaining in the current phase
+  visibleSec: number;
+  transitionSec: number;
+  cloakedSec: number;
+}
 
 export interface Entity {
   id: number;
@@ -75,6 +86,8 @@ export interface Entity {
   // and worth triple damage on a direct hit [ROC-HERM-1,8, ROC-DCKG-3]
   contraband?: boolean; // different shape [ROC-ECO-4]
   indestructible?: boolean; // shrugs off all damage; a solid navigational obstacle, not a target [ROC-GIANT-1]
+  cloak?: CloakState; // periodic cloak/decloak cycle (the rare Cougar); rendering-only — still
+  // damageable and targetable by lasers throughout [ROC-CLK-*]
   debugLabel?: string; // cheat-mode identifier drawn above the entity (e.g. a giant asteroid's
   // authored id), so it can be referred to precisely while playtesting [dev cheat]
 }

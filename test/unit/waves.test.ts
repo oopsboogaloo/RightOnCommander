@@ -54,4 +54,26 @@ describe('wave spawning', () => {
     expect(w.events.filter((e) => e.type === 'waveBonus').length).toBe(0);
     expect(w.econ.wallet).toBe(0);
   });
+
+  it('carries a cloak-capable enemy\'s cloakCycle and guaranteed drop onto the spawned entity', () => {
+    const w = makeWorld(1);
+    const cloakCtx: WaveContext = {
+      enemies: {
+        cougar: {
+          hull: 10,
+          bounty: 100,
+          drops: 'cloak',
+          missileImmune: true,
+          cloakCycle: { visibleSec: 4, transitionSec: 1, cloakedSec: 5 },
+        },
+      },
+    };
+    startWave(w, { id: 'w', pattern: 'wander', enemy: 'cougar', count: 1, spacingMs: 0, durationMs: 1e7 }, cloakCtx);
+    waveSystem(w, rng, DT, cloakCtx);
+
+    const [e] = enemies(w);
+    expect(e.missileImmune).toBe(true);
+    expect(e.drops).toBe('cloak');
+    expect(e.cloak).toEqual({ phase: 'visible', timer: 4, visibleSec: 4, transitionSec: 1, cloakedSec: 5 });
+  });
 });

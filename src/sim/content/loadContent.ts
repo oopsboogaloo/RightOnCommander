@@ -1,7 +1,8 @@
 // Parse + schema-validate content JSON into typed sim structures. Throws on malformed data so
 // bad content fails fast (in CI) rather than at runtime. [tasks T5.2, design §2; ROC-ENM-7,8]
 
-import type { EnemyDef, WaveDef } from '../systems/waves.js';
+import type { EnemyDef, WaveDef, CloakCycleDef } from '../systems/waves.js';
+import type { PickupType } from '../components.js';
 import type { LevelDef } from '../systems/levelstate.js';
 import type { AsteroidFieldDef, GiantAsteroidDef, GiantAsteroidPhase } from '../systems/asteroids.js';
 import { PATTERNS } from '../systems/paths.js';
@@ -18,6 +19,16 @@ const num = (v: unknown, where: string): number => {
 };
 
 const BOSS_BEHAVIORS = ['hermit', 'strafe'] as const;
+const PICKUP_TYPES = ['fuel', 'gems', 'alloys', 'laser', 'missile', 'ecm', 'bomb', 'life', 'cargo', 'cloak'] as const;
+
+function parseCloakCycle(raw: unknown, where: string): CloakCycleDef {
+  if (!isObj(raw)) throw new Error(`content: ${where} must be an object`);
+  return {
+    visibleSec: num(raw.visibleSec, `${where}.visibleSec`),
+    transitionSec: num(raw.transitionSec, `${where}.transitionSec`),
+    cloakedSec: num(raw.cloakedSec, `${where}.cloakedSec`),
+  };
+}
 
 function parseEnemies(raw: unknown): Record<string, EnemyDef> {
   if (!isObj(raw)) throw new Error('content: "enemies" must be an object');
@@ -26,6 +37,9 @@ function parseEnemies(raw: unknown): Record<string, EnemyDef> {
     if (!isObj(v)) throw new Error(`content: enemy '${name}' must be an object`);
     if (v.behavior !== undefined && !BOSS_BEHAVIORS.includes(v.behavior as (typeof BOSS_BEHAVIORS)[number])) {
       throw new Error(`content: enemy '${name}' has unknown behavior '${String(v.behavior)}'`);
+    }
+    if (v.drops !== undefined && !PICKUP_TYPES.includes(v.drops as (typeof PICKUP_TYPES)[number])) {
+      throw new Error(`content: enemy '${name}' has unknown drops type '${String(v.drops)}'`);
     }
     out[name] = {
       hull: num(v.hull, `enemy ${name}.hull`),
@@ -39,6 +53,8 @@ function parseEnemies(raw: unknown): Record<string, EnemyDef> {
       behavior: v.behavior as EnemyDef['behavior'],
       cargoDrops: v.cargoDrops === undefined ? undefined : num(v.cargoDrops, `enemy ${name}.cargoDrops`),
       missileImmune: v.missileImmune === undefined ? undefined : !!v.missileImmune,
+      drops: v.drops as PickupType | undefined,
+      cloakCycle: v.cloakCycle === undefined ? undefined : parseCloakCycle(v.cloakCycle, `enemy ${name}.cloakCycle`),
     };
   }
   return out;

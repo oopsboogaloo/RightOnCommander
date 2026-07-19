@@ -778,6 +778,17 @@
       "durationMs": 8000,
       "speed": 0.45,
       "params": { "x0": -1.05, "x1": 1.05, "z0": 1, "z1": 0.7, "arc": 0.2 }
+    },
+    {
+      "id": "l2aC",
+      "pattern": "wander",
+      "enemy": "cougar",
+      "count": 1,
+      "spacingMs": 0,
+      "delayMs": 100000,
+      "durationMs": 28000,
+      "params": { "cx": 0, "cz": 0.35, "ax": 0.9, "az": 0.55, "wx": 4, "wz": 5 },
+      "fire": { "rate": 0.35, "aimed": true }
     }
   ],
   "midBoss": "python",

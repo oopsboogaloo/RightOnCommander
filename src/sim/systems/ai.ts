@@ -45,6 +45,8 @@ function fireShot(world: World, ex: number, ez: number, aimed: boolean, cfg: AiC
 }
 
 export function aiSystem(world: World, dt: number, cfg: AiConfig = DEFAULT_AI): void {
+  // A cloaked player can't be aimed at: aimed fire falls back to straight-down. [ROC-CLK-4]
+  const targetable = world.player.cloakTtl <= 0;
   for (const e of [...world.entities.values()]) {
     if ((e.kind !== 'enemy' && e.kind !== 'boss') || !e.ai || e.dying) continue;
     const ai = e.ai as AiState;
@@ -52,7 +54,7 @@ export function aiSystem(world: World, dt: number, cfg: AiConfig = DEFAULT_AI): 
 
     ai.cooldown -= dt;
     if (ai.cooldown <= 0) {
-      fireShot(world, e.pos.x, e.pos.z, ai.aimed, cfg);
+      fireShot(world, e.pos.x, e.pos.z, ai.aimed && targetable, cfg);
       ai.cooldown = 1 / ai.rate;
     }
   }

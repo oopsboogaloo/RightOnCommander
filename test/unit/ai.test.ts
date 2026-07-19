@@ -54,4 +54,15 @@ describe('aiSystem', () => {
     expect(straight.vel.x).toBe(0);
     expect(straight.vel.z).toBeLessThan(0);
   });
+
+  it("falls back to unaimed fire against a cloaked player, even when aimed is set", () => {
+    const w = makeWorld(1);
+    w.entities.get(PLAYER_ID)!.pos = vec3(1, 0, 0); // player to the right and below
+    w.player.cloakTtl = 5; // cloak-device active [ROC-CLK-4]
+    addEnemy(w, { rate: 5, aimed: true, cooldown: 0 }, vec3(0, 0, 0.5));
+    aiSystem(w, DT);
+    const shot = shots(w)[0];
+    expect(shot.vel.x).toBe(0); // can't aim at the player -> straight down
+    expect(shot.vel.z).toBeLessThan(0);
+  });
 });

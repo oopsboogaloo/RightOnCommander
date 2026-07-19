@@ -72,6 +72,15 @@ describe('pickup collection', () => {
     expect(w.player.missileGrade).toBe(1);
   });
 
+  it('a cloak pickup grants the player 15s of immunity from aimed enemy fire', () => {
+    const w = makeWorld(1);
+    player(w).pos = vec3(0, 0, 0);
+    expect(w.player.cloakTtl).toBe(0);
+    addPickup(w, 'cloak');
+    pickupsSystem(w, DT);
+    expect(w.player.cloakTtl).toBe(15); // [ROC-CLK-4]
+  });
+
   it('scooped cargo banks by commodity and shows its type', () => {
     const w = makeWorld(1);
     player(w).pos = vec3(0, 0, 0);
