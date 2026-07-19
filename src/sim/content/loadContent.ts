@@ -3,6 +3,7 @@
 
 import type { EnemyDef, WaveDef, CloakCycleDef } from '../systems/waves.js';
 import type { PickupType } from '../components.js';
+import type { ClearFieldDef } from '../world.js';
 import type { LevelDef } from '../systems/levelstate.js';
 import type { AsteroidFieldDef, GiantAsteroidDef, GiantAsteroidPhase } from '../systems/asteroids.js';
 import { PATTERNS } from '../systems/paths.js';
@@ -55,6 +56,7 @@ function parseEnemies(raw: unknown): Record<string, EnemyDef> {
       missileImmune: v.missileImmune === undefined ? undefined : !!v.missileImmune,
       drops: v.drops as PickupType | undefined,
       cloakCycle: v.cloakCycle === undefined ? undefined : parseCloakCycle(v.cloakCycle, `enemy ${name}.cloakCycle`),
+      fireSpeedMul: v.fireSpeedMul === undefined ? undefined : num(v.fireSpeedMul, `enemy ${name}.fireSpeedMul`),
     };
   }
   return out;
@@ -84,6 +86,15 @@ function parseWave(raw: unknown, enemies: Record<string, EnemyDef>, where: strin
     speed: raw.speed === undefined ? undefined : num(raw.speed, `${where}.speed`),
     params: isObj(raw.params) ? (raw.params as Record<string, number>) : undefined,
     fire,
+    clearField: raw.clearField === undefined ? undefined : parseClearField(raw.clearField, `${where}.clearField`),
+  };
+}
+
+function parseClearField(raw: unknown, where: string): ClearFieldDef {
+  if (!isObj(raw)) throw new Error(`content: ${where} must be an object`);
+  return {
+    beforeMs: num(raw.beforeMs, `${where}.beforeMs`),
+    afterMs: num(raw.afterMs, `${where}.afterMs`),
   };
 }
 

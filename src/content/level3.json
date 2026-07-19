@@ -780,7 +780,8 @@
       "delayMs": 95000,
       "durationMs": 30000,
       "params": { "cx": 0, "cz": 0.35, "ax": 0.95, "az": 0.6, "wx": 4, "wz": 5 },
-      "fire": { "rate": 0.4, "aimed": true }
+      "fire": { "rate": 0.8, "aimed": true },
+      "clearField": { "beforeMs": 3000, "afterMs": 6000 }
     }
   ],
   "midBoss": ["anaconda", "anaconda"],

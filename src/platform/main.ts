@@ -511,6 +511,25 @@ function drawCloakedShip(e: Entity, m: Mesh, model: Mat4, now: number): void {
   if (!distorted) drawShield(e, m, drawM);
 }
 
+// Player cloak-device effect: unlike the Cougar's phased cycle, this is a flat on/off window
+// (world.player.cloakTtl > 0), so instead of ramping opacity it reads as "only the hull's outline
+// is visible" — silhouette-only (no facet lines, no shield ring), faint and flickering. [ROC-CLK-4,9]
+function drawPlayerCloak(player: Entity, pmesh: Mesh, pos: Vec3, yaw: number, bank: number, scale: number, now: number): void {
+  const jx = Math.sin(now * 27) * CLOAK_JITTER;
+  const jz = Math.cos(now * 21) * CLOAK_JITTER;
+  const model = modelMatrix(vec3(pos.x + jx, pos.y, pos.z + jz), yaw, bank, scale);
+  if ((player.flashTtl ?? 0) > 0) {
+    renderer.drawSilhouette(pmesh, model, { fill: '#fff', stroke: '#fff' }); // a landed hit still reads through the cloak
+    return;
+  }
+  const pulse = 0.35 + 0.25 * (0.5 + 0.5 * Math.sin(now * 6)); // 0.35..0.85, flickering
+  renderer.drawSilhouette(pmesh, model, {
+    fill: `rgba(20,20,30,${(pulse * 0.5).toFixed(2)})`,
+    stroke: `rgba(255,255,255,${pulse.toFixed(2)})`,
+    lineWidth: 1,
+  });
+}
+
 let prev = readPlayerPose();
 let curr = prev;
 
@@ -720,14 +739,16 @@ startGameLoop({
     if (sim.state.mode !== 'GAME_OVER' && !blinkOff && !sim.state.player.respawnPending) {
       const pmesh = (player.meshId && MESHES[player.meshId]) || MESHES.sidewinder;
       const pos = vec3(lerp(prev.x, curr.x, alpha), lerp(prev.y, curr.y, alpha), lerp(prev.z, curr.z, alpha));
-      const model = modelMatrix(
-        pos,
-        lerp(prev.yaw, curr.yaw, alpha),
-        lerp(prev.bank, curr.bank, alpha),
-        SHIP_SCALE * (player.scale ?? 1), // the player-flown FdL is 1.5x too [ROC-FDL-1]
-      );
-      renderer.drawMesh(pmesh, model, hullFlash(player));
-      drawShield(player, pmesh, model);
+      const yaw = lerp(prev.yaw, curr.yaw, alpha);
+      const bank = lerp(prev.bank, curr.bank, alpha);
+      const scale = SHIP_SCALE * (player.scale ?? 1); // the player-flown FdL is 1.5x too [ROC-FDL-1]
+      if (sim.state.player.cloakTtl > 0) {
+        drawPlayerCloak(player, pmesh, pos, yaw, bank, scale, now);
+      } else {
+        const model = modelMatrix(pos, yaw, bank, scale);
+        renderer.drawMesh(pmesh, model, hullFlash(player));
+        drawShield(player, pmesh, model);
+      }
     }
 
     // Floating credit/bonus numbers, rising and fading from the explosion. [ROC-KC-1,2,3]

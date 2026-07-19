@@ -6,7 +6,7 @@
 import { vec3 } from '../math/vec3.js';
 import type { CloakState, Entity, PickupType } from '../components.js';
 import type { Rng } from '../rng.js';
-import type { World, WaveRecord } from '../world.js';
+import type { ClearFieldDef, World, WaveRecord } from '../world.js';
 import { getPattern, yawFromTangent, type PathParams } from './paths.js';
 import { difficultyScale, scaledCount } from './difficulty.js';
 
@@ -32,6 +32,7 @@ export interface EnemyDef {
   missileImmune?: boolean; // player missiles won't lock onto or home toward this enemy type
   drops?: PickupType; // guaranteed power-up on destruction (e.g. the Cougar's cloak device)
   cloakCycle?: CloakCycleDef; // periodic cloak/decloak (the Cougar) [ROC-CLK-1,2,3]
+  fireSpeedMul?: number; // per-enemy shot-speed multiplier over ai.ts's base shotSpeed [ROC-CLK-7]
 }
 
 // Wave-as-data: pattern, enemy and stats are orthogonal. [ROC-ENM-7,8]
@@ -46,6 +47,8 @@ export interface WaveDef {
   speed?: number; // scales the path rate
   params?: PathParams;
   fire?: { rate: number; aimed?: boolean }; // enemy weapon (driven by ai.ts) [ROC-ENM-11]
+  clearField?: ClearFieldDef; // a solo encounter (the Cougar): clears every other wave around its
+  // own appearance [ROC-CLK-5,6]
 }
 
 export interface WaveContext {
@@ -77,6 +80,7 @@ export function startWave(world: World, def: WaveDef, ctx: WaveContext): number 
     killed: 0,
     escaped: false,
     defId: def.id,
+    clearField: def.clearField,
     spawn: {
       pattern: def.pattern,
       enemy: def.enemy,
@@ -89,6 +93,7 @@ export function startWave(world: World, def: WaveDef, ctx: WaveContext): number 
       spawnedIndex: 0,
       fireRate: def.fire?.rate ?? 0,
       fireAimed: def.fire?.aimed ?? false,
+      sinceSpawnSec: Infinity, // no member has spawned yet
     },
   };
   world.waves.active.set(id, rec);
@@ -138,10 +143,22 @@ function spawnMember(world: World, waveId: number, rec: WaveRecord, ctx: WaveCon
     cloak,
     waveId,
     path,
-    ai: fireRate > 0 ? { rate: fireRate, aimed: s.fireAimed, cooldown: 1 / fireRate } : undefined,
+    ai: fireRate > 0 ? { rate: fireRate, aimed: s.fireAimed, cooldown: 1 / fireRate, speedMul: def.fireSpeedMul } : undefined,
   };
   world.entities.set(id, e);
   rec.members.add(id);
+  s.sinceSpawnSec = 0; // this wave just appeared — starts (or restarts) its post-appearance window [ROC-CLK-6]
+}
+
+// Is this wave's solo-encounter window (clearField) currently open — from `beforeMs` ahead of its
+// own spawn through `afterMs` after it? [ROC-CLK-5,6]
+function inClearWindow(rec: WaveRecord): boolean {
+  const cf = rec.clearField;
+  const s = rec.spawn;
+  if (!cf || !s) return false;
+  const before = s.pending > 0 && s.timer <= cf.beforeMs / 1000;
+  const after = s.sinceSpawnSec <= cf.afterMs / 1000;
+  return before || after;
 }
 
 export function waveSystem(world: World, rng: Rng, dt: number, ctx: WaveContext): void {
@@ -155,10 +172,38 @@ export function waveSystem(world: World, rng: Rng, dt: number, ctx: WaveContext)
     }
   }
 
-  // 2. Spawn any due members.
+  // A solo encounter (the Cougar) gets the field to itself: while its clearField window is open,
+  // every other wave's members are swept away (asteroids aren't wave members, so they're
+  // untouched) and every other wave's spawn timer is paused rather than cancelled — it resumes
+  // exactly where it left off once the window closes. [ROC-CLK-5,6]
+  let soloWaveId: number | null = null;
+  for (const [id, rec] of world.waves.active) {
+    if (inClearWindow(rec)) {
+      soloWaveId = id;
+      break;
+    }
+  }
+  if (soloWaveId !== null) {
+    for (const [id, rec] of world.waves.active) {
+      if (id === soloWaveId) continue;
+      for (const mid of [...rec.members]) {
+        const e = world.entities.get(mid);
+        if (!e || e.kind !== 'enemy') continue;
+        world.entities.delete(mid);
+        rec.members.delete(mid);
+        rec.escaped = true; // cleared, not killed — forfeits that wave's bonus [ROC-ECO-1a]
+      }
+    }
+  }
+
+  // 2. Spawn any due members (paused, not ticked, for every wave but the solo one while its
+  // window is open).
   for (const [waveId, rec] of world.waves.active) {
     const s = rec.spawn;
-    if (!s || s.pending <= 0) continue;
+    if (!s) continue;
+    s.sinceSpawnSec += dt;
+    if (s.pending <= 0) continue;
+    if (soloWaveId !== null && waveId !== soloWaveId) continue;
     s.timer -= dt;
     while (s.pending > 0 && s.timer <= 0) {
       spawnMember(world, waveId, rec, ctx, rng);
