@@ -31,9 +31,26 @@ import {
   type StationContext,
 } from '../sim/systems/station.js';
 import { loadShips, energyBombCap, type LaserType } from '../sim/systems/ships.js';
-import { SPLINTER_HIT_SCALE } from '../sim/systems/asteroids.js';
+import { SPLINTER_HIT_SCALE, type AsteroidFieldDef } from '../sim/systems/asteroids.js';
 import { hyperCountdown, BOSS_FADE_SEC } from '../sim/systems/levelstate.js';
 import { stationButtons, buttonAt, drawStation, type StationAction } from '../render/screens/station.js';
+import { PATTERNS } from '../sim/systems/paths.js';
+import { isDesignPhase, anchorParams } from '../sim/systems/designMode.js';
+import { DEFAULT_FIELD_BOUNDS } from '../input/domInput.js';
+import type { WaveDef } from '../sim/systems/waves.js';
+import {
+  actionButtons,
+  transportButtons,
+  scrubBarRect,
+  scrubFractionAt,
+  contentListRows,
+  pickListRows,
+  drawDesigner,
+  hitTest,
+  type DesignerAction,
+  type TransportAction,
+  type ContentRow,
+} from '../render/screens/designer.js';
 
 import enemies from '../content/enemies.json';
 import level1 from '../content/level1.json';
@@ -282,6 +299,274 @@ function clockReadoutRect(w: number): { x: number; y: number; w: number; h: numb
   return { x: w - CLOCK_READOUT.marginX - CLOCK_READOUT.w, y: CLOCK_READOUT.marginY, w: CLOCK_READOUT.w, h: CLOCK_READOUT.h };
 }
 
+// Interactive attack-wave designer: scrub/play a level phase's timeline and add/remove
+// waves/asteroid-fields/giant-asteroids against it, live. Only meaningful in the four phases with
+// authored content (ASTEROIDS/WAVES_A/ASTEROIDS_B/WAVES_B) — tapping it elsewhere is a no-op.
+// [wave-designer-spec.md]
+const DESIGN_BUTTON = { w: SKIP_BUTTON.w, h: SKIP_BUTTON.h, marginX: SKIP_BUTTON.marginX, marginY: CLOCK_READOUT.marginY + CLOCK_READOUT.h + PAUSE_BUTTON_GAP };
+function designButtonRect(w: number): { x: number; y: number; w: number; h: number } {
+  return { x: w - DESIGN_BUTTON.marginX - DESIGN_BUTTON.w, y: DESIGN_BUTTON.marginY, w: DESIGN_BUTTON.w, h: DESIGN_BUTTON.h };
+}
+
+// ---- Wave designer state ------------------------------------------------------------------
+// [wave-designer-spec.md]
+
+let designMode = false;
+let designUiMode: 'idle' | 'placing' | 'removing' = 'idle';
+let designScrubFrame = 0; // sim frames since the design phase's own start
+let designSpanFrames = 1; // scrub-range estimate, refreshed on enter/edit
+let designPlaying: 0 | 1 | -1 = 0; // 0 idle, 1 auto-play forward, -1 auto-rewind
+let designRewindAccum = 0;
+// Continuous rewind needs a full reset-and-replay every tick (only *forward* motion gets the
+// cheap incremental path — see sim/index.ts's design.replayTo). Throttling to ~12 replays/sec
+// bounds the worst case instead of doing a full-span replay 120x/sec. [wave-designer-spec.md]
+const DESIGN_REWIND_THROTTLE_TICKS = 10;
+const DESIGN_STEP_MS = 500; // STEP BACK/FWD chunk size
+
+type PendingWaveAdd = { kind: 'wave'; step: 'location' | 'pattern' | 'enemy'; x?: number; z?: number; pattern?: string };
+type PendingGiantAdd = { kind: 'giant' };
+let designAdd: PendingWaveAdd | PendingGiantAdd | null = null;
+let designWaveSeq = 0;
+let designGiantSeq = 0;
+
+const DESIGN_WAVE_DEFAULT_COUNT = 6;
+const DESIGN_WAVE_DEFAULT_SPEED = 1.0;
+const DESIGN_WAVE_DEFAULT_SPACING_MS = 400;
+const DESIGN_FIELD_DEFAULT_COUNT = 8;
+const DESIGN_FIELD_DEFAULT_SPEED = 0.3;
+const DESIGN_FIELD_DEFAULT_SPREAD = 0.9;
+const DESIGN_FIELD_DEFAULT_SPACING_MS = 400;
+
+const PATTERN_NAMES = Object.keys(PATTERNS);
+const ENEMY_IDS = Object.keys(enemies);
+
+function designSetSpan(): void {
+  designSpanFrames = Math.max(1, Math.round(sim.design.spanMs() / 1000 / DT));
+  designScrubFrame = Math.min(designScrubFrame, designSpanFrames);
+}
+
+function designSeek(frame: number): void {
+  designScrubFrame = Math.max(0, Math.min(designSpanFrames, Math.round(frame)));
+  sim.design.replayTo(designScrubFrame);
+}
+
+function enterDesignMode(): void {
+  if (!sim.design.enter()) return; // no-op outside a designable phase
+  designMode = true;
+  designUiMode = 'idle';
+  designPlaying = 0;
+  designRewindAccum = 0;
+  designAdd = null;
+  designScrubFrame = 0;
+  designSetSpan();
+  sim.design.replayTo(0);
+}
+
+function exitDesignMode(): void {
+  designMode = false;
+  designPlaying = 0;
+  designUiMode = 'idle';
+  designAdd = null;
+  // The player-facing rewind cheat's snapshot buffer is keyed on ever-increasing frame numbers;
+  // a design session can leave sim.state.frame lower than it was, so start that buffer fresh
+  // rather than risk it misbehaving against frame numbers that just went backward.
+  rewindBuffer = [];
+  lastSnapshotFrame = -Infinity;
+  curr = readPlayerPose();
+  prev = curr; // resync interpolation so returning to live play doesn't lerp from a stale pose
+}
+
+function designStepMsToFrames(): number {
+  return Math.round(DESIGN_STEP_MS / 1000 / DT);
+}
+
+// Prompts (count/speed/spacing) use window.prompt — a dev-only tool doesn't need a custom
+// on-canvas numeric keypad, and prompt() pre-filled with a sensible default means accepting it
+// is just hitting OK/Enter. [wave-designer-spec.md]
+function promptNumber(message: string, def: number): number | null {
+  const raw = window.prompt(message, String(def));
+  if (raw === null) return null; // cancelled
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : def;
+}
+
+function commitWaveAdd(x: number, z: number, pattern: string, enemy: string): void {
+  const count = Math.max(1, Math.round(promptNumber('Ship count?', DESIGN_WAVE_DEFAULT_COUNT) ?? DESIGN_WAVE_DEFAULT_COUNT));
+  const speedRaw = promptNumber('Speed (path-rate multiplier)?', DESIGN_WAVE_DEFAULT_SPEED);
+  const speed = speedRaw && speedRaw > 0 ? speedRaw : DESIGN_WAVE_DEFAULT_SPEED;
+  const spacingRaw = promptNumber('Spacing between members, ms?', DESIGN_WAVE_DEFAULT_SPACING_MS);
+  const spacingMs = spacingRaw !== null && spacingRaw >= 0 ? spacingRaw : DESIGN_WAVE_DEFAULT_SPACING_MS;
+
+  const phase = sim.design.content()?.phase ?? 'phase';
+  const wave: WaveDef = {
+    id: `${currentLevel()?.id ?? 'level'}-${phase}-${++designWaveSeq}`,
+    pattern,
+    enemy,
+    count,
+    spacingMs,
+    speed,
+    delayMs: Math.round(designScrubFrame * DT * 1000),
+    params: anchorParams(pattern, x, z),
+  };
+  sim.design.addWave(wave);
+  designAdd = null;
+  designUiMode = 'idle';
+  designSetSpan();
+  designSeek(designScrubFrame);
+}
+
+function commitGiantAdd(x: number): void {
+  const id = `${currentLevel()?.id ?? 'level'}-g${++designGiantSeq}`;
+  sim.design.addGiantAsteroid(x, Math.round(designScrubFrame * DT * 1000), id);
+  designAdd = null;
+  designUiMode = 'idle';
+  designSetSpan();
+  designSeek(designScrubFrame);
+}
+
+function promptAddField(): void {
+  const count = Math.max(1, Math.round(promptNumber('Asteroid count?', DESIGN_FIELD_DEFAULT_COUNT) ?? DESIGN_FIELD_DEFAULT_COUNT));
+  const speedRaw = promptNumber('Drift speed (world units/sec)?', DESIGN_FIELD_DEFAULT_SPEED);
+  const speed = speedRaw && speedRaw > 0 ? speedRaw : DESIGN_FIELD_DEFAULT_SPEED;
+  const spreadRaw = promptNumber('Spawn x-spread (half-width)?', DESIGN_FIELD_DEFAULT_SPREAD);
+  const xSpread = spreadRaw && spreadRaw > 0 ? spreadRaw : DESIGN_FIELD_DEFAULT_SPREAD;
+  const spacingRaw = promptNumber('Spacing between spawns, ms?', DESIGN_FIELD_DEFAULT_SPACING_MS);
+  const spacingMs = spacingRaw !== null && spacingRaw >= 0 ? spacingRaw : DESIGN_FIELD_DEFAULT_SPACING_MS;
+
+  const field: AsteroidFieldDef = { count, speed, xSpread, spacingMs, delayMs: Math.round(designScrubFrame * DT * 1000) };
+  sim.design.addAsteroidField(field);
+  designSetSpan();
+  designSeek(designScrubFrame);
+}
+
+function commitRemove(row: ContentRow): void {
+  if (row.kind === 'wave') sim.design.removeWave(row.refId);
+  else if (row.kind === 'giant') sim.design.removeGiantAsteroid(row.refId);
+  else sim.design.removeAsteroidFieldAt(row.index);
+  designSetSpan();
+  designSeek(designScrubFrame);
+}
+
+function exportDesignContent(): void {
+  const content = sim.design.content();
+  if (!content) return;
+  const payload: Record<string, unknown> = {};
+  if (content.waveField) payload[content.waveField] = content.waves;
+  payload[content.asteroidFieldKey] = content.asteroidField;
+  payload.giantAsteroids = content.giantAsteroids;
+  const json = JSON.stringify(payload, null, 2);
+  navigator.clipboard?.writeText(json).catch(() => {}); // best-effort — the prompt below is the reliable path
+  window.prompt('Copy this JSON — paste into the level content file:', json);
+}
+
+function handleTransport(action: TransportAction): void {
+  switch (action) {
+    case 'rewind':
+      designPlaying = designPlaying === -1 ? 0 : -1;
+      designRewindAccum = 0;
+      break;
+    case 'stepBack':
+      designPlaying = 0;
+      designSeek(designScrubFrame - designStepMsToFrames());
+      break;
+    case 'playPause':
+      designPlaying = designPlaying === 1 ? 0 : 1;
+      break;
+    case 'stepFwd':
+      designPlaying = 0;
+      designSeek(designScrubFrame + designStepMsToFrames());
+      break;
+  }
+}
+
+function handleDesignAction(action: DesignerAction): void {
+  switch (action) {
+    case 'addWave':
+      designAdd = { kind: 'wave', step: 'location' };
+      designUiMode = 'placing';
+      break;
+    case 'addGiant':
+      designAdd = { kind: 'giant' };
+      designUiMode = 'placing';
+      break;
+    case 'addField':
+      designUiMode = 'idle';
+      designAdd = null;
+      promptAddField();
+      break;
+    case 'remove':
+      designUiMode = designUiMode === 'removing' ? 'idle' : 'removing';
+      designAdd = null;
+      break;
+    case 'export':
+      exportDesignContent();
+      break;
+    case 'exit':
+      exitDesignMode();
+      break;
+  }
+}
+
+// px/py/w here are already box-local (matching every other design-mode rect) — see
+// handleTapAt's conversion. [viewport-spec.md, wave-designer-spec.md]
+function handleDesignTap(px: number, py: number, w: number): void {
+  const bar = scrubBarRect(w);
+  if (px >= bar.x && px <= bar.x + bar.w && py >= bar.y && py <= bar.y + bar.h) {
+    designPlaying = 0;
+    designSeek(scrubFractionAt(bar, px) * designSpanFrames);
+    return;
+  }
+
+  const transportHit = hitTest(transportButtons(designPlaying), px, py);
+  if (transportHit) {
+    handleTransport(transportHit.action);
+    return;
+  }
+
+  // A pattern/enemy pick list, while one is showing, takes priority over everything below it.
+  if (designAdd?.kind === 'wave' && designAdd.step === 'pattern') {
+    const hit = hitTest(pickListRows(PATTERN_NAMES, w), px, py);
+    if (hit) designAdd = { ...designAdd, pattern: hit.item, step: 'enemy' };
+    return;
+  }
+  if (designAdd?.kind === 'wave' && designAdd.step === 'enemy') {
+    const hit = hitTest(pickListRows(ENEMY_IDS, w), px, py);
+    if (hit) commitWaveAdd(designAdd.x!, designAdd.z!, designAdd.pattern!, hit.item);
+    return;
+  }
+
+  const content = sim.design.content();
+  const actionHit = hitTest(actionButtons(content?.waveField != null), px, py);
+  if (actionHit && actionHit.enabled) {
+    handleDesignAction(actionHit.action);
+    return;
+  }
+
+  if (designUiMode === 'removing' && content) {
+    const hit = hitTest(contentListRows(content, w), px, py);
+    if (hit) {
+      commitRemove(hit);
+      designUiMode = 'idle';
+    }
+    return;
+  }
+
+  // Otherwise: a tap on the field itself, only meaningful while placing a wave/obstacle's
+  // location — full (x, z) point, per wave-designer-spec.md.
+  if (designUiMode === 'placing' && designAdd) {
+    const b = DEFAULT_FIELD_BOUNDS;
+    const u = px / w;
+    const v = py / (renderer.getViewport().box.h);
+    const x = b.minX + u * (b.maxX - b.minX);
+    const z = b.maxY - v * (b.maxY - b.minY);
+    if (designAdd.kind === 'wave' && designAdd.step === 'location') {
+      designAdd = { ...designAdd, x, z, step: 'pattern' };
+    } else if (designAdd.kind === 'giant') {
+      commitGiantAdd(x);
+    }
+  }
+}
+
 const REWIND_SEC = 30; // seconds jumped back per press
 // Total history retained — was == REWIND_SEC, so a press consumed almost the whole buffer and a
 // second press right after had nothing left to jump to. 10x deeper lets ten 30s presses chain
@@ -402,6 +687,11 @@ function handleTapAt(physX: number, physY: number): void {
   const w = box.w;
   const h = box.h;
 
+  if (designMode) {
+    handleDesignTap(px, py, w);
+    return;
+  }
+
   tryCheatTap(px, py, w, h);
 
   if (dockActive()) {
@@ -413,6 +703,7 @@ function handleTapAt(physX: number, physY: number): void {
   if (cheatUnlocked && inRect(px, py, skipButtonRect(w))) sim.cheatSkipLevel();
   if (cheatUnlocked && inRect(px, py, pauseButtonRect(w))) paused = !paused;
   if (cheatUnlocked && inRect(px, py, rewindButtonRect(w))) cheatRewind();
+  if (cheatUnlocked && inRect(px, py, designButtonRect(w))) enterDesignMode();
 }
 
 canvas.addEventListener('mousedown', (e) => handleTapAt(e.offsetX, e.offsetY));
@@ -604,9 +895,185 @@ function drawRotateHint(): void {
   ctx!.fillText('↻ Turn your phone sideways to play', w / 2, h * 0.5);
 }
 
+// The pattern/enemy pick list currently showing, if any, keyed off the in-progress add-wave flow.
+function designPickList(): { title: string; rows: ReturnType<typeof pickListRows> } | null {
+  const w = renderer.getViewport().box.w;
+  if (designAdd?.kind === 'wave' && designAdd.step === 'pattern') {
+    return { title: 'Pick a pattern', rows: pickListRows(PATTERN_NAMES, w) };
+  }
+  if (designAdd?.kind === 'wave' && designAdd.step === 'enemy') {
+    return { title: 'Pick a ship', rows: pickListRows(ENEMY_IDS, w) };
+  }
+  return null;
+}
+
+// Design mode's frame: the same entity drawing as live play (so the preview is exactly what the
+// player would see), the player ship at its exact position (never moves during a design replay —
+// neutral input holds it fixed, so no interpolation is needed), ghost trails, and the designer
+// toolbar in place of the normal HUD. [wave-designer-spec.md]
+function renderDesignFrame(): void {
+  const now = performance.now() / 1000;
+  drawEntities(now);
+
+  const player = sim.state.entities.get(PLAYER_ID)!;
+  const pmesh = (player.meshId && MESHES[player.meshId]) || MESHES.sidewinder;
+  const pmodel = modelMatrix(player.pos, player.yaw, player.bank, SHIP_SCALE * (player.scale ?? 1));
+  renderer.drawMesh(pmesh, pmodel, hullFlash(player));
+
+  const { box } = renderer.getViewport();
+  const content = sim.design.content();
+  drawDesigner(renderer, content, {
+    w: box.w,
+    phaseLabel: content?.phase ?? sim.state.levelState,
+    scrubMs: designScrubFrame * DT * 1000,
+    spanMs: designSpanFrames * DT * 1000,
+    playing: designPlaying,
+    mode: designUiMode,
+    pickList: designPickList(),
+  });
+}
+
+// Projectiles/missiles/particles/fragments/pickups/cargo/ships/asteroids + beam lasers — every
+// entity in sim.state.entities except the player ship (drawn separately, interpolated, by the
+// caller). Factored out so design mode's replayed preview can reuse the exact same drawing as
+// live play, not a parallel simplified rendering. [wave-designer-spec.md]
+function drawEntities(now: number): void {
+  const particles: Vec3[] = [];
+  for (const e of sim.state.entities.values()) {
+    switch (e.kind) {
+      case 'projectile':
+      case 'missile': {
+        // Missiles render as a small dart; pulses as a slightly longer streak. Military bolts
+        // are shorter and thicker than a pulse. [ROC-LAS-5]
+        const isEnemyBolt = e.kind === 'projectile' && e.team === 'enemy';
+        const len = e.kind === 'missile' ? 0.09 : e.mil ? PULSE_LEN * 0.55 : isEnemyBolt ? PULSE_LEN * 0.5 : PULSE_LEN;
+        const tail = sub(e.pos, scale(normalize(e.vel), len));
+        if (isEnemyBolt) {
+          // Incoming fire reads as a rapidly strobing white/black core inside a constant white
+          // outline (the outline alone stays visible through the black phase), thicker overall
+          // than before so it doesn't get lost against the starfield/HUD. [ROC-LAS-5 legibility]
+          const flashOn = Math.floor(now * BOLT_FLASH_HZ) % 2 === 0;
+          renderer.drawWorldLine(e.pos, tail, { stroke: '#fff', lineWidth: 5 });
+          renderer.drawWorldLine(e.pos, tail, { stroke: flashOn ? '#fff' : '#000', lineWidth: 3 });
+        } else {
+          renderer.drawWorldLine(e.pos, tail, { stroke: '#fff', lineWidth: e.mil ? 4 : 2 });
+        }
+        break;
+      }
+      case 'particle':
+        particles.push(e.pos);
+        break;
+      case 'fragment': {
+        // A tumbling wireframe shard from a destroyed hull, fading over its life. [ROC-DMG-6]
+        if (!e.seg) break;
+        const a = vec3(e.pos.x - e.seg.x, e.pos.y, e.pos.z - e.seg.z);
+        const b = vec3(e.pos.x + e.seg.x, e.pos.y, e.pos.z + e.seg.z);
+        const fade = e.ttlMax ? Math.max(0, Math.min(1, (e.ttl ?? 0) / e.ttlMax)) : 1;
+        renderer.drawWorldLine(a, b, { stroke: `rgba(255,255,255,${fade.toFixed(2)})`, lineWidth: 1.5 });
+        break;
+      }
+      case 'pickup': {
+        // Tumbles in place — cosmetic only (wall-clock driven, like the starfield), doesn't
+        // touch sim state or collision. [ROC-PWR-*]
+        if (!e.pickup) break;
+        const meshId = pickupMeshId(e.pickup);
+        const m = MESHES[meshId];
+        if (!m) break;
+        const phase = e.id * 0.7; // per-entity offset so pickups don't spin in lockstep
+        // Ship-upgrade coins read at full ship size (a Sidewinder's scale); everything else
+        // stays a small prop.
+        const scale = meshId === 'gem' ? GEM_SCALE : SHIP_UPGRADE_MESH_IDS.has(meshId) ? SHIP_SCALE : PICKUP_SCALE;
+        renderer.drawMesh(m, modelMatrix(e.pos, now * 1.1 + phase, now * 0.8 + phase * 1.3, scale));
+        break;
+      }
+      case 'cargo': {
+        // Jettisoned cargo canisters spilling from the player's wreck — tumbling, fading. [ROC-CARGO-6]
+        const m = MESHES.canister;
+        if (!m) break;
+        const phase = e.id * 0.7;
+        const fade = e.ttlMax ? Math.max(0, Math.min(1, (e.ttl ?? 0) / e.ttlMax)) : 1;
+        renderer.drawMesh(m, modelMatrix(e.pos, now * 1.4 + phase, now * 1.1 + phase * 1.3, PICKUP_SCALE), {
+          stroke: `rgba(255,255,255,${fade.toFixed(2)})`,
+        });
+        break;
+      }
+      case 'enemy':
+      case 'boss':
+      case 'station': {
+        const m = e.meshId ? MESHES[e.meshId] : undefined;
+        if (m) {
+          const model = modelMatrix(e.pos, e.yaw, e.bank, SHIP_SCALE * (e.scale ?? 1)); // [ROC-FDL-1]
+          if (e.cloak) {
+            drawCloakedShip(e, m, model, now);
+          } else {
+            renderer.drawMesh(m, model, hullFlash(e));
+            drawShield(e, m, model);
+          }
+        }
+        // The docking bay is modelled into the hull mesh now (hermit + station), so it just
+        // rolls with the hull; the invisible dock/damage footprint lives in the sim. [ROC-DCKG-1]
+        break;
+      }
+      case 'asteroid': {
+        // Tumbles freely (yaw + bank both spin independently of its drift). [ROC-L1-1]
+        // A splinter is its own gameplay tier (collider, hull, drops all stay keyed off
+        // meshId 'splinter'), but reads better on screen as a small asteroid chunk than the
+        // authentic-but-oddly-angular bbcelite splinter shape, so it draws the asteroid mesh
+        // at a fraction of the size instead.
+        const isSplinter = e.meshId === 'splinter';
+        // A giant asteroid is a solid, indestructible obstacle — its scale (matching the sim's
+        // silhouette-based collider) comes straight off the entity, same as any other scaled
+        // hull, and it draws as a plain outer outline only (no internal facet lines, no damage
+        // flash since it never takes damage) so its shape and size alone read as "obstacle".
+        // [ROC-GIANT-1]
+        const isGiant = e.meshId === 'giant_asteroid';
+        const m = isSplinter ? MESHES.asteroid : e.meshId ? MESHES[e.meshId] : undefined;
+        const scale = isSplinter ? MINI_ASTEROID_SCALE : SHIP_SCALE * (e.scale ?? 1);
+        if (m) {
+          const matrix = modelMatrix(e.pos, e.yaw, e.bank, scale);
+          if (isGiant) renderer.drawSilhouette(m, matrix);
+          else renderer.drawMesh(m, matrix, hullFlash(e));
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  if (particles.length) renderer.drawWorldParticles(particles, { fill: '#fff', size: 2 });
+
+  // Beam lasers: instant, continuous shots from the ship to whatever they hit — a soft grey
+  // glow underlay plus a bright white core. [ROC-LAS-6]
+  for (const b of sim.state.beams) {
+    const a = vec3(b.ax, 0, b.az);
+    const c = vec3(b.bx, 0, b.bz);
+    renderer.drawWorldLine(a, c, { stroke: 'rgba(200,200,200,0.35)', lineWidth: 6 });
+    renderer.drawWorldLine(a, c, { stroke: '#fff', lineWidth: 2 });
+  }
+}
+
 startGameLoop({
   step: () => {
-    const frame = input.sample(DT); // always drain one-shot input edges, even while paused
+    const frame = input.sample(DT); // always drain one-shot input edges, even while paused/designing
+    if (designMode) {
+      // Forward auto-play advances one frame per tick (cheap: sim.design.replayTo's forward
+      // path is just one incremental step). Rewind is throttled since every backward step is a
+      // full reset-and-replay from the phase's start. [wave-designer-spec.md]
+      if (designPlaying === 1) {
+        designScrubFrame = Math.min(designSpanFrames, designScrubFrame + 1);
+        sim.design.replayTo(designScrubFrame);
+        if (designScrubFrame >= designSpanFrames) designPlaying = 0;
+      } else if (designPlaying === -1) {
+        designRewindAccum++;
+        if (designRewindAccum >= DESIGN_REWIND_THROTTLE_TICKS) {
+          designRewindAccum = 0;
+          designScrubFrame = Math.max(0, designScrubFrame - DESIGN_REWIND_THROTTLE_TICKS);
+          sim.design.replayTo(designScrubFrame);
+          if (designScrubFrame <= 0) designPlaying = 0;
+        }
+      }
+      return;
+    }
     if (paused) return;
     prev = curr;
     const events = sim.step(frame);
@@ -633,6 +1100,13 @@ startGameLoop({
   render: (alpha) => {
     renderer.beginFrame(paused ? 0 : sim.state.scroll); // sim-owned: 0 halts for bosses/pause, >1 is hyperspace [ROC-BOSS-1, ROC-HYP-3]
 
+    if (designMode) {
+      renderDesignFrame();
+      renderer.endFrame(alpha);
+      drawRotateHint();
+      return;
+    }
+
     // Docked: show the station shop instead of the play field. [ROC-STN-1]
     if (dockActive()) {
       const { w, h } = renderer.getViewport().box;
@@ -643,119 +1117,8 @@ startGameLoop({
       return;
     }
 
-    const particles: Vec3[] = [];
     const now = performance.now() / 1000;
-    for (const e of sim.state.entities.values()) {
-      switch (e.kind) {
-        case 'projectile':
-        case 'missile': {
-          // Missiles render as a small dart; pulses as a slightly longer streak. Military bolts
-          // are shorter and thicker than a pulse. [ROC-LAS-5]
-          const isEnemyBolt = e.kind === 'projectile' && e.team === 'enemy';
-          const len = e.kind === 'missile' ? 0.09 : e.mil ? PULSE_LEN * 0.55 : isEnemyBolt ? PULSE_LEN * 0.5 : PULSE_LEN;
-          const tail = sub(e.pos, scale(normalize(e.vel), len));
-          if (isEnemyBolt) {
-            // Incoming fire reads as a rapidly strobing white/black core inside a constant white
-            // outline (the outline alone stays visible through the black phase), thicker overall
-            // than before so it doesn't get lost against the starfield/HUD. [ROC-LAS-5 legibility]
-            const flashOn = Math.floor(now * BOLT_FLASH_HZ) % 2 === 0;
-            renderer.drawWorldLine(e.pos, tail, { stroke: '#fff', lineWidth: 5 });
-            renderer.drawWorldLine(e.pos, tail, { stroke: flashOn ? '#fff' : '#000', lineWidth: 3 });
-          } else {
-            renderer.drawWorldLine(e.pos, tail, { stroke: '#fff', lineWidth: e.mil ? 4 : 2 });
-          }
-          break;
-        }
-        case 'particle':
-          particles.push(e.pos);
-          break;
-        case 'fragment': {
-          // A tumbling wireframe shard from a destroyed hull, fading over its life. [ROC-DMG-6]
-          if (!e.seg) break;
-          const a = vec3(e.pos.x - e.seg.x, e.pos.y, e.pos.z - e.seg.z);
-          const b = vec3(e.pos.x + e.seg.x, e.pos.y, e.pos.z + e.seg.z);
-          const fade = e.ttlMax ? Math.max(0, Math.min(1, (e.ttl ?? 0) / e.ttlMax)) : 1;
-          renderer.drawWorldLine(a, b, { stroke: `rgba(255,255,255,${fade.toFixed(2)})`, lineWidth: 1.5 });
-          break;
-        }
-        case 'pickup': {
-          // Tumbles in place — cosmetic only (wall-clock driven, like the starfield), doesn't
-          // touch sim state or collision. [ROC-PWR-*]
-          if (!e.pickup) break;
-          const meshId = pickupMeshId(e.pickup);
-          const m = MESHES[meshId];
-          if (!m) break;
-          const phase = e.id * 0.7; // per-entity offset so pickups don't spin in lockstep
-          // Ship-upgrade coins read at full ship size (a Sidewinder's scale); everything else
-          // stays a small prop.
-          const scale = meshId === 'gem' ? GEM_SCALE : SHIP_UPGRADE_MESH_IDS.has(meshId) ? SHIP_SCALE : PICKUP_SCALE;
-          renderer.drawMesh(m, modelMatrix(e.pos, now * 1.1 + phase, now * 0.8 + phase * 1.3, scale));
-          break;
-        }
-        case 'cargo': {
-          // Jettisoned cargo canisters spilling from the player's wreck — tumbling, fading. [ROC-CARGO-6]
-          const m = MESHES.canister;
-          if (!m) break;
-          const phase = e.id * 0.7;
-          const fade = e.ttlMax ? Math.max(0, Math.min(1, (e.ttl ?? 0) / e.ttlMax)) : 1;
-          renderer.drawMesh(m, modelMatrix(e.pos, now * 1.4 + phase, now * 1.1 + phase * 1.3, PICKUP_SCALE), {
-            stroke: `rgba(255,255,255,${fade.toFixed(2)})`,
-          });
-          break;
-        }
-        case 'enemy':
-        case 'boss':
-        case 'station': {
-          const m = e.meshId ? MESHES[e.meshId] : undefined;
-          if (m) {
-            const model = modelMatrix(e.pos, e.yaw, e.bank, SHIP_SCALE * (e.scale ?? 1)); // [ROC-FDL-1]
-            if (e.cloak) {
-              drawCloakedShip(e, m, model, now);
-            } else {
-              renderer.drawMesh(m, model, hullFlash(e));
-              drawShield(e, m, model);
-            }
-          }
-          // The docking bay is modelled into the hull mesh now (hermit + station), so it just
-          // rolls with the hull; the invisible dock/damage footprint lives in the sim. [ROC-DCKG-1]
-          break;
-        }
-        case 'asteroid': {
-          // Tumbles freely (yaw + bank both spin independently of its drift). [ROC-L1-1]
-          // A splinter is its own gameplay tier (collider, hull, drops all stay keyed off
-          // meshId 'splinter'), but reads better on screen as a small asteroid chunk than the
-          // authentic-but-oddly-angular bbcelite splinter shape, so it draws the asteroid mesh
-          // at a fraction of the size instead.
-          const isSplinter = e.meshId === 'splinter';
-          // A giant asteroid is a solid, indestructible obstacle — its scale (matching the sim's
-          // silhouette-based collider) comes straight off the entity, same as any other scaled
-          // hull, and it draws as a plain outer outline only (no internal facet lines, no damage
-          // flash since it never takes damage) so its shape and size alone read as "obstacle".
-          // [ROC-GIANT-1]
-          const isGiant = e.meshId === 'giant_asteroid';
-          const m = isSplinter ? MESHES.asteroid : e.meshId ? MESHES[e.meshId] : undefined;
-          const scale = isSplinter ? MINI_ASTEROID_SCALE : SHIP_SCALE * (e.scale ?? 1);
-          if (m) {
-            const matrix = modelMatrix(e.pos, e.yaw, e.bank, scale);
-            if (isGiant) renderer.drawSilhouette(m, matrix);
-            else renderer.drawMesh(m, matrix, hullFlash(e));
-          }
-          break;
-        }
-        default:
-          break;
-      }
-    }
-    if (particles.length) renderer.drawWorldParticles(particles, { fill: '#fff', size: 2 });
-
-    // Beam lasers: instant, continuous shots from the ship to whatever they hit — a soft grey
-    // glow underlay plus a bright white core. [ROC-LAS-6]
-    for (const b of sim.state.beams) {
-      const a = vec3(b.ax, 0, b.az);
-      const c = vec3(b.bx, 0, b.bz);
-      renderer.drawWorldLine(a, c, { stroke: 'rgba(200,200,200,0.35)', lineWidth: 6 });
-      renderer.drawWorldLine(a, c, { stroke: '#fff', lineWidth: 2 });
-    }
+    drawEntities(now);
 
     // Player ship, interpolated between the last two sim states. Hidden while the wreck's
     // dramatic explosion plays out (respawnPending); blinks only during the fresh-ship window
@@ -777,7 +1140,6 @@ startGameLoop({
         drawShield(player, pmesh, model);
       }
     }
-
     // Floating credit/bonus numbers, rising and fading from the explosion. [ROC-KC-1,2,3]
     for (const f of floaters) {
       const u = f.age / f.ttl;
@@ -967,6 +1329,21 @@ startGameLoop({
       renderer.drawText(`${Math.round(cheatClockMs)}ms`, { x: r.x + r.w / 2, y: r.y + r.h / 2 + 11 }, {
         fill: 'rgba(255,215,107,0.85)',
         font: '13px monospace',
+        align: 'center',
+      });
+    }
+
+    // Wave designer entry point: only meaningful in the four phases with authored content, but
+    // stays visible (dimmed) elsewhere rather than popping in/out. [wave-designer-spec.md]
+    if (cheatUnlocked && !dockActive()) {
+      const r = designButtonRect(w);
+      const available = isDesignPhase(sim.state.levelState as never);
+      ctx!.strokeStyle = available ? 'rgba(255,215,107,0.7)' : 'rgba(255,255,255,0.25)';
+      ctx!.lineWidth = 1;
+      ctx!.strokeRect(r.x, r.y, r.w, r.h);
+      renderer.drawText('DESIGN', { x: r.x + r.w / 2, y: r.y + r.h / 2 + 4 }, {
+        fill: available ? 'rgba(255,215,107,0.9)' : 'rgba(255,255,255,0.35)',
+        font: '11px monospace',
         align: 'center',
       });
     }

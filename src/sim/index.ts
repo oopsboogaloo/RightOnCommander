@@ -19,13 +19,26 @@ import { damageSystem } from './systems/damage.js';
 import { economySystem } from './systems/economy.js';
 import { particlesSystem, DEFAULT_PARTICLES, type FragGeom } from './systems/particles.js';
 import type { Mesh } from '../interfaces.js';
-import { waveSystem, type WaveContext } from './systems/waves.js';
-import { asteroidFieldSystem, asteroidSplitSystem } from './systems/asteroids.js';
+import { waveSystem, type WaveContext, type WaveDef } from './systems/waves.js';
+import { asteroidFieldSystem, asteroidSplitSystem, type AsteroidFieldDef } from './systems/asteroids.js';
 import { aiSystem } from './systems/ai.js';
 import { missilesSystem } from './systems/missiles.js';
 import { dropsSystem } from './systems/drops.js';
 import { pickupsSystem, DEFAULT_PICKUPS } from './systems/pickups.js';
-import { startLevel, enterLevelState, levelStateSystem, type LevelDef } from './systems/levelstate.js';
+import { startLevel, enterLevelState, levelStateSystem, type LevelDef, type LevelState } from './systems/levelstate.js';
+import {
+  isDesignPhase,
+  designPhaseContent,
+  estimatePhaseSpanMs,
+  addWave as designAddWave,
+  removeWave as designRemoveWave,
+  addAsteroidField as designAddAsteroidField,
+  removeAsteroidFieldAt as designRemoveAsteroidFieldAt,
+  addGiantAsteroid as designAddGiantAsteroid,
+  removeGiantAsteroid as designRemoveGiantAsteroid,
+  type DesignPhase,
+  type DesignPhaseContent,
+} from './systems/designMode.js';
 import { gamestateSystem, DEFAULT_GAMESTATE } from './systems/gamestate.js';
 import { bossSystem } from './systems/boss.js';
 import { ecmSystem } from './systems/ecm.js';
@@ -59,6 +72,24 @@ export interface CreateSimArgs {
   config?: SimConfig;
 }
 
+// Dev-only interactive attack-wave/asteroid-field authoring, reachable from cheat mode.
+// [wave-designer-spec.md]
+export interface DesignApi {
+  // Wipes current combat and restarts the current phase from its own start as the replay base;
+  // false (no-op) if the sim isn't currently in a designable phase (ASTEROIDS/WAVES_A/
+  // ASTEROIDS_B/WAVES_B).
+  enter(): boolean;
+  content(): DesignPhaseContent | null; // the phase entered via enter(), even if replayTo() has since scrubbed past its natural end
+  spanMs(): number; // a generous scrub-range estimate covering everything currently placed
+  replayTo(frameOffset: number): void; // frames since the design phase's own start — deterministic re-simulation, not an approximation
+  addWave(wave: WaveDef): void;
+  removeWave(id: string): void;
+  addAsteroidField(field: AsteroidFieldDef): void;
+  removeAsteroidFieldAt(index: number): void;
+  addGiantAsteroid(x: number, delayMs: number, id: string): void;
+  removeGiantAsteroid(id: string): void;
+}
+
 export interface Sim {
   step(input: InputFrame): SimEvent[];
   readonly state: World;
@@ -67,6 +98,7 @@ export interface Sim {
   relaunch(): void; // leave the station for a fresh level run, keeping ship/wallet/lives [ROC-STN-6]
   midDockLaunch(): void; // leave the mid-level trader: resume WAVES_B in place, no restart [ROC-MDCK-2]
   cheatSkipLevel(): void; // dev cheat: wipe the current combat and jump straight to docking
+  design: DesignApi;
 }
 
 export function createSim({ seed, content }: CreateSimArgs): Sim {
@@ -155,6 +187,13 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     clearCombat();
     startLevel(world, lvl, waveCtx);
   }
+
+  // Design-mode replay state: the phase entered via design.enter() and a snapshot of its own
+  // fresh start, replayed from on every design.replayTo() call. [wave-designer-spec.md]
+  let designPhase: DesignPhase | null = null;
+  let designSnapshot: WorldSnapshot | null = null;
+  let designCurrentFrame = 0; // how far the last replayTo() actually advanced, for the cheap forward path below
+  const NEUTRAL_INPUT: InputFrame = { moveTarget: null, firing: false, fireTapped: false, ecm: false, energyBomb: false, confirm: false, pause: false };
 
   function step(input: InputFrame): SimEvent[] {
     rng.setState(world.rngState);
@@ -247,5 +286,86 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
       clearCombat();
       enterLevelState(world, 'DOCKING', lvl, waveCtx);
     },
+    design: (() => {
+      // enterLevelState() is what actually turns level.wavesA/asteroidWaves/giantAsteroids
+      // content into live `world.waves.active`/`world.asteroidWaves`/`world.giantAsteroids`
+      // records — and it only runs once, at phase entry. So every content edit has to re-run it
+      // (wiping combat and re-registering everything fresh against the now-edited content) and
+      // take a new snapshot as the replay base — otherwise an added wave would mutate the level
+      // object but never actually get spawned by a replay built on the old snapshot.
+      // [wave-designer-spec.md]
+      const reenterPhase = (): void => {
+        const lvl = currentLevel();
+        if (!designPhase || !lvl) return;
+        clearCombat();
+        enterLevelState(world, designPhase, lvl, waveCtx);
+        designSnapshot = snapshot(world);
+        designCurrentFrame = 0;
+      };
+
+      return {
+        enter: (): boolean => {
+          const state = world.levelState as LevelState;
+          if (!isDesignPhase(state) || !currentLevel()) return false;
+          designPhase = state;
+          reenterPhase();
+          return true;
+        },
+        content: (): DesignPhaseContent | null => {
+          const lvl = currentLevel();
+          return designPhase && lvl ? designPhaseContent(lvl, designPhase) : null;
+        },
+        spanMs: (): number => {
+          const lvl = currentLevel();
+          return designPhase && lvl ? estimatePhaseSpanMs(designPhaseContent(lvl, designPhase)) : 0;
+        },
+        // Deterministic re-simulation from the phase's own start, not an approximation. Moving
+        // *forward* from wherever the last call left off is just incremental step()s (cheap
+        // enough for every-tick auto-play); only moving backward pays for a full reset-and-replay.
+        // Stops early if the content has naturally cleared and the level moved on. [wave-designer-spec.md]
+        replayTo: (frameOffset: number): void => {
+          if (!designPhase || !designSnapshot) return;
+          const target = Math.max(0, Math.round(frameOffset));
+          if (target >= designCurrentFrame && world.levelState === designPhase) {
+            for (let i = designCurrentFrame; i < target && world.levelState === designPhase; i++) step(NEUTRAL_INPUT);
+          } else {
+            restore(world, designSnapshot);
+            rng.setState(world.rngState);
+            for (let i = 0; i < target && world.levelState === designPhase; i++) step(NEUTRAL_INPUT);
+          }
+          designCurrentFrame = target;
+        },
+        addWave: (wave: WaveDef): void => {
+          const lvl = currentLevel();
+          if (designPhase && lvl) designAddWave(lvl, designPhase, wave);
+          reenterPhase();
+        },
+        removeWave: (id: string): void => {
+          const lvl = currentLevel();
+          if (designPhase && lvl) designRemoveWave(lvl, designPhase, id);
+          reenterPhase();
+        },
+        addAsteroidField: (field: AsteroidFieldDef): void => {
+          const lvl = currentLevel();
+          if (designPhase && lvl) designAddAsteroidField(lvl, designPhase, field);
+          reenterPhase();
+        },
+        removeAsteroidFieldAt: (index: number): void => {
+          const lvl = currentLevel();
+          if (designPhase && lvl) designRemoveAsteroidFieldAt(lvl, designPhase, index);
+          reenterPhase();
+        },
+        addGiantAsteroid: (x: number, delayMs: number, id: string): void => {
+          const lvl = currentLevel();
+          if (designPhase && lvl) designAddGiantAsteroid(lvl, designPhase, x, delayMs, id);
+          reenterPhase();
+        },
+        removeGiantAsteroid: (id: string): void => {
+          const lvl = currentLevel();
+          if (lvl) designRemoveGiantAsteroid(lvl, id);
+          reenterPhase();
+        },
+      };
+    })(),
   };
 }

@@ -9,6 +9,10 @@ import { computeViewport, isTouchCapable, physicalToLogical } from '../render/vi
 
 const EDGE_ACTIONS: ReadonlySet<Action> = new Set(['fire', 'ecm', 'bomb', 'confirm', 'pause']);
 
+// The flight-control field's default extent. Exported so design mode (main.ts) can map a tapped
+// point through the exact same bounds a live drag would use. [wave-designer-spec.md]
+export const DEFAULT_FIELD_BOUNDS: FieldBounds = { minX: -1, maxX: 1, minY: -1.6, maxY: 1.6 };
+
 export interface DomInputOptions {
   canvas: HTMLCanvasElement;
   storage?: Storage;
@@ -36,7 +40,7 @@ export class DomInput {
   constructor(opts: DomInputOptions) {
     this.canvas = opts.canvas;
     this.remap = opts.storage ? loadRemap(opts.storage) : defaultRemap();
-    this.bounds = opts.bounds ?? { minX: -1, maxX: 1, minY: -1.6, maxY: 1.6 };
+    this.bounds = opts.bounds ?? DEFAULT_FIELD_BOUNDS;
     this.speed = opts.speed ?? 2;
     this.attach();
   }
