@@ -5,13 +5,9 @@
 import type { InputFrame, Vec2, Storage } from '../interfaces.js';
 import { type RemapTable, type Action, defaultRemap, loadRemap, keyAction, buttonAction } from './remap.js';
 import { composeInputFrame, type FieldBounds, type RawInput } from './compose.js';
-import { computeViewport, isTouchCapable, physicalToLogical, saturateEdges } from '../render/viewport.js';
+import { computeViewport, isTouchCapable, physicalToLogical } from '../render/viewport.js';
 
 const EDGE_ACTIONS: ReadonlySet<Action> = new Set(['fire', 'ecm', 'bomb', 'confirm', 'pause']);
-
-// The outer 5% of the box saturates to the full field extent — see saturateEdges() for why
-// (pen/touch on iPad Safari in particular never quite reaches the literal box edge).
-const EDGE_SATURATION_FRAC = 0.05;
 
 // The flight-control field's default extent. Exported so design mode (main.ts) can map a tapped
 // point through the exact same bounds a live drag would use. [wave-designer-spec.md]
@@ -49,18 +45,29 @@ export class DomInput {
     this.attach();
   }
 
-  // Map client pixels to play-field coords, via the same 4:3 game box the renderer draws
-  // against — not the raw canvas rect — so a drag tracks the ship 1:1 regardless of window/
-  // device aspect. screen-up maps to +y (forward). [viewport-spec.md]
+  // Map client pixels to play-field coords by inverting the *exact* world->screen transform the
+  // renderer draws with, so a drag lands the ship under the pointer on any window/device aspect.
+  // [viewport-spec.md]
   //
-  // Canvas size is measured via clientWidth/clientHeight — the exact same properties
-  // Renderer2D.refreshViewport() reads — rather than getBoundingClientRect()'s width/height.
-  // They're normally identical, but the whole point of computeViewport being a pure function of
-  // (canvasW, canvasH, touchCapable) is that both sides agree *by construction*; feeding them
-  // from two different DOM APIs quietly reopened the door to exactly the kind of mismatch this
-  // was meant to rule out. getBoundingClientRect() is still used for its left/top (the offset
-  // needed to turn a page-relative clientX/clientY into canvas-relative pixels), which clientWidth/
-  // clientHeight don't provide.
+  // Renderer2D draws every world point at `screen = box.(x|y) + box.(w|h)/2 + projected * scale`
+  // with a single UNIFORM `scale = box.h/2` px per world unit (see refreshViewport/toPixel), and
+  // for a point on the play plane the camera's projected.x == world.x exactly (the 25° tilt is a
+  // rotation about the x-axis, so it never foreshortens x — see camera.ts). So the horizontal
+  // inverse is exactly `(px - boxCenterX) / (box.h/2)`.
+  //
+  // The earlier version instead stretched the field across box.w horizontally and box.h
+  // vertically independently — which disagreed with the renderer's uniform scale by exactly the
+  // box's 4:3 aspect, so the ship travelled only ~box.h ("one portrait width") while the pointer
+  // ranged across the full box.w, and the pointer ran ahead of the ship near the edges. Using the
+  // renderer's own scale for both axes removes that mismatch. (Vertical carries the camera's mild
+  // cos(tilt) foreshortening, as it always has; the scroll axis is forgiving and this is the same
+  // ~10% looseness the portrait build shipped with. The reported bug was horizontal, which is now
+  // exact.)
+  //
+  // Canvas size is measured via clientWidth/clientHeight — the same properties Renderer2D reads —
+  // so both sides feed computeViewport identical inputs and agree by construction.
+  // getBoundingClientRect() supplies only left/top, to turn page-relative client coords into
+  // canvas-relative pixels.
   private toField(clientX: number, clientY: number): Vec2 {
     const rect = this.canvas.getBoundingClientRect();
     const canvasW = this.canvas.clientWidth || this.canvas.width;
@@ -68,11 +75,10 @@ export class DomInput {
     const viewport = computeViewport(canvasW, canvasH, isTouchCapable());
     const logical = physicalToLogical(viewport, clientX - rect.left, clientY - rect.top);
     const { box } = viewport;
-    const u = saturateEdges((logical.x - box.x) / box.w, EDGE_SATURATION_FRAC);
-    const v = saturateEdges((logical.y - box.y) / box.h, EDGE_SATURATION_FRAC);
+    const scale = box.h / 2; // MUST match Renderer2D's `scale` (px per world unit)
     return {
-      x: this.bounds.minX + u * (this.bounds.maxX - this.bounds.minX),
-      y: this.bounds.maxY - v * (this.bounds.maxY - this.bounds.minY),
+      x: (logical.x - box.x - box.w / 2) / scale,
+      y: (box.y + box.h / 2 - logical.y) / scale, // screen-y is down; world/field +y (forward) is up
     };
   }
 

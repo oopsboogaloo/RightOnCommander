@@ -53,18 +53,3 @@ export function physicalToLogical(v: Viewport, px: number, py: number): { x: num
   if (!v.rotated) return { x: px, y: py };
   return { x: py, y: v.canvasW - px };
 }
-
-// Some devices never actually report a pointer coordinate at the literal edge of the box —
-// notably a pen/finger on iPad Safari, where the OS reserves a strip near the physical screen
-// edge for its own edge-swipe gestures (Control Center, app switching, back/forward), regardless
-// of the page's own touch-action. Left unaddressed, the ship visibly stops short of the true
-// field edge no matter how far the drag goes. Saturating the outer `margin` fraction of the box
-// on each side to the full [0,1] range compensates: getting *close* to an edge is enough to reach
-// it, while the interior 1-2*margin of the box still maps smoothly and proportionally. Applied
-// uniformly across input sources (not just touch) so the box's input contract stays one thing —
-// mouse/desktop users can already reach the literal edge, so this is imperceptible for them.
-export function saturateEdges(t: number, margin: number): number {
-  if (t <= margin) return 0;
-  if (t >= 1 - margin) return 1;
-  return (t - margin) / (1 - 2 * margin);
-}
