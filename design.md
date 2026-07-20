@@ -1,7 +1,9 @@
 # Right on Commander — Design
 
-**Version:** 0.9 (draft — all design decisions resolved)
+**Version:** 1.0 (draft — all design decisions resolved)
 
+> **Changelog 0.9 → 1.0:** **Reversed the play/render area from portrait to a fixed 4:3 landscape "game box"** — supersedes ROC-HUD-1/ROC-NFR-4 as documented in requirements.md (a matching requirements.md update is tracked separately). New `render/viewport.ts` (`computeViewportBox`/`computeViewport`, pure) is the single source of truth for the box, consumed independently by `Renderer2D` (render scale, HUD/button layout) and `DomInput` (pointer-to-field mapping) so the two always agree without being wired together. `Renderer2D.beginFrame`/`endFrame` now draw through a box-local, letterboxed transform each frame with a 1px white border around the box; on a portrait **touch** device the frame draws through an additional 90° rotation so the box fills the screen instead of shrinking, with a persistent on-screen hint telling the player to turn their device sideways — a narrow **desktop** window (no touch) falls back to a plain shrink-to-fit box instead of rotating. See §7 (Viewport & aspect lock) and §17.
+>
 > **Changelog 0.8 → 0.9:** **Removed Level 3's star backdrop and star-flare hazard** — `renderer2d.ts`'s `drawStarBackdrop`/`showStarBackdrop`/`starFlareAlpha`, `systems/hazards.ts` (`HazardState`/`StarFlareDef`/`hazardsSystem`/`initHazard`) and `world.hazard`, and `level3.json`'s `backdrop`/`starFlare` fields, are all gone — the circle was large enough to cover the whole viewport at the game's aspect ratio rather than read as an edge limb (requirements v1.12). Added a **corner-tap cheat code**: tapping all four screen corners in clockwise order starting top-left grants 100 lives + 1,000,000cr once, and reveals a persistent **Skip Level** HUD button (`sim.cheatSkipLevel()`) that wipes the current combat and jumps straight to the docking approach, same as clearing the level normally. `gamestateSystem`'s life-loss decrement no longer clamps to `MAX_LIVES` before subtracting, so a cheat-granted life count above 5 decrements normally instead of snapping down to 4 on the next death.
 >
 > **Changelog 0.7 → 0.8:** Level 3's mid-boss changes to a **pair of Anacondas** (`midBoss: "anaconda_pair"`, ROC-L3-3). Added a **witchspace interlude between Level 2 and 3**: level3's schema entry becomes `"entry": "witchspace_interlude"`, and the level FSM gains a `WITCHSPACE_COMBAT` state between `HYPERSPACE` and `INFO` — `world.scroll` holds at its fully-stretched hyperspace value (instead of resuming) until a spawned Thargoid wave is cleared, then the jump resolves as usual (§12, §12a). **Level 4 renamed "Alien warzone"**, reverts to a normal `"entry": "launch"` (the misjump framing moved to the new interlude), adds **broken Galactic Navy wrecks** as scenery/hazard, and **drops its `midBoss`** entirely — wave combat runs straight to the end boss, and the level is paced shorter. See requirements v1.10 (ROC-L3-3, ROC-WITCH-1..4, ROC-L4-0,3,4).
@@ -72,6 +74,7 @@ right-on-commander/
       meshes/*.json        # generated from bbcelite (see §15)
     render/                # Canvas 2D backend implementing Renderer
       renderer2d.js  project.js  camera.js
+      viewport.js          # fixed 4:3 game box (pure) — shared by Renderer2D and DomInput, §7
       screens/title.js  station.js  hud.js  overlays.js
     audio/  webaudio.js  nullaudio.js
     input/  domInput.js  remap.js
@@ -244,9 +247,21 @@ Each `step()` runs systems in a fixed order so behaviour is deterministic:
 ## 7. 3D render pipeline (Canvas 2D software 3D)
 
 ### Axes & camera
-World space: **+x** right, **+z** forward (up-screen, the scroll axis), **+y** height above the play plane (ships sit near `y=0`). Portrait field maps x→screen-x, z→screen-y. `[ROC-HUD-1]`
+World space: **+x** right, **+z** forward (up-screen, the scroll axis), **+y** height above the play plane (ships sit near `y=0`). The fixed 4:3 landscape game box (below) maps x→box-x, z→box-y — supersedes ROC-HUD-1's portrait framing (see the 0.9 → 1.0 changelog above).
 
 Camera sits **above and slightly behind** the action looking forward-down, tilt **θ ≈ 25°** from vertical — giving the "slightly back from directly overhead" view that reveals hull tops/backs. `[ROC-VIS-3]` Projection is **mild perspective** (small FOV) so depth occlusion reads naturally; near-orthographic to keep the flat vector feel.
+
+### Viewport & aspect lock
+The play/render area is a fixed **4:3 landscape box**, not the raw canvas — so play reads identically regardless of window/device aspect ratio (the previous portrait-fills-the-window approach let render scale and input mapping silently drift out of sync on anything but a portrait-shaped window). `render/viewport.ts` is the single pure source of truth:
+
+- `computeViewportBox(canvasW, canvasH)` — the largest 4:3 rect that fits within the canvas, centered; letterboxed (bars top/bottom) or pillarboxed (bars left/right) as needed.
+- `computeViewport(canvasW, canvasH, touchCapable)` — wraps the box with a `rotated` flag: **true** only when the canvas is portrait *and* the device is touch-capable.
+  - **Landscape**, or **portrait on a non-touch (desktop) window**: `rotated = false`; the box is a plain shrink-to-fit rect.
+  - **Portrait + touch** (phone/tablet held upright): `rotated = true`. Rather than shrinking the box into a small letterboxed rectangle, `Renderer2D.beginFrame` draws the whole frame through an additional 90° rotation (`ctx.translate(canvasW,0); ctx.rotate(90°)`) against the *swapped* dimensions, so the box fills the screen edge-to-edge instead. A persistent on-screen hint ("turn your phone sideways"), drawn in plain physical screen coordinates *after* the frame's rotation transform is restored, tells the player to physically turn the device — deliberately not the Fullscreen API, which iOS Safari doesn't support for ordinary pages.
+
+`Renderer2D` and `DomInput` each call `computeViewport` independently (from the same canvas CSS dimensions + touch capability) rather than sharing a live object — being a pure function of the same inputs, they agree by construction with no coordination needed. `Renderer2D.beginFrame`/`endFrame` bracket each frame with the rotation + box-offset transform (plus a clip to the box, and the 1px white border drawn just inside it once the clip is lifted), so every draw call for the rest of the frame — including `main.ts`'s own HUD/button/overlay drawing — works in plain box-local pixel coordinates with no per-call offset math. `DomInput.toField` and `main.ts`'s cheat/station tap handling map incoming client coordinates through the same box (via `physicalToLogical`, the inverse of the render rotation), so a drag or tap that lands outside the box — in a letterbox bar, or past the device's physical rotation — clamps to the nearest field edge rather than reading as an out-of-sync or ignored position.
+
+This is a real-renderer/real-input concern only — the abstract `Renderer` interface (§4) and the headless test harness are untouched; null/recording backends in tests have no notion of a box or aspect ratio.
 
 ### Per-object draw (`drawMesh`)
 A mesh = `{ vertices:Vec3[], edges:[i,j][], faces:{loop:int[], normal:Vec3}[] }` (from bbcelite, §15).
@@ -423,7 +438,7 @@ All of the above run headless in CI with no display. `[ROC-TEST-8]`
 - **Pools** for projectiles, missiles and particles (no per-frame GC churn).
 - **Pre-rendered particle dot** drawn via `drawImage` rather than per-particle `arc()`.
 - Painter sort only over *visible, culled* faces; meshes are low-poly (tens of faces).
-- Cap `devicePixelRatio` at ~2; portrait-fit canvas sizing.
+- Cap `devicePixelRatio` at ~2; canvas always fills the window — the 4:3 game box (§7) is a render/input-layer concept on top, not a canvas-element resize, so it needs no extra resize handling of its own.
 - Particle/entity budget caps on mobile, scaling the energy-bomb/Thargon storms gracefully.
 
 ---
