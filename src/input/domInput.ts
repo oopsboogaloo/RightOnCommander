@@ -5,6 +5,7 @@
 import type { InputFrame, Vec2, Storage } from '../interfaces.js';
 import { type RemapTable, type Action, defaultRemap, loadRemap, keyAction, buttonAction } from './remap.js';
 import { composeInputFrame, type FieldBounds, type RawInput } from './compose.js';
+import { computeViewport, isTouchCapable, physicalToLogical } from '../render/viewport.js';
 
 const EDGE_ACTIONS: ReadonlySet<Action> = new Set(['fire', 'ecm', 'bomb', 'confirm', 'pause']);
 
@@ -40,11 +41,16 @@ export class DomInput {
     this.attach();
   }
 
-  // Map client pixels to play-field coords; screen-up maps to +y (forward).
+  // Map client pixels to play-field coords, via the same 4:3 game box the renderer draws
+  // against — not the raw canvas rect — so a drag tracks the ship 1:1 regardless of window/
+  // device aspect. screen-up maps to +y (forward). [viewport-spec.md]
   private toField(clientX: number, clientY: number): Vec2 {
     const rect = this.canvas.getBoundingClientRect();
-    const u = (clientX - rect.left) / rect.width;
-    const v = (clientY - rect.top) / rect.height;
+    const viewport = computeViewport(rect.width, rect.height, isTouchCapable());
+    const logical = physicalToLogical(viewport, clientX - rect.left, clientY - rect.top);
+    const { box } = viewport;
+    const u = (logical.x - box.x) / box.w;
+    const v = (logical.y - box.y) / box.h;
     return {
       x: this.bounds.minX + u * (this.bounds.maxX - this.bounds.minX),
       y: this.bounds.maxY - v * (this.bounds.maxY - this.bounds.minY),

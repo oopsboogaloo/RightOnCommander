@@ -10,6 +10,7 @@ import { shieldGap } from '../sim/systems/collision.js';
 import { type Camera, createCamera } from './camera.js';
 import { prepareMesh, projectPoint, type Projected } from './project.js';
 import { offsetPolygonPath } from './shieldRing.js';
+import { computeViewport, isTouchCapable, type Viewport } from './viewport.js';
 
 interface Star {
   x: number; // normalised [0,1) across the canvas
@@ -156,12 +157,13 @@ export class Renderer2D implements Renderer {
   showAsteroidBackdrop = false; // set by the shell for asteroid-belt levels
   camera: Camera;
 
-  // Viewport mapping, refreshed each frame.
+  // Viewport mapping, refreshed each frame. cx/cy/scale are box-local (0,0 = box top-left) —
+  // beginFrame translates the ctx by the box offset (and rotates it, on a portrait touch device)
+  // so every draw call for the rest of the frame can just work in box-local coordinates. [viewport-spec.md]
+  private viewport: Viewport = computeViewport(1, 1, false);
   private cx = 0;
   private cy = 0;
   private scale = 1;
-  private w = 0;
-  private h = 0;
 
   constructor(ctx: CanvasRenderingContext2D, camera: Camera = createCamera()) {
     this.ctx = ctx;
@@ -171,28 +173,49 @@ export class Renderer2D implements Renderer {
 
   private refreshViewport(): void {
     const { canvas } = this.ctx;
-    this.w = canvas.clientWidth || canvas.width;
-    this.h = canvas.clientHeight || canvas.height;
-    this.cx = this.w / 2;
-    this.cy = this.h / 2;
-    this.scale = Math.min(this.w, this.h) * 0.5; // pixels per projected unit
+    const canvasW = canvas.clientWidth || canvas.width;
+    const canvasH = canvas.clientHeight || canvas.height;
+    this.viewport = computeViewport(canvasW, canvasH, isTouchCapable());
+    const { box } = this.viewport;
+    this.cx = box.w / 2;
+    this.cy = box.h / 2;
+    this.scale = box.h * 0.5; // pixels per projected unit — box is always 4:3, so h is the constraining side
   }
 
-  // Projected (y-up) -> canvas pixels (y-down).
+  // The current frame's viewport (box + rotation state), for callers that need to align HUD/
+  // button layout or input hit-testing to the same box the scene is drawn against.
+  getViewport(): Viewport {
+    return this.viewport;
+  }
+
+  // Projected (y-up) -> box-local pixels (y-down).
   private toPixel(p: Projected): Vec2 {
     return { x: this.cx + p.x * this.scale, y: this.cy - p.y * this.scale };
   }
 
   beginFrame(scroll = 1): void {
     this.refreshViewport();
-    const { ctx } = this;
+    const { ctx, viewport } = this;
+    const { canvasW, rotated, logicalW, logicalH, box } = viewport;
+
+    ctx.save(); // restored in endFrame — covers the rotation + box-offset transform for the whole frame
+    if (rotated) {
+      ctx.translate(canvasW, 0);
+      ctx.rotate(Math.PI / 2);
+    }
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, this.w, this.h);
+    ctx.fillRect(0, 0, logicalW, logicalH); // covers the full physical screen, letterbox bars included
+    ctx.translate(box.x, box.y); // from here on, (0,0) is the box's top-left corner
+
+    ctx.save(); // clip scope, restored in endFrame before the border is drawn
+    ctx.beginPath();
+    ctx.rect(0, 0, box.w, box.h);
+    ctx.clip();
     this.starfield.update(1 / 60, scroll);
-    this.starfield.draw(ctx, this.w, this.h, scroll);
+    this.starfield.draw(ctx, box.w, box.h, scroll);
     if (this.showAsteroidBackdrop && this.bgAsteroids.isRevealed) {
       this.bgAsteroids.update(1 / 60, scroll);
-      this.bgAsteroids.draw(ctx, this.w, this.h);
+      this.bgAsteroids.draw(ctx, box.w, box.h);
     }
   }
 
@@ -354,6 +377,11 @@ export class Renderer2D implements Renderer {
   }
 
   endFrame(_alpha: number): void {
-    // Single-buffered canvas; nothing to flush yet.
+    const { ctx, viewport } = this;
+    ctx.restore(); // undo the box clip — the border below sits astride the box edge
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0.5, 0.5, viewport.box.w - 1, viewport.box.h - 1); // crisp 1px border, box-local
+    ctx.restore(); // undo the rotation + box-offset transform
   }
 }

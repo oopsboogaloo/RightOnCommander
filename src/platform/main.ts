@@ -11,6 +11,7 @@ import { modelMatrix } from '../render/project.js';
 import type { Mat4 } from '../sim/math/mat4.js';
 import { startGameLoop, DT } from './loop.js';
 import { DomInput } from '../input/domInput.js';
+import { physicalToLogical } from '../render/viewport.js';
 import { createLocalStorage } from './storage.js';
 import type { Mesh } from '../interfaces.js';
 import type { Entity } from '../sim/components.js';
@@ -388,9 +389,18 @@ function inRect(px: number, py: number, r: { x: number; y: number; w: number; h:
 // Listening on 'mousedown' + 'touchstart' directly (rather than the unified 'pointerdown') matches
 // DomInput's existing input handling, since pointer events aren't uniformly reliable for touch
 // across every mobile browser/WebView. [dev cheat]
-function handleTapAt(px: number, py: number): void {
-  const w = canvas!.clientWidth || canvas!.width;
-  const h = canvas!.clientHeight || canvas!.height;
+//
+// physX/physY are raw canvas-relative pixels (unaffected by the renderer's internal rotation/box
+// transform); they're converted to the same box-local space every button/HUD rect below is
+// defined in, so hit-testing always matches what's drawn. [viewport-spec.md]
+function handleTapAt(physX: number, physY: number): void {
+  const viewport = renderer.getViewport();
+  const { box } = viewport;
+  const logical = physicalToLogical(viewport, physX, physY);
+  const px = logical.x - box.x;
+  const py = logical.y - box.y;
+  const w = box.w;
+  const h = box.h;
 
   tryCheatTap(px, py, w, h);
 
@@ -577,6 +587,23 @@ function drainFloaters(events: ReturnType<typeof sim.step>): void {
   }
 }
 
+// Persistent hint on a portrait touch device (renderer.getViewport().rotated): the scene is
+// intentionally drawn rotated 90° to fill the screen (viewport-spec.md), so the player needs
+// telling to turn the device sideways to read it correctly. Drawn in plain physical screen
+// coordinates, after the renderer's own rotation transform has been restored, so the hint itself
+// reads upright regardless of how the game content beneath it is oriented.
+function drawRotateHint(): void {
+  if (!renderer.getViewport().rotated) return;
+  const w = canvas!.clientWidth || canvas!.width;
+  const h = canvas!.clientHeight || canvas!.height;
+  ctx!.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx!.fillRect(0, h * 0.42, w, h * 0.16);
+  ctx!.fillStyle = '#fff';
+  ctx!.font = '15px monospace';
+  ctx!.textAlign = 'center';
+  ctx!.fillText('↻ Turn your phone sideways to play', w / 2, h * 0.5);
+}
+
 startGameLoop({
   step: () => {
     const frame = input.sample(DT); // always drain one-shot input edges, even while paused
@@ -608,11 +635,11 @@ startGameLoop({
 
     // Docked: show the station shop instead of the play field. [ROC-STN-1]
     if (dockActive()) {
-      const w = canvas!.clientWidth || canvas!.width;
-      const h = canvas!.clientHeight || canvas!.height;
+      const { w, h } = renderer.getViewport().box;
       const buttons = stationButtons(sim.state, stationCtx, w, h, launchArmed, selectedLaser);
       drawStation(renderer, sim.state, stationCtx, MESHES, buttons, { w, h, time: performance.now() / 1000 });
       renderer.endFrame(alpha);
+      drawRotateHint();
       return;
     }
 
@@ -781,8 +808,7 @@ startGameLoop({
     }
 
     // --- full-screen overlays -------------------------------------------------
-    const w = canvas!.clientWidth || canvas!.width;
-    const h = canvas!.clientHeight || canvas!.height;
+    const { w, h } = renderer.getViewport().box;
 
     // Boss health bar: horizontal, black and white, top of the screen; shields + hull so the
     // bar moves from the very first hit. [ROC-BOSS-2]
@@ -970,6 +996,7 @@ startGameLoop({
     }
 
     renderer.endFrame(alpha);
+    drawRotateHint();
   },
 });
 
