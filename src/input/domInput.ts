@@ -5,9 +5,13 @@
 import type { InputFrame, Vec2, Storage } from '../interfaces.js';
 import { type RemapTable, type Action, defaultRemap, loadRemap, keyAction, buttonAction } from './remap.js';
 import { composeInputFrame, type FieldBounds, type RawInput } from './compose.js';
-import { computeViewport, isTouchCapable, physicalToLogical } from '../render/viewport.js';
+import { computeViewport, isTouchCapable, physicalToLogical, saturateEdges } from '../render/viewport.js';
 
 const EDGE_ACTIONS: ReadonlySet<Action> = new Set(['fire', 'ecm', 'bomb', 'confirm', 'pause']);
+
+// The outer 5% of the box saturates to the full field extent — see saturateEdges() for why
+// (pen/touch on iPad Safari in particular never quite reaches the literal box edge).
+const EDGE_SATURATION_FRAC = 0.05;
 
 // The flight-control field's default extent. Exported so design mode (main.ts) can map a tapped
 // point through the exact same bounds a live drag would use. [wave-designer-spec.md]
@@ -53,8 +57,8 @@ export class DomInput {
     const viewport = computeViewport(rect.width, rect.height, isTouchCapable());
     const logical = physicalToLogical(viewport, clientX - rect.left, clientY - rect.top);
     const { box } = viewport;
-    const u = (logical.x - box.x) / box.w;
-    const v = (logical.y - box.y) / box.h;
+    const u = saturateEdges((logical.x - box.x) / box.w, EDGE_SATURATION_FRAC);
+    const v = saturateEdges((logical.y - box.y) / box.h, EDGE_SATURATION_FRAC);
     return {
       x: this.bounds.minX + u * (this.bounds.maxX - this.bounds.minX),
       y: this.bounds.maxY - v * (this.bounds.maxY - this.bounds.minY),

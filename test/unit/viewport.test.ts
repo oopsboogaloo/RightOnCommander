@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
-import { GAME_ASPECT, computeViewportBox, computeViewport, physicalToLogical } from '../../src/render/viewport.js';
+import { GAME_ASPECT, computeViewportBox, computeViewport, physicalToLogical, saturateEdges } from '../../src/render/viewport.js';
 
 const dim = fc.double({ min: 1, max: 4000, noNaN: true });
 
@@ -100,6 +100,39 @@ describe('physicalToLogical', () => {
         const logical = physicalToLogical(v, px, py);
         expect(logical.x).toBeCloseTo(lx, 9);
         expect(logical.y).toBeCloseTo(ly, 9);
+      }),
+    );
+  });
+});
+
+describe('saturateEdges', () => {
+  it('reaches the full [0,1] range once within the margin of either edge, not just at the literal edge', () => {
+    const margin = 0.05;
+    expect(saturateEdges(0, margin)).toBe(0);
+    expect(saturateEdges(margin, margin)).toBe(0); // right at the margin boundary
+    expect(saturateEdges(margin * 0.5, margin)).toBe(0); // short of the literal edge, but inside the margin
+    expect(saturateEdges(1, margin)).toBe(1);
+    expect(saturateEdges(1 - margin, margin)).toBe(1);
+    expect(saturateEdges(1 - margin * 0.5, margin)).toBe(1);
+  });
+
+  it('still maps the interior smoothly and monotonically', () => {
+    const margin = 0.05;
+    expect(saturateEdges(0.5, margin)).toBeCloseTo(0.5, 9); // center stays center
+    let prev = -Infinity;
+    for (let t = 0; t <= 1; t += 0.01) {
+      const out = saturateEdges(t, margin);
+      expect(out).toBeGreaterThanOrEqual(prev);
+      expect(out).toBeGreaterThanOrEqual(0);
+      expect(out).toBeLessThanOrEqual(1);
+      prev = out;
+    }
+  });
+
+  it('is the identity when margin is 0', () => {
+    fc.assert(
+      fc.property(fc.double({ min: 0, max: 1, noNaN: true }), (t) => {
+        expect(saturateEdges(t, 0)).toBeCloseTo(t, 9);
       }),
     );
   });
