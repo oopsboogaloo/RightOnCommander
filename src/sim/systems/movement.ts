@@ -10,7 +10,13 @@ import { PLAYER_ID, type World } from '../world.js';
 
 export interface MovementConfig {
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
-  shipRadius: number; // inset so no part of the ship leaves the field [ROC-MOV-2]
+  shipRadius: number; // fallback uniform inset so no part of the ship leaves the field [ROC-MOV-2]
+  // Per-axis inset = the current ship's actual drawn half-reach along each direction (world units,
+  // already scaled). When supplied it replaces the uniform shipRadius so the ship's *sprite* edge
+  // — not an oversized collision circle — reaches each field boundary exactly, on every hull. The
+  // shell fills this from the player's hull silhouette each step; tests omit it and fall back to
+  // shipRadius. [ROC-MOV-2]
+  hullInset?: { left: number; right: number; front: number; rear: number };
   maxSpeed: number; // world units / second
   responsiveness: number; // fraction of the remaining gap closed per step
   bankFactor: number; // bank radians per (unit/s) of lateral velocity [ROC-MOV-3]
@@ -66,10 +72,17 @@ export function movementSystem(
     sz *= s;
   }
 
-  // Clamp the centre so the whole ship stays on the field. [ROC-MOV-2]
+  // Clamp the centre so the whole ship stays on the field — by the ship's actual per-axis reach
+  // when the shell supplies it (so the sprite edge touches the boundary), else the uniform
+  // shipRadius. World x = right, world z = up-screen (front). [ROC-MOV-2]
   const { bounds: b, shipRadius: r } = cfg;
-  const newX = clamp(p.pos.x + sx, b.minX + r, b.maxX - r);
-  const newZ = clamp(p.pos.z + sz, b.minZ + r, b.maxZ - r);
+  const hi = cfg.hullInset;
+  const insetLeft = hi ? hi.left : r;
+  const insetRight = hi ? hi.right : r;
+  const insetFront = hi ? hi.front : r; // +z / top
+  const insetRear = hi ? hi.rear : r; // -z / bottom
+  const newX = clamp(p.pos.x + sx, b.minX + insetLeft, b.maxX - insetRight);
+  const newZ = clamp(p.pos.z + sz, b.minZ + insetRear, b.maxZ - insetFront);
 
   // Actual velocity (reflects any clamping, so banking levels out at the edges).
   const vx = (newX - p.pos.x) / dt;

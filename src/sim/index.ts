@@ -11,7 +11,7 @@ import { createRng, type Rng } from './rng.js';
 import { snapshot, restore, type WorldSnapshot } from './snapshot.js';
 import { makeWorld, PLAYER_ID, type World } from './world.js';
 import { vec3 } from './math/vec3.js';
-import { movementSystem } from './systems/movement.js';
+import { movementSystem, DEFAULT_MOVEMENT } from './systems/movement.js';
 import { weaponsSystem, DEFAULT_WEAPONS, type HullExtent } from './systems/weapons.js';
 import { collisionSystem, meshSilhouette, hullRadius } from './systems/collision.js';
 import type { Pt } from './math/geom2.js';
@@ -199,7 +199,16 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     rng.setState(world.rngState);
     world.events = [];
 
-    movementSystem(world, input, SIM_DT);
+    // Clamp the player's movement by its ship's actual drawn half-reach (hull silhouette extent ×
+    // the entity's own scale, e.g. the 1.5× player Fer-de-Lance), so the sprite edge reaches each
+    // field boundary rather than stopping an oversized-collision-radius short of it. [ROC-MOV-2]
+    const pl = world.entities.get(PLAYER_ID);
+    const ext = pl?.meshId ? hullExtents[pl.meshId] : undefined;
+    const es = pl?.scale ?? 1;
+    const movementCfg = ext
+      ? { ...DEFAULT_MOVEMENT, hullInset: { left: ext.left * es, right: ext.right * es, front: ext.front * es, rear: ext.rear * es } }
+      : DEFAULT_MOVEMENT;
+    movementSystem(world, input, SIM_DT, movementCfg);
     weaponsSystem(world, input, SIM_DT, weaponsCfg);
     missilesSystem(world, SIM_DT);
     ecmSystem(world, SIM_DT); // boss ECM pops player missiles after its fuse [ROC-BECM-*]
