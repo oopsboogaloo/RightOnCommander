@@ -1,10 +1,12 @@
 # Right on Commander — Requirements Specification
 
-**Version:** 1.12 (draft — all design decisions resolved)
+**Version:** 1.13 (draft — all design decisions resolved)
 **Author:** Chloe
 **Notation:** EARS (Easy Approach to Requirements Syntax)
 **Status:** Spec under construction — review
 
+> **Changelog 1.12 → 1.13:** **Reversed the play/render area from portrait to a fixed 4:3 landscape "game box"** (ROC-HUD-1, ROC-NFR-4 both revised) — centered and letterboxed/pillarboxed to fit the window, with a thin white border marking its edge, and input (mouse/touch) mapped to the same box so a drag or tap beyond its edge clamps to the nearest field position rather than drifting out of sync with what's drawn. On a portrait **touch** device the game renders rotated 90° to fill the screen instead of shrinking, with a persistent on-screen prompt to turn the device sideways; a narrow **desktop** window (no touch) just shrinks the box to fit, no rotation. See design.md v1.0 §7 for the render/input architecture.
+>
 > **Changelog 1.11 → 1.12:** **Removed Level 3's star backdrop and star-flare hazard** (ROC-L3-1, ROC-L3-2, both dropped): at the game's actual portrait aspect ratio the "large white star" circle was big enough to cover the entire viewport rather than read as a curved limb off the right edge, whiting out the screen — including through the witchspace interlude and hyperspace starfield that precede the level. Level 3 now plays with no star backdrop and no environmental flare damage; its mid- and end-boss requirements (ROC-L3-3,4) are unaffected.
 >
 > **Changelog 1.10 → 1.11:** **Level 3 end boss changed** from the generation ship to an **Elite-rated ace pilot flying a fully-kitted Cobra Mk III** — military laser, beam lasers, missiles, and shields to match (ROC-L3-4 revised) — keeping every boss in the roster a real Elite hull rather than an original invention.
@@ -230,7 +232,7 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
 
 ### 3.11 Screen & HUD
 
-- **ROC-HUD-1** The system shall run in **portrait aspect ratio**.
+- **ROC-HUD-1** *(v1.13 — reversed from portrait)* The system shall render and accept input within a **fixed 4:3 landscape play area** ("game box"), centered and letterboxed/pillarboxed to fit the window regardless of its actual aspect ratio, with a **thin white border** marking the box's edge.
 - **ROC-HUD-2** *(v1.9 — drops the hull readout)* The system shall display a **persistent status bar at the bottom of the screen**, as simple white/grey text, showing: **shield**, **missile level with a countdown in seconds**, **energy bomb count**, and **energy bank countdown** — plus **score, credits and lives**. *(No hull readout: the player has no hull hit-point buffer, ROC-DMG-6b. An ECM countdown is planned to join this row later.)*
 - **ROC-HUD-3** In addition to the numeric bar (ROC-HUD-2), the system shall keep conveying player shield state **diegetically** too — via the player ship's own shield rings and its white damage flash (§3.3) — so the two reinforce each other rather than replacing one another.
 
@@ -475,7 +477,7 @@ Framing shared by **every mid-level and end-of-level boss** (§3.9). Level 1's t
 - **ROC-NFR-1** The system shall sustain 60 fps on a mid-range laptop with ≥ 50 on-screen entities (swarm + wave + particles).
 - **ROC-NFR-2** The system shall be fully playable with mouse only, touch only, keyboard only, or controller only.
 - **ROC-NFR-3** The system shall provide accessibility options: remappable controls, audio toggle, reduced-flash mode (shield-flash, explosions, star activity).
-- **ROC-NFR-4** The system shall fit a portrait field responsively across phone and desktop.
+- **ROC-NFR-4** *(v1.13 — reversed from portrait)* The system shall fit the fixed 4:3 landscape game box (ROC-HUD-1) responsively across phone and desktop: shrink-to-fit on a landscape window or a narrow non-touch desktop window; on a portrait **touch** device, render rotated 90° to fill the screen instead of shrinking, with an on-screen prompt to turn the device sideways.
 - **ROC-NFR-5** The system shall load to a playable title screen within a few seconds on typical broadband.
 
 ### 4.1 Testability (headless, no screenshots)
