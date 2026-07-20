@@ -36,7 +36,6 @@ import { hyperCountdown, BOSS_FADE_SEC } from '../sim/systems/levelstate.js';
 import { stationButtons, buttonAt, drawStation, type StationAction } from '../render/screens/station.js';
 import { PATTERNS } from '../sim/systems/paths.js';
 import { isDesignPhase, anchorParams } from '../sim/systems/designMode.js';
-import { DEFAULT_FIELD_BOUNDS } from '../input/domInput.js';
 import type { WaveDef } from '../sim/systems/waves.js';
 import {
   actionButtons,
@@ -552,13 +551,14 @@ function handleDesignTap(px: number, py: number, w: number): void {
   }
 
   // Otherwise: a tap on the field itself, only meaningful while placing a wave/obstacle's
-  // location — full (x, z) point, per wave-designer-spec.md.
+  // location — full (x, z) point, per wave-designer-spec.md. Uses the same renderer-transform
+  // inversion as DomInput.toField (uniform box.h/2 scale), so a placed wave/obstacle lands
+  // exactly where the tap was and matches where its ghost trail then draws.
   if (designUiMode === 'placing' && designAdd) {
-    const b = DEFAULT_FIELD_BOUNDS;
-    const u = px / w;
-    const v = py / (renderer.getViewport().box.h);
-    const x = b.minX + u * (b.maxX - b.minX);
-    const z = b.maxY - v * (b.maxY - b.minY);
+    const { box } = renderer.getViewport();
+    const scale = box.h / 2;
+    const x = (px - box.w / 2) / scale;
+    const z = (box.h / 2 - py) / scale;
     if (designAdd.kind === 'wave' && designAdd.step === 'location') {
       designAdd = { ...designAdd, x, z, step: 'pattern' };
     } else if (designAdd.kind === 'giant') {

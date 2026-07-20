@@ -19,8 +19,17 @@ export interface MovementConfig {
   thrustEpsilon: number; // minimum +z velocity to count as thrusting up [ROC-MOV-4]
 }
 
+// The play field's horizontal half-extent, in world units. Matches the fixed 4:3 landscape game
+// box's visible horizontal range exactly: the renderer draws with a uniform scale of box.h/2 px
+// per world unit, so the box's half-width (box.w/2 px) spans box.w/box.h = 4/3 world units on
+// every device. Setting the player's bound to this lets the ship dodge across the full landscape
+// width (edge-to-edge), rather than the ±1 that only filled the old portrait width. The vertical
+// stays ±1.6. [ROC-HUD-1 landscape, ROC-MOV-2] (Literal, not imported from render/viewport's
+// GAME_ASPECT, since sim/ must not depend on render/ — the boundary rule.)
+const FIELD_HALF_WIDTH = 4 / 3;
+
 export const DEFAULT_MOVEMENT: MovementConfig = {
-  bounds: { minX: -1, maxX: 1, minZ: -1.6, maxZ: 1.6 },
+  bounds: { minX: -FIELD_HALF_WIDTH, maxX: FIELD_HALF_WIDTH, minZ: -1.6, maxZ: 1.6 },
   shipRadius: 0.2,
   maxSpeed: 4,
   responsiveness: 0.2,

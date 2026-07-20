@@ -9,9 +9,11 @@ import { computeViewport, isTouchCapable, physicalToLogical } from '../render/vi
 
 const EDGE_ACTIONS: ReadonlySet<Action> = new Set(['fire', 'ecm', 'bomb', 'confirm', 'pause']);
 
-// The flight-control field's default extent. Exported so design mode (main.ts) can map a tapped
-// point through the exact same bounds a live drag would use. [wave-designer-spec.md]
-export const DEFAULT_FIELD_BOUNDS: FieldBounds = { minX: -1, maxX: 1, minY: -1.6, maxY: 1.6 };
+// The flight-control field's default extent — the compose step clamps the pointer/virtual-cursor
+// target to this. minX/maxX = ±4/3 matches the 4:3 box's visible horizontal range (see
+// FIELD_HALF_WIDTH in movement.ts, kept in sync) so a drag can carry the ship edge-to-edge across
+// the landscape width; minY/maxY (world z) stay ±1.6. [ROC-HUD-1 landscape]
+export const DEFAULT_FIELD_BOUNDS: FieldBounds = { minX: -4 / 3, maxX: 4 / 3, minY: -1.6, maxY: 1.6 };
 
 export interface DomInputOptions {
   canvas: HTMLCanvasElement;
