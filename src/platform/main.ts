@@ -1333,6 +1333,24 @@ startGameLoop({
       });
     }
 
+    // Temporary diagnostic readout for a reported iPad touch/pen input discrepancy: the canvas
+    // size as measured by the renderer (clientWidth/clientHeight, used for the box the game is
+    // drawn against) versus by DomInput (getBoundingClientRect, used for the box input is read
+    // against) — if these ever disagree, that's the bug; if they match, the problem is elsewhere.
+    // Remove once the discrepancy is understood. [dev cheat]
+    if (cheatUnlocked && !dockActive()) {
+      const rect = canvas!.getBoundingClientRect();
+      const vp = renderer.getViewport();
+      const dpr = window.devicePixelRatio || 1;
+      const lines = [
+        `client ${Math.round(canvas!.clientWidth)}x${Math.round(canvas!.clientHeight)}  rect ${Math.round(rect.width)}x${Math.round(rect.height)}`,
+        `box ${Math.round(vp.box.w)}x${Math.round(vp.box.h)} @(${Math.round(vp.box.x)},${Math.round(vp.box.y)}) rot:${vp.rotated} dpr:${dpr.toFixed(2)}`,
+      ];
+      lines.forEach((line, i) => {
+        renderer.drawText(line, { x: 8, y: 20 + i * 14 }, { fill: 'rgba(255,215,107,0.9)', font: '11px monospace', align: 'left' });
+      });
+    }
+
     // Wave designer entry point: only meaningful in the four phases with authored content, but
     // stays visible (dimmed) elsewhere rather than popping in/out. [wave-designer-spec.md]
     if (cheatUnlocked && !dockActive()) {

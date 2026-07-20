@@ -52,9 +52,20 @@ export class DomInput {
   // Map client pixels to play-field coords, via the same 4:3 game box the renderer draws
   // against — not the raw canvas rect — so a drag tracks the ship 1:1 regardless of window/
   // device aspect. screen-up maps to +y (forward). [viewport-spec.md]
+  //
+  // Canvas size is measured via clientWidth/clientHeight — the exact same properties
+  // Renderer2D.refreshViewport() reads — rather than getBoundingClientRect()'s width/height.
+  // They're normally identical, but the whole point of computeViewport being a pure function of
+  // (canvasW, canvasH, touchCapable) is that both sides agree *by construction*; feeding them
+  // from two different DOM APIs quietly reopened the door to exactly the kind of mismatch this
+  // was meant to rule out. getBoundingClientRect() is still used for its left/top (the offset
+  // needed to turn a page-relative clientX/clientY into canvas-relative pixels), which clientWidth/
+  // clientHeight don't provide.
   private toField(clientX: number, clientY: number): Vec2 {
     const rect = this.canvas.getBoundingClientRect();
-    const viewport = computeViewport(rect.width, rect.height, isTouchCapable());
+    const canvasW = this.canvas.clientWidth || this.canvas.width;
+    const canvasH = this.canvas.clientHeight || this.canvas.height;
+    const viewport = computeViewport(canvasW, canvasH, isTouchCapable());
     const logical = physicalToLogical(viewport, clientX - rect.left, clientY - rect.top);
     const { box } = viewport;
     const u = saturateEdges((logical.x - box.x) / box.w, EDGE_SATURATION_FRAC);
