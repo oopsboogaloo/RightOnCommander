@@ -22,6 +22,8 @@ export interface ShipDef {
   colliderRz: number;
   price: number;
   scale?: number; // render + collision size multiplier (the FdL flies at 1.5x) [ROC-FDL-1]
+  unlock?: string; // off the ladder: sold only once this unlock is earned (the Thargoid) [ROC-SHIP-6]
+  drones?: { everySec: number; max: number }; // launches friendly Thargons that fight for you
 }
 
 export interface ShipsContent {
@@ -36,8 +38,9 @@ export function loadShips(raw: unknown): ShipsContent {
     throw new Error('ships content: expected { ladder: string[], ships: {} }');
   }
   for (const id of data.ladder) {
-    const s = data.ships[id];
-    if (!s) throw new Error(`ships content: ladder entry '${id}' has no ship def`);
+    if (!data.ships[id]) throw new Error(`ships content: ladder entry '${id}' has no ship def`);
+  }
+  for (const [id, s] of Object.entries(data.ships)) {
     for (const d of DIRECTIONS) {
       const n = s.hardpoints?.[d];
       if (typeof n !== 'number' || n < 0 || n > 4) throw new Error(`ship '${id}': ${d} hardpoints ${n} out of range 0..4`);
@@ -101,6 +104,8 @@ export function applyShip(world: World, ships: ShipsContent, shipId: string, fre
     p.hullMax = def.hull;
     p.colliderRx = def.colliderRx;
     p.colliderRz = def.colliderRz;
+    // The Thargoid ship's friendly Thargons ride the shared launcher (thargons.ts). [ROC-SHIP-6]
+    p.launch = def.drones ? { enemy: DRONE, everySec: def.drones.everySec, max: def.drones.max, timer: def.drones.everySec / 2 } : undefined;
     if (fresh) {
       p.shield = def.shield;
       p.hull = def.hull;
@@ -110,6 +115,13 @@ export function applyShip(world: World, ships: ShipsContent, shipId: string, fre
     }
   }
 }
+
+// Marker in a player launcher's `enemy` slot: what it launches is the player's own drones.
+export const DRONE = 'drone';
+
+// Ships sold outside the ladder once their unlock is earned (the Thargoid). [ROC-SHIP-6]
+export const unlockableShips = (ships: ShipsContent): string[] =>
+  Object.keys(ships.ships).filter((id) => ships.ships[id].unlock !== undefined);
 
 // The next hull up the ladder, or null if already at the top. [ROC-SHIP-1]
 export function nextShipId(ships: ShipsContent, current: string): string | null {

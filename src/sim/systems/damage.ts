@@ -4,7 +4,7 @@
 // player, enemy, boss, hazard — behaves identically. [tasks T3.2, design §8, ROC-DMG-2,3,6,6a,7]
 
 import type { Entity } from '../components.js';
-import type { World } from '../world.js';
+import { playerInert, type World } from '../world.js';
 import type { CollisionHit } from './collision.js';
 import { DEFAULT_MISSILES } from './missiles.js';
 import { portDamageMultiplier } from './dock.js';
@@ -133,7 +133,7 @@ export function damageSystem(
     // harmlessly — a wreck waiting to respawn can't take further hits or re-trigger death. [T6.4]
     const playerImmune =
       target.kind === 'player' &&
-      (world.mode === 'GAME_OVER' || world.player.invulnTtl > 0 || !!world.player.respawnPending);
+      (playerInert(world) || world.player.invulnTtl > 0);
     // A direct hit on a docking port (the hermit's weak spot) deals triple damage; the shot's
     // path from its impact point decides "direct". [ROC-HERM-8]
     const mult = portDamageMultiplier(target, proj.pos.x, proj.pos.z, proj.vel.x, proj.vel.z);

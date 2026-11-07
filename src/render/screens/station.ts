@@ -7,12 +7,13 @@ import { modelMatrix } from '../project.js';
 import { vec3 } from '../../sim/math/vec3.js';
 import type { Mesh } from '../../interfaces.js';
 import type { World } from '../../sim/world.js';
-import { nextShipId, equippedCount, energyBombCap, DIRECTIONS, type LaserType } from '../../sim/systems/ships.js';
+import { nextShipId, unlockableShips, equippedCount, energyBombCap, DIRECTIONS, type LaserType } from '../../sim/systems/ships.js';
 import type { StationContext } from '../../sim/systems/station.js';
 
 export type StationAction =
   | 'sell'
   | 'buyShip'
+  | 'buyThargoid'
   | 'laserType'
   | 'fitFront'
   | 'fitRear'
@@ -53,6 +54,18 @@ export function stationButtons(world: World, ctx: StationContext, w: number, h: 
     next
       ? { label: `Buy ${ships.ships[next].name}  ${ships.ships[next].price}cr`, enabled: affordable(world, ships.ships[next].price), action: 'buyShip' }
       : { label: 'Top ship owned', enabled: false, action: 'buyShip' },
+    // The Thargoid, once completing the game has unlocked it. [ROC-SHIP-6, ROC-PROG-2]
+    ...unlockableShips(ships)
+      .filter((id) => ctx.unlocks?.[ships.ships[id].unlock!])
+      .map((id) => {
+        const def = ships.ships[id];
+        const flying = world.player.shipClass === id;
+        return {
+          label: flying ? `Flying the ${def.name}` : `Buy ${def.name} ship  ${def.price}cr`,
+          enabled: !flying && affordable(world, def.price),
+          action: 'buyThargoid' as StationAction,
+        };
+      }),
     // Pick a laser type, then fit it to any free direction (so side/rear lasers are buyable). [ROC-STN-4]
     { label: `Laser type: ${cap(selected)}  (${laserPrice}cr)`, enabled: true, action: 'laserType' },
     ...DIRECTIONS.map((dir) => {

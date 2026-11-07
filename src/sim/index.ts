@@ -227,7 +227,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     bossSystem(world, rng, SIM_DT, waveCtx); // hermit spin/escorts + FdL strafe track [ROC-HERM-*, ROC-FDL-*]
     thargonSystem(world, rng, SIM_DT, waveCtx); // Thargoid launches + Thargon chase/inert [ROC-ENM-6]
     const activeLevel = currentLevel();
-    if (activeLevel) levelStateSystem(world, SIM_DT, activeLevel, waveCtx);
+    if (activeLevel) levelStateSystem(world, SIM_DT, activeLevel, waveCtx, world.levelIndex === levels.length - 1);
     const hits = collisionSystem(world, {
       dt: SIM_DT,
       cellSize: COLLISION_CELL,

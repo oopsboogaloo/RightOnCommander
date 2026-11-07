@@ -1,10 +1,12 @@
 # Right on Commander — Requirements Specification
 
-**Version:** 1.14 (draft — all design decisions resolved)
+**Version:** 1.15 (draft — all design decisions resolved)
 **Author:** Chloe
 **Notation:** EARS (Easy Approach to Requirements Syntax)
 **Status:** Spec under construction — review
 
+> **Changelog 1.14 → 1.15:** **Completing the game** (killing Level 4's mothership) now rates the commander **Elite** whatever their tally, shows a congratulations screen, pays a **completion bonus** and goes to the high-score table (ROC-PROG-1 revised). It also **unlocks the Thargoid ship directly** — no longer gated behind Elite mode (ROC-PROG-2 revised; Elite mode is deferred). The **Thargoid ship** is specified: Asp-like with 50% more shield, launching friendly Thargons that attack enemies (ROC-SHIP-6). The mothership's hull is doubled.
+>
 > **Changelog 1.13 → 1.14:** **ECM is no longer sold at the station** (ROC-STN-5 revised). **Rank-ups pay a credit bonus** (ROC-RTG-3 extended), and the rating ladder's thresholds are set from the campaign itself (ROC-RTG-2): Elite at 60% of every point the levels can award. Added the **title screen** (title, author, copyright, Elite credit, high-score table seeded with Elite characters, local-storage notice) and the **game over → high-score name entry → title** flow (ROC-TTL-1,2,4, ROC-LBD-1a).
 >
 > **Changelog 1.12 → 1.13:** **Reversed the play/render area from portrait to a fixed 4:3 landscape "game box"** (ROC-HUD-1, ROC-NFR-4 both revised) — centered and letterboxed/pillarboxed to fit the window, with a thin white border marking its edge, and input (mouse/touch) mapped to the same box so a drag or tap beyond its edge clamps to the nearest field position rather than drifting out of sync with what's drawn. On a portrait **touch** device the game renders rotated 90° to fill the screen instead of shrinking, with a persistent on-screen prompt to turn the device sideways; a narrow **desktop** window (no touch) just shrinks the box to fit, no rotation. See design.md v1.0 §7 for the render/input architecture.
@@ -99,7 +101,7 @@ The player launches from a **Coriolis station**, flies up a scrolling field acro
 - **ROC-SHIP-3** The system shall treat **shield hp as the number of concentric shield rings** (§3.3) for the player ship.
 - **ROC-SHIP-4** The system shall cap the player's equipped lasers at the ship's hardpoint count, with **at most one laser per firing direction** (front, rear, left, right) — see §3.4.
 - **ROC-SHIP-5** When the player buys a new ship, the system shall **carry equipped weapons forward** and re-fit them up to the new hull's hardpoint count (since each step up the ladder adds a hardpoint, no laser is lost).
-- **ROC-SHIP-6** Where the player has unlocked it (ROC-PROG-2), the system shall offer the **Thargoid ship as a playable bonus craft** beyond the four-ship ladder.
+- **ROC-SHIP-6** Where the player has unlocked it (ROC-PROG-2), the system shall offer the **Thargoid ship as a playable bonus craft** beyond the four-ship ladder. *(v1.15)* It shall match the Asp Mk II's hardpoints with **50% more shield** (4.5 rings, rounded up to 5), and shall **launch friendly Thargons** (up to 2 at a time) that fly to the nearest enemy and shoot it; they cannot be destroyed and expire after a short time.
 
 ### 3.3 Shields, hull & damage model
 
@@ -322,8 +324,8 @@ Shown on docking (§3.9), between levels.
 - **ROC-LIFE-2c** *(v1.9, new)* The ship shall **blink (toggle visibility)** only during the brief invulnerability window granted right after a respawn (ROC-LIFE-2b) — never during the shorter contact/ramming i-frame window (§3.16 contact grace) that follows an ordinary hit. A hit's feedback is the flash (ROC-DMG-2a), not a blink.
 - **ROC-LIFE-4** The system shall let the player **buy additional lives**, up to a **maximum of 5** held at once.
 - **ROC-LIFE-5** If lives reach **zero**, then the system shall end the run (game over) and proceed to score submission (§3.14).
-- **ROC-PROG-1** When the player **completes all four levels**, the system shall **unlock Elite mode** — a replay of the game at greater difficulty.
-- **ROC-PROG-2** When the player **completes Elite mode**, the system shall **unlock the Thargoid ship as playable** (a bonus craft beyond the standard ladder, §3.2).
+- **ROC-PROG-1** *(v1.15 — revised)* When the player **completes all four levels** (destroys the Level 4 mothership), the system shall rate the commander **Elite** regardless of their tally, show a **congratulations** message (including "Thargoid ship now purchasable"), add a **completion bonus** (25,000) to the score, and then go to the **high-score table** (name entry if the score qualifies). *(Elite mode — a harder replay — is deferred.)*
+- **ROC-PROG-2** *(v1.15 — revised)* When the player **completes the game** (ROC-PROG-1), the system shall **unlock the Thargoid ship as playable** (a bonus craft beyond the standard ladder, §3.2), purchasable at the station on later runs.
 - **ROC-PROG-3** The system shall persist these unlocks locally (§3.14).
 
 ### 3.17 Lore & flavour (Elite homage)

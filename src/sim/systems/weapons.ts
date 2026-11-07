@@ -109,7 +109,7 @@ function muzzleDist(ship: Entity, mount: 'front' | 'rear' | 'left' | 'right', cf
   return reach != null ? reach * (ship.scale ?? 1) + cfg.muzzleGap : cfg.muzzleOffset;
 }
 
-function spawnBolt(world: World, origin: Vec3, dir: Vec3, speed: number, ttl: number, damage: number, mil: boolean): void {
+export function spawnBolt(world: World, origin: Vec3, dir: Vec3, speed: number, ttl: number, damage: number, mil: boolean): void {
   const e = acquireProjectile(world);
   e.kind = 'projectile';
   e.team = 'player';

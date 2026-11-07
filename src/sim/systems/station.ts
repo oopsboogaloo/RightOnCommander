@@ -27,6 +27,7 @@ export interface PricesContent {
 export interface StationContext {
   ships: ShipsContent;
   prices: PricesContent;
+  unlocks?: Record<string, boolean>; // earned unlocks (e.g. thargoidShip after completing the game)
 }
 
 export const MAX_LIVES = 5; // [ROC-LIFE-5]
@@ -70,6 +71,20 @@ export function buyShip(world: World, ctx: StationContext): StationResult {
   applyShip(world, ctx.ships, next, true);
   world.events.push({ type: 'shipBought', shipId: next });
   return { ok: true, shipId: next };
+}
+
+// Buy a ship that sits outside the ladder (the Thargoid), once its unlock has been earned. Lasers
+// carry over as far as its hardpoints allow. [ROC-SHIP-6, ROC-PROG-2]
+export function buyUnlockedShip(world: World, ctx: StationContext, shipId: string): StationResult {
+  const def = ctx.ships.ships[shipId];
+  if (!def || def.unlock === undefined) return fail('not an unlockable ship');
+  if (!ctx.unlocks?.[def.unlock]) return fail('not unlocked yet');
+  if (world.player.shipClass === shipId) return fail('already flying it');
+  const err = charge(world, def.price);
+  if (err) return err;
+  applyShip(world, ctx.ships, shipId, true);
+  world.events.push({ type: 'shipBought', shipId });
+  return { ok: true, shipId };
 }
 
 // Fit a laser of `type` to `dir`. A free hardpoint takes another laser (they all fire together);

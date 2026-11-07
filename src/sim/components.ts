@@ -14,7 +14,8 @@ export type EntityKind =
   | 'cargo'
   | 'particle'
   | 'fragment'
-  | 'station';
+  | 'station'
+  | 'drone'; // a friendly Thargon launched by the player's Thargoid ship; never collides [ROC-SHIP-6]
 
 export type PickupType =
   | 'fuel'
