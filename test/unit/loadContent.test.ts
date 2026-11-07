@@ -5,6 +5,7 @@ import enemiesJson from '../../src/content/enemies.json';
 import level1Json from '../../src/content/level1.json';
 import level2Json from '../../src/content/level2.json';
 import level3Json from '../../src/content/level3.json';
+import level4Json from '../../src/content/level4.json';
 import { loadContent } from '../../src/sim/content/loadContent.js';
 
 describe('loadContent', () => {
@@ -62,9 +63,11 @@ describe('loadContent', () => {
     expect(levels[0].giantAsteroids?.map((g) => g.id)).toEqual(['g1', 'rocky', 'g3']);
   });
 
-  it('loads the full campaign (Levels 1-3) as an ordered array', () => {
-    const { levels } = loadContent({ enemies: enemiesJson, levels: [level1Json, level2Json, level3Json] });
-    expect(levels).toHaveLength(3);
+  it('loads the full campaign (Levels 1-4) as an ordered array', () => {
+    const { levels } = loadContent({ enemies: enemiesJson, levels: [level1Json, level2Json, level3Json, level4Json] });
+    expect(levels).toHaveLength(4);
+    expect(levels[3].name).toBe('Zaonce');
+    expect(levels[3].midBoss).toBeUndefined(); // [ROC-L4-4]
     expect(levels[0].name).toBe('Lave');
     expect(levels[1].name).toBe('Diso'); // [ROC-LORE-2]
     expect(levels[1].midBoss).toBe('python'); // [ROC-L2-3]
@@ -81,6 +84,19 @@ describe('loadContent', () => {
     const cougarWaveL3 = levels[2].wavesA.find((w) => w.enemy === 'cougar');
     expect(cougarWaveL3?.clearField).toEqual({ beforeMs: 3000, afterMs: 6000 });
     expect(cougarWaveL3?.fire?.rate).toBeCloseTo(0.8, 6);
+  });
+
+  it('rejects an enemy that launches an unknown enemy', () => {
+    expect(() =>
+      loadContent({ enemies: { mum: { hull: 1, bounty: 1, launches: { enemy: 'nope', everySec: 1, max: 1 } } } }),
+    ).toThrow(/launches unknown enemy/);
+  });
+
+  it('parses Thargoid launchers and fanned fire', () => {
+    const { enemies, levels } = loadContent({ enemies: enemiesJson, levels: [level4Json] });
+    expect(enemies.thargoid_carrier.launches).toEqual({ enemy: 'thargon', everySec: 2.5, max: 2 }); // [ROC-ENM-6]
+    expect(enemies.thargoid_mothership.behavior).toBe('mothership'); // [ROC-L4-2]
+    expect(levels[0].wavesA.some((w) => (w.fire?.spread ?? 1) > 1)).toBe(true);
   });
 
   it('rejects a malformed asteroidWaves', () => {

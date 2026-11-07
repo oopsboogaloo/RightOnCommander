@@ -55,6 +55,8 @@ export interface WaveSpawnState {
   spawnedIndex: number; // how many have spawned (for per-member variation)
   fireRate: number; // enemy shots/sec (0 = doesn't fire) [ROC-ENM-11]
   fireAimed: boolean; // aim at the player vs fire straight down
+  fireSpread?: number; // shots per volley, fanned across fireArc (default 1) [ROC-ENM-11]
+  fireArc?: number; // total fan width in radians
   sinceSpawnSec: number; // seconds since this wave's most recent member spawn (Infinity if none
   // have spawned yet) — drives a solo encounter's post-appearance clear window [ROC-CLK-5,6]
 }

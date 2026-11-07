@@ -150,11 +150,146 @@ class BackgroundAsteroids {
   }
 }
 
+// One broken hull drifting in the Level 4 backdrop: a random subset of a real ship's faces (so
+// it reads as a torn-open section, not a whole ship) plus a few snapped spars, tumbling slowly.
+interface WreckPiece {
+  x: number; // normalised [0,1) across the box
+  y: number;
+  depth: number; // parallax layer (0.55..1], nearer = faster/bigger/lighter
+  radius: number; // as a fraction of min(w,h)
+  yaw: number;
+  pitch: number;
+  yawRate: number; // slow tumble, rad/s
+  pitchRate: number;
+  faces: Vec3[][]; // kept face loops, in unit-radius local space
+  spars: [Vec3, Vec3][]; // loose edges sticking out of the break
+}
+
+// Level 4's backdrop: the broken remains of Galactic Navy vessels scattered through a Thargoid
+// warzone. Render-only (Math.random, wall-clock), like the stars and the asteroid belt; drawn
+// dark so it never competes with live ships. [ROC-L4-3]
+class BackgroundWreckage {
+  private pieces: WreckPiece[] = [];
+  private revealed = false;
+
+  // Hulls to break up; the shell supplies them (the renderer holds no content of its own).
+  build(meshes: Mesh[], count = 16): void {
+    this.pieces = [];
+    if (meshes.length === 0) return;
+    for (let i = 0; i < count; i++) {
+      const m = meshes[Math.floor(Math.random() * meshes.length)];
+      const r = Math.max(...m.vertices.map((v) => Math.hypot(v.x, v.y, v.z))) || 1;
+      const unit = (v: Vec3): Vec3 => ({ x: v.x / r, y: v.y / r, z: v.z / r });
+      // Keep a contiguous-ish chunk: faces on one side of a random cut plane, plus a few strays.
+      const n = { x: Math.random() - 0.5, y: Math.random() - 0.5, z: Math.random() - 0.5 };
+      const cut = (Math.random() - 0.5) * 0.4 * r;
+      const faces = m.faces
+        .filter((f) => {
+          const c = f.loop.reduce((s, vi) => s + m.vertices[vi].x * n.x + m.vertices[vi].y * n.y + m.vertices[vi].z * n.z, 0) / f.loop.length;
+          return c > cut || Math.random() < 0.12;
+        })
+        .map((f) => f.loop.map((vi) => unit(m.vertices[vi])));
+      const spars: [Vec3, Vec3][] = [];
+      for (let k = 0; k < 3; k++) {
+        const [a, b] = m.edges[Math.floor(Math.random() * m.edges.length)];
+        const pa = unit(m.vertices[a]);
+        const pb = unit(m.vertices[b]);
+        const stretch = 1.3 + Math.random() * 0.6; // snapped beams jut out past the hull
+        spars.push([pa, { x: pa.x + (pb.x - pa.x) * stretch, y: pa.y + (pb.y - pa.y) * stretch, z: pa.z + (pb.z - pa.z) * stretch }]);
+      }
+      this.pieces.push({
+        x: Math.random(),
+        y: Math.random() * 1.2 - 0.1,
+        depth: 0.55 + Math.random() * 0.45,
+        radius: 0.05 + Math.random() * 0.11,
+        yaw: Math.random() * Math.PI * 2,
+        pitch: Math.random() * Math.PI * 2,
+        yawRate: (Math.random() - 0.5) * 0.2,
+        pitchRate: (Math.random() - 0.5) * 0.15,
+        faces,
+        spars,
+      });
+    }
+  }
+
+  get isRevealed(): boolean {
+    return this.revealed;
+  }
+
+  // As the ship drops out of hyperspace it arrives among the wreckage: about half the pieces are
+  // already in view, the rest drift in from above. Idempotent.
+  reveal(): void {
+    if (this.revealed) return;
+    this.revealed = true;
+    this.pieces.forEach((p, i) => {
+      p.x = Math.random();
+      p.y = i % 2 === 0 ? Math.random() * 0.9 : -0.15 - Math.random() * 1.2;
+    });
+  }
+
+  // Drifts with the sim `scroll` (halts for the boss), the hyperspace surge capped.
+  update(dt: number, scroll = 1): void {
+    const sc = Math.min(scroll, 3);
+    for (const p of this.pieces) {
+      p.y += dt * 0.06 * p.depth * sc;
+      p.yaw += dt * p.yawRate;
+      p.pitch += dt * p.pitchRate;
+      while (p.y >= 1.2) {
+        p.y -= 1.4;
+        p.x = Math.random();
+      }
+    }
+  }
+
+  draw(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+    const unit = Math.min(w, h);
+    ctx.lineWidth = 1;
+    ctx.lineJoin = 'round';
+    // Nearer (lighter) pieces last, so they overlap the distant ones.
+    for (const p of [...this.pieces].sort((a, b) => a.depth - b.depth)) {
+      const cy = Math.cos(p.yaw), sy = Math.sin(p.yaw);
+      const cp = Math.cos(p.pitch), sp = Math.sin(p.pitch);
+      // Tumble (yaw about y, then pitch about x), then a top-down orthographic view: screen x =
+      // world x, screen y = -world z, depth = world y.
+      const xf = (v: Vec3): { x: number; y: number; d: number } => {
+        const x1 = v.x * cy + v.z * sy;
+        const z1 = -v.x * sy + v.z * cy;
+        const y2 = v.y * cp - z1 * sp;
+        const z2 = v.y * sp + z1 * cp;
+        return { x: p.x * w + x1 * p.radius * unit, y: p.y * h - z2 * p.radius * unit, d: y2 };
+      };
+      const shade = Math.round(36 + p.depth * 40); // dark grey; nearer a touch lighter
+      ctx.strokeStyle = `rgb(${shade},${shade},${shade})`;
+      ctx.fillStyle = '#000'; // opaque, so the hull occludes stars and the pieces behind it
+      const faces = p.faces
+        .map((loop) => loop.map(xf))
+        .sort((a, b) => a.reduce((s, q) => s + q.d, 0) / a.length - b.reduce((s, q) => s + q.d, 0) / b.length);
+      for (const loop of faces) {
+        ctx.beginPath();
+        loop.forEach((q, i) => (i === 0 ? ctx.moveTo(q.x, q.y) : ctx.lineTo(q.x, q.y)));
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+      for (const [a, b] of p.spars) {
+        const qa = xf(a);
+        const qb = xf(b);
+        ctx.beginPath();
+        ctx.moveTo(qa.x, qa.y);
+        ctx.lineTo(qb.x, qb.y);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
 export class Renderer2D implements Renderer {
   private ctx: CanvasRenderingContext2D;
   private starfield: Starfield;
   private bgAsteroids = new BackgroundAsteroids();
   showAsteroidBackdrop = false; // set by the shell for asteroid-belt levels
+  private bgWreckage = new BackgroundWreckage();
+  showWreckageBackdrop = false; // set by the shell for the Level 4 warzone [ROC-L4-3]
   camera: Camera;
 
   // Viewport mapping, refreshed each frame. cx/cy/scale are box-local (0,0 = box top-left) —
@@ -217,6 +352,20 @@ export class Renderer2D implements Renderer {
       this.bgAsteroids.update(1 / 60, scroll);
       this.bgAsteroids.draw(ctx, box.w, box.h);
     }
+    if (this.showWreckageBackdrop && this.bgWreckage.isRevealed) {
+      this.bgWreckage.update(1 / 60, scroll);
+      this.bgWreckage.draw(ctx, box.w, box.h);
+    }
+  }
+
+  // Hulls the Level 4 wreckage is broken from (the shell passes the Navy/trader meshes). [ROC-L4-3]
+  setWreckageMeshes(meshes: Mesh[]): void {
+    this.bgWreckage.build(meshes);
+  }
+
+  // As the ship drops out of hyperspace into the warzone, the wreckage drifts into view.
+  revealWreckage(): void {
+    this.bgWreckage.reveal();
   }
 
   // The shell calls this as the ship exits hyperspace, so the belt drifts into view. [ROC-L1-1]

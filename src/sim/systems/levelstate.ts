@@ -12,6 +12,8 @@
 //   LAUNCH -> HYPERSPACE -> [WITCHSPACE_COMBAT] -> INFO -> [ASTEROIDS] -> WAVES_A -> MID_BOSS
 //     -> MID_DOCKING -> MID_DOCK -> WAVES_B -> END_BOSS -> [VIPER_INTERCEPT] -> DOCKING -> DOCK
 //
+// A level with no midBoss (Level 4) goes WAVES_A -> END_BOSS directly. [ROC-L4-4]
+//
 // MID_DOCKING/MID_DOCK is a second, mid-level shop stop: a transporter trader (not the full
 // Coriolis) scrolls in the same way the end-of-level station does, and the shop opens — the same
 // full menu, ship purchases included. It's terminal exactly like DOCK: the shell must call the
@@ -21,7 +23,7 @@
 import { vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
 import { type World } from '../world.js';
-import { startWave, type WaveDef, type WaveContext } from './waves.js';
+import { startWave, launchState, type WaveDef, type WaveContext } from './waves.js';
 import { startAsteroidWaves, startGiantAsteroids, type AsteroidFieldDef, type GiantAsteroidDef, type GiantAsteroidPhase } from './asteroids.js';
 import { bossPlacement } from './boss.js';
 
@@ -52,7 +54,8 @@ export interface LevelDef {
   combatAsteroids?: AsteroidFieldDef[]; // a light trickle that drifts through the ship-wave groups
   giantAsteroids?: GiantAsteroidDef[]; // fixed, indestructible obstacles placed across the level [ROC-GIANT-1]
   wavesA: WaveDef[];
-  midBoss: string | string[]; // enemy name(s) spawned as a boss; multiple names fight together (e.g. a pair) [ROC-L3-3]
+  midBoss?: string | string[]; // enemy name(s) spawned as a boss; multiple names fight together (e.g. a
+  // pair) [ROC-L3-3]. Omitted on Level 4, whose waves run straight into the end boss [ROC-L4-4]
   wavesB: WaveDef[];
   endBoss: string;
   viper?: WaveDef; // contraband interception wave
@@ -211,6 +214,8 @@ function spawnBoss(world: World, name: string, ctx: WaveContext, slot = 0): void
     colliderRz: def.colliderRz,
     cargoDrops: def.cargoDrops,
     ecm: def.ecm, // boss ECM: player missiles detonate harmlessly [ROC-BECM-*]
+    missileImmune: def.missileImmune, // Thargoid hulls jam missile lock-on [ROC-ENM-6]
+    launch: launchState(def.launches), // the mothership's Thargons [ROC-L4-2]
     port: place.port,
     ai: place.ai,
   });
@@ -279,7 +284,7 @@ export function enterLevelState(world: World, state: LevelState, level: LevelDef
       // A pair (or more) of mid-bosses fight together, side by side; the fight only clears once
       // every one of them is dead — `bossCleared` already checks for *any* `boss`-kind entity, so
       // no change is needed there. [ROC-L3-3]
-      const midBosses = Array.isArray(level.midBoss) ? level.midBoss : [level.midBoss];
+      const midBosses = level.midBoss === undefined ? [] : Array.isArray(level.midBoss) ? level.midBoss : [level.midBoss];
       // No guaranteed laser drop — lasers are bought at the station (mid-level trader included)
       // now, not farmed off a boss kill. [ROC-PWR-6]
       midBosses.forEach((name, i) => spawnBoss(world, name, ctx, i));
@@ -309,12 +314,15 @@ export function enterLevelState(world: World, state: LevelState, level: LevelDef
       if (level.combatAsteroids) startAsteroidWaves(world, level.combatAsteroids);
       startPhaseGiants(world, level, 'wavesB');
       break;
-    case 'END_BOSS':
+    case 'END_BOSS': {
       // A strafe boss (the FdL) flies in from off-screen while the field keeps scrolling and halts
       // it itself once it reaches its track; other bosses halt the field immediately. [ROC-FDL-*, ROC-BOSS-1]
-      if (ctx.enemies[level.endBoss]?.behavior !== 'strafe') world.scroll = 0;
+      // The mothership likewise descends while the field scrolls and halts it on arrival. [ROC-L4-2]
+      const entering = ctx.enemies[level.endBoss]?.behavior;
+      if (entering !== 'strafe' && entering !== 'mothership') world.scroll = 0;
       spawnBoss(world, level.endBoss, ctx);
       break;
+    }
     case 'VIPER_INTERCEPT':
       if (level.viper) startWave(world, level.viper, ctx);
       break;
@@ -456,8 +464,12 @@ export function levelStateSystem(world: World, dt: number, level: LevelDef, ctx:
       if (asteroidFieldCleared(world)) enterLevelState(world, 'WAVES_A', level, ctx);
       break;
     case 'WAVES_A':
-      if (groupCleared(world))
-        enterLevelState(world, level.midAsteroids?.length ? 'ASTEROIDS_B' : 'MID_BOSS', level, ctx);
+      if (groupCleared(world)) {
+        // No mid-boss (Level 4): skip the mid-boss, the trader and part 2, straight to the end
+        // boss. [ROC-L4-4]
+        if (level.midBoss === undefined) enterLevelState(world, 'END_BOSS', level, ctx);
+        else enterLevelState(world, level.midAsteroids?.length ? 'ASTEROIDS_B' : 'MID_BOSS', level, ctx);
+      }
       break;
     case 'ASTEROIDS_B':
       if (asteroidFieldCleared(world)) enterLevelState(world, 'MID_BOSS', level, ctx);

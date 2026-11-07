@@ -88,8 +88,18 @@ export interface Entity {
   indestructible?: boolean; // shrugs off all damage; a solid navigational obstacle, not a target [ROC-GIANT-1]
   cloak?: CloakState; // periodic cloak/decloak cycle (the rare Cougar); rendering-only — still
   // damageable and targetable by lasers throughout [ROC-CLK-*]
+  launch?: LaunchState; // launches pursuing child craft (a Thargoid's Thargons) [ROC-ENM-6, ROC-L4-1a]
   debugLabel?: string; // cheat-mode identifier drawn above the entity (e.g. a giant asteroid's
   // authored id), so it can be referred to precisely while playtesting [dev cheat]
+}
+
+// A launcher's runtime state: every `everySec` it launches one `enemy` while fewer than `max` of
+// its own children are alive. [ROC-ENM-6]
+export interface LaunchState {
+  enemy: string;
+  everySec: number;
+  max: number;
+  timer: number; // seconds until the next launch
 }
 
 // Events emitted by the sim each step and drained by the shell (routed to Renderer/AudioOut).

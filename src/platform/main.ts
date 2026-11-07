@@ -55,6 +55,7 @@ import enemies from '../content/enemies.json';
 import level1 from '../content/level1.json';
 import level2 from '../content/level2.json';
 import level3 from '../content/level3.json';
+import level4 from '../content/level4.json';
 import shipsJson from '../content/ships.json';
 import economyJson from '../content/economy.json';
 import cobra_mk3 from '../content/meshes/cobra_mk3.json';
@@ -70,6 +71,7 @@ import python from '../content/meshes/python.json';
 import constrictor from '../content/meshes/constrictor.json';
 import anaconda from '../content/meshes/anaconda.json';
 import thargoid from '../content/meshes/thargoid.json';
+import thargoid_saucer from '../content/meshes/thargoid_saucer.json';
 import boa from '../content/meshes/boa.json';
 import cobra_mk1 from '../content/meshes/cobra_mk1.json';
 import moray from '../content/meshes/moray.json';
@@ -124,6 +126,7 @@ const MESHES: Record<string, Mesh> = {
   constrictor,
   anaconda,
   thargoid,
+  thargoid_saucer,
   boa,
   cobra_mk1,
   moray,
@@ -152,11 +155,13 @@ for (const [id, m] of Object.entries(MESHES)) {
   HULL_RADII[id] = hullRadius(meshSilhouette(m), SHIP_SCALE);
 }
 
-// The campaign, in play order. Level 4 joins this array once its content lands (task T7.3).
-const LEVELS = [level1, level2, level3];
+// The campaign, in play order. [ROC-LVL-1, T7.3]
+const LEVELS = [level1, level2, level3, level4];
 const currentLevel = (): (typeof LEVELS)[number] => LEVELS[sim.state.levelIndex] ?? level1;
 const sim = createSim({ seed: 1, content: { enemies, levels: LEVELS, meshes: MESHES } });
 const renderer = new Renderer2D(ctx);
+// Level 4's backdrop wreckage is broken from Galactic Navy and trader hulls. [ROC-L4-3]
+renderer.setWreckageMeshes(['viper', 'python', 'anaconda', 'cobra_mk3', 'boa', 'transporter', 'asp_mk2', 'constrictor'].map((id) => MESHES[id]).filter(Boolean));
 const input = new DomInput({ canvas, storage: createLocalStorage() });
 
 // Station shop wiring: the dock screen shows when the level reaches DOCK; taps route to intents.
@@ -1081,10 +1086,14 @@ startGameLoop({
     // not just the first. [ROC-L1-1]
     const lvl = currentLevel() as { backdrop?: string };
     renderer.showAsteroidBackdrop = lvl.backdrop === 'asteroids';
+    renderer.showWreckageBackdrop = lvl.backdrop === 'wreckage'; // Level 4's Navy wreckage [ROC-L4-3]
     // Reveal the asteroid belt as we drop out of hyperspace, so it drifts into view — arriving
     // at the field. Idempotent. [ROC-L1-1]
     const ls = sim.state.levelState;
-    if (ls !== 'LAUNCH' && ls !== 'HYPERSPACE') renderer.revealAsteroidBelt();
+    if (ls !== 'LAUNCH' && ls !== 'HYPERSPACE') {
+      renderer.revealAsteroidBelt();
+      renderer.revealWreckage();
+    }
     if (cheatUnlocked) {
       if (ls !== cheatClockState) {
         cheatClockState = ls;
