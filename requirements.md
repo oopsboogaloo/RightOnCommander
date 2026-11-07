@@ -1,10 +1,12 @@
 # Right on Commander — Requirements Specification
 
-**Version:** 1.13 (draft — all design decisions resolved)
+**Version:** 1.14 (draft — all design decisions resolved)
 **Author:** Chloe
 **Notation:** EARS (Easy Approach to Requirements Syntax)
 **Status:** Spec under construction — review
 
+> **Changelog 1.13 → 1.14:** **ECM is no longer sold at the station** (ROC-STN-5 revised). **Rank-ups pay a credit bonus** (ROC-RTG-3 extended), and the rating ladder's thresholds are set from the campaign itself (ROC-RTG-2): Elite at 60% of every point the levels can award. Added the **title screen** (title, author, copyright, Elite credit, high-score table seeded with Elite characters, local-storage notice) and the **game over → high-score name entry → title** flow (ROC-TTL-1,2,4, ROC-LBD-1a).
+>
 > **Changelog 1.12 → 1.13:** **Reversed the play/render area from portrait to a fixed 4:3 landscape "game box"** (ROC-HUD-1, ROC-NFR-4 both revised) — centered and letterboxed/pillarboxed to fit the window, with a thin white border marking its edge, and input (mouse/touch) mapped to the same box so a drag or tap beyond its edge clamps to the nearest field position rather than drifting out of sync with what's drawn. On a portrait **touch** device the game renders rotated 90° to fill the screen instead of shrinking, with a persistent on-screen prompt to turn the device sideways; a narrow **desktop** window (no touch) just shrinks the box to fit, no rotation. See design.md v1.0 §7 for the render/input architecture.
 >
 > **Changelog 1.11 → 1.12:** **Removed Level 3's star backdrop and star-flare hazard** (ROC-L3-1, ROC-L3-2, both dropped): at the game's actual portrait aspect ratio the "large white star" circle was big enough to cover the entire viewport rather than read as a curved limb off the right edge, whiting out the screen — including through the witchspace interlude and hyperspace starfield that precede the level. Level 3 now plays with no star backdrop and no environmental flare damage; its mid- and end-boss requirements (ROC-L3-3,4) are unaffected.
@@ -286,8 +288,8 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
 ### 3.14 Scoring, rating & persistence
 
 - **ROC-RTG-1** The system shall maintain a **cumulative kill tally, weighted by ship type** (tougher ships — up to the Thargoid — count for more), held **separately from the credit score**.
-- **ROC-RTG-2** The system shall drive the **Harmless → Mostly Harmless → … → Elite** rating ladder from the **kill tally**, each threshold materially higher than the last.
-- **ROC-RTG-3** When a kill pushes the tally across a threshold, the system shall **award the rating increase and show a rank-up notice**; on reaching **Elite**, it shall display **"RIGHT ON, COMMANDER!"**.
+- **ROC-RTG-2** The system shall drive the **Harmless → Mostly Harmless → … → Elite** rating ladder from the **kill tally**, each threshold materially higher than the last. *(v1.14)* A kill scores 1 point plus 1 per 50cr of its bounty, so tougher ships, bosses and Thargoids count for more. **Elite is set at 60% of every point the campaign can award** (all wave members, the witchspace wave and every boss), so a commander who destroys about 60% of everything is Elite by the end of the last level; the other ranks sit at fixed shares of Elite — Mostly Harmless on the first kill, then Poor 2%, Average 5%, Above Average 10%, Competent 18%, Dangerous 30%, Deadly 55%. (With the current four levels: 1, 33, 82, 163, 294, 490, 898, 1633 points.)
+- **ROC-RTG-3** When a kill pushes the tally across a threshold, the system shall **award the rating increase and show a rank-up notice**; on reaching **Elite**, it shall display **"RIGHT ON, COMMANDER!"**. *(v1.14)* Each rank-up shall also pay a **credit bonus** (to wallet and score) that grows with the rank: 100, 200, 300, 500, 1,000, 2,500, 5,000 and 10,000cr for Mostly Harmless through Elite; the notice flashes the new rank and its bonus.
 - **ROC-LBD-1** The system shall persist high score, best rating, current ship class, **unlocks (Elite mode, Thargoid ship)** and settings locally.
 - **ROC-LBD-1a** The system shall maintain and display a **high score table** (local at minimum; online where the leaderboard is enabled).
 - **ROC-LBD-2** Where the online leaderboard is enabled, when a run ends, the system shall offer score submission with a commander name, **defaulting to "Jameson"** (the canonical starting commander).
@@ -303,7 +305,7 @@ Shown on docking (§3.9), between levels.
 - **ROC-STN-2** The system shall provide a **Sell Cargo** action that converts all collected cargo (and banked surplus pickups) to credits and updates the wallet.
 - **ROC-STN-3** The system shall provide an **Upgrade Ship** action that lets the player **buy the next ship** in the ladder (§3.2) if they can afford it, carrying weapons forward per ROC-SHIP-5; if unaffordable, the action shall be disabled and indicate the shortfall.
 - **ROC-STN-4** The system shall provide **laser-fitting controls** that let the player **add a laser of any type (Pulse / Beam / Military) to any available firing direction (front / rear / left / right)**, up to the ship's hardpoint count and at most one per direction (§3.4), charging the per-type price (§3.8).
-- **ROC-STN-5** The system shall let the player buy **ECM** and **Energy Bomb** here at their listed prices (§3.8), the latter **capped at one carried (two in the Fer-de-Lance, ROC-DEF-2a)**.
+- **ROC-STN-5** *(v1.14 — ECM no longer sold)* The system shall let the player buy an **Energy Bomb** here at its listed price (§3.8), **capped at one carried (two in the Fer-de-Lance, ROC-DEF-2a)**. ECM is not offered for sale.
 - **ROC-STN-5a** *(v1.8 — Escape Pod removed)* The system shall let the player buy an **Energy Bank** (a one-time purchase that passively regenerates one shield ring every 15 seconds, §3.7) and **additional lives** here (lives capped at 5, §3.16), at their tuned prices.
 - **ROC-STN-5b** The system shall let the player **upgrade the missile level** here (still timed, per ROC-ECO-9 / §3.5).
 - **ROC-STN-6** The system shall provide a **Launch** action that, **after an "Are you sure?" confirmation**, undocks the ship and begins the next level's launch sequence (§3.9).

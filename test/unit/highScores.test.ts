@@ -1,0 +1,86 @@
+// High-score table: seeded with Elite characters, persisted through the Storage interface,
+// with qualification + insertion rules; and the name-entry keyboard's key handling.
+// [ROC-LBD-1,1a]
+
+import { describe, it, expect } from 'vitest';
+import type { Storage } from '../../src/interfaces.js';
+import {
+  DEFAULT_HIGH_SCORES,
+  TABLE_SIZE,
+  MAX_NAME,
+  HIGH_SCORES_KEY,
+  loadHighScores,
+  saveHighScores,
+  qualifies,
+  insertScore,
+} from '../../src/platform/highScores.js';
+import { applyEntryKey, entryKeys, entryKeyAt } from '../../src/render/screens/title.js';
+
+function memStorage(init: Record<string, unknown> = {}): Storage & { data: Record<string, unknown> } {
+  const data = { ...init };
+  return { data, load: (k) => (k in data ? data[k] : null), save: (k, v) => void (data[k] = structuredClone(v)) };
+}
+
+describe('high scores', () => {
+  it('starts with the Elite characters, highest first', () => {
+    const t = loadHighScores(memStorage());
+    expect(t.map((e) => e.name)).toEqual(DEFAULT_HIGH_SCORES.map((e) => e.name));
+    expect(t.map((e) => e.name)).toContain('Jameson');
+    for (let i = 1; i < t.length; i++) expect(t[i].score).toBeLessThanOrEqual(t[i - 1].score);
+  });
+
+  it('round-trips through storage, and ignores junk', () => {
+    const s = memStorage();
+    const { table } = insertScore(loadHighScores(s), { name: 'CHLOE', score: 50000, rank: 'Deadly' });
+    saveHighScores(s, table);
+    expect(loadHighScores(s)).toEqual(table);
+    expect(loadHighScores(memStorage({ [HIGH_SCORES_KEY]: 'nonsense' }))).toEqual(loadHighScores(memStorage()));
+    expect(loadHighScores(memStorage({ [HIGH_SCORES_KEY]: [{ name: 1 }] }))).toEqual(loadHighScores(memStorage()));
+  });
+
+  it('a score qualifies while the table has room, then only by beating the lowest', () => {
+    const t = loadHighScores(memStorage());
+    expect(t.length).toBeLessThan(TABLE_SIZE);
+    expect(qualifies(t, 1)).toBe(true); // room left
+    expect(qualifies(t, 0)).toBe(false); // never for nothing
+    let full = t;
+    while (full.length < TABLE_SIZE) full = insertScore(full, { name: 'X', score: 1000, rank: 'Poor' }).table;
+    expect(qualifies(full, 1000)).toBe(false); // a tie with the lowest doesn't
+    expect(qualifies(full, 1001)).toBe(true);
+  });
+
+  it('inserts in score order, reports the row, and keeps the table to size', () => {
+    const t = loadHighScores(memStorage());
+    const r = insertScore(t, { name: 'CHLOE', score: 70000, rank: 'Elite' });
+    expect(r.row).toBe(1); // between Rafe Zetter (80000) and Jason Ryder (60000)
+    expect(r.table[1].name).toBe('CHLOE');
+    let full = r.table;
+    for (let i = 0; i < 10; i++) full = insertScore(full, { name: `P${i}`, score: 90000 + i, rank: 'Elite' }).table;
+    expect(full).toHaveLength(TABLE_SIZE);
+    expect(insertScore(full, { name: 'LOW', score: 1, rank: 'Harmless' }).row).toBe(-1);
+  });
+
+  it('defaults a blank name to Jameson and caps the length', () => {
+    const t = loadHighScores(memStorage());
+    expect(insertScore(t, { name: '  ', score: 99999, rank: 'Elite' }).table[0].name).toBe('Jameson');
+    expect(insertScore(t, { name: 'A'.repeat(30), score: 99999, rank: 'Elite' }).table[0].name).toHaveLength(MAX_NAME);
+  });
+});
+
+describe('name entry keys', () => {
+  it('types, deletes, spaces and confirms', () => {
+    let n: string | null = '';
+    for (const k of ['C', 'H', 'L', 'O', 'E', 'SPACE', 'X', 'DEL']) n = applyEntryKey(n!, k);
+    expect(n).toBe('CHLOE ');
+    expect(applyEntryKey('CHLOE', 'OK')).toBeNull();
+    expect(applyEntryKey('A'.repeat(MAX_NAME), 'B')).toHaveLength(MAX_NAME);
+  });
+
+  it('lays out tappable keys for every letter plus DEL and OK', () => {
+    const keys = entryKeys(800, 600);
+    for (const c of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') expect(keys.some((k) => k.key === c)).toBe(true);
+    const ok = keys.find((k) => k.key === 'OK')!;
+    expect(entryKeyAt(keys, ok.x + 2, ok.y + 2)?.key).toBe('OK');
+    expect(entryKeyAt(keys, 1, 1)).toBeUndefined();
+  });
+});

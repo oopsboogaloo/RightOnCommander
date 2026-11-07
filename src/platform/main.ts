@@ -21,7 +21,6 @@ import {
   sellCargo,
   buyShip,
   fitLaserAt,
-  buyEcm,
   buyEnergyBomb,
   buyEnergyBank,
   buyLife,
@@ -89,6 +88,8 @@ import gem from '../content/meshes/gem.json';
 import missile_pickup from '../content/meshes/missile_pickup.json';
 import laser_pickup from '../content/meshes/laser_pickup.json';
 import cougar from '../content/meshes/cougar.json';
+import { loadHighScores, saveHighScores, qualifies, insertScore, type HighScore } from './highScores.js';
+import { drawTitleScreen, drawEntryScreen, entryKeys, entryKeyAt, applyEntryKey } from '../render/screens/title.js';
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
 if (!canvas) throw new Error('gameCanvas element not found');
@@ -162,7 +163,20 @@ const sim = createSim({ seed: 1, content: { enemies, levels: LEVELS, meshes: MES
 const renderer = new Renderer2D(ctx);
 // Level 4's backdrop wreckage is broken from Galactic Navy and trader hulls. [ROC-L4-3]
 renderer.setWreckageMeshes(['viper', 'python', 'anaconda', 'cobra_mk3', 'boa', 'transporter', 'asp_mk2', 'constrictor'].map((id) => MESHES[id]).filter(Boolean));
-const input = new DomInput({ canvas, storage: createLocalStorage() });
+const storage = createLocalStorage();
+const input = new DomInput({ canvas, storage });
+
+// Which screen the shell is showing. The game opens on the title; a run ends at game over, then
+// (if the score makes the table) name entry, then back to the title. [ROC-TTL-*, ROC-LBD-1a]
+type Screen = 'title' | 'play' | 'entry';
+let screen: Screen = 'title';
+let screenT = 0; // seconds on the current screen (title rotation, flashing prompts)
+let highScores: HighScore[] = loadHighScores(storage);
+let highlightRow = -1; // the row a just-entered score landed on, blinking on the title
+let entryName = '';
+let gameOverSec = 0;
+const GAME_OVER_HOLD_SEC = 3; // "GAME OVER" holds this long before moving on
+const LAST_NAME_KEY = 'roc.lastName';
 
 // Station shop wiring: the dock screen shows when the level reaches DOCK; taps route to intents.
 const stationCtx: StationContext = { ships: loadShips(shipsJson), prices: economyJson as PricesContent };
@@ -184,7 +198,6 @@ function runStationAction(action: StationAction): void {
     case 'fitRear': fitLaserAt(w, stationCtx, 'rear', selectedLaser); break;
     case 'fitLeft': fitLaserAt(w, stationCtx, 'left', selectedLaser); break;
     case 'fitRight': fitLaserAt(w, stationCtx, 'right', selectedLaser); break;
-    case 'ecm': buyEcm(w, stationCtx); break;
     case 'bomb': buyEnergyBomb(w, stationCtx); break;
     case 'bank': buyEnergyBank(w, stationCtx); break;
     case 'life': buyLife(w, stationCtx); break;
@@ -692,6 +705,21 @@ function handleTapAt(physX: number, physY: number): void {
   const w = box.w;
   const h = box.h;
 
+  if (screen === 'title') {
+    startNewGame();
+    return;
+  }
+  if (screen === 'entry') {
+    const key = entryKeyAt(entryKeys(w, h), px, py);
+    if (key) typeEntryKey(key.key);
+    return;
+  }
+  // A tap during the game-over hold skips straight on.
+  if (sim.state.mode === 'GAME_OVER' && gameOverSec > 0.8) {
+    finishRun();
+    return;
+  }
+
   if (designMode) {
     handleDesignTap(px, py, w);
     return;
@@ -710,6 +738,71 @@ function handleTapAt(physX: number, physY: number): void {
   if (cheatUnlocked && inRect(px, py, rewindButtonRect(w))) cheatRewind();
   if (cheatUnlocked && inRect(px, py, designButtonRect(w))) enterDesignMode();
 }
+
+// ---- title / game over / high-score flow ---------------------------------------------------
+
+// A fresh run from Level 1, clearing every bit of per-run shell state too.
+function startNewGame(): void {
+  sim.newGame((Date.now() & 0x7fffffff) || 1);
+  floaters.length = 0;
+  rankBanners.length = 0;
+  rewindBuffer = [];
+  lastSnapshotLevelIndex = -1;
+  launchArmed = false;
+  paused = false;
+  gameOverSec = 0;
+  highlightRow = -1;
+  renderer.resetBackdrops();
+  prev = readPlayerPose();
+  curr = prev;
+  screen = 'play';
+  screenT = 0;
+}
+
+// The run is over: enter a name if the score makes the table, otherwise straight to the title.
+function finishRun(): void {
+  gameOverSec = 0;
+  screenT = 0;
+  if (qualifies(highScores, sim.state.econ.score)) {
+    const last = storage.load(LAST_NAME_KEY);
+    entryName = typeof last === 'string' ? last : '';
+    screen = 'entry';
+  } else {
+    highlightRow = -1;
+    screen = 'title';
+  }
+}
+
+function typeEntryKey(key: string): void {
+  const next = applyEntryKey(entryName, key);
+  if (next !== null) {
+    entryName = next;
+    return;
+  }
+  const name = entryName.trim() || 'Jameson';
+  const { table, row } = insertScore(highScores, { name, score: sim.state.econ.score, rank: sim.state.rating.rank });
+  highScores = table;
+  saveHighScores(storage, highScores);
+  storage.save(LAST_NAME_KEY, name);
+  highlightRow = row;
+  screen = 'title';
+  screenT = 0;
+}
+
+// Keyboard for the title (start) and name entry (typing). Gameplay keys are DomInput's.
+window.addEventListener('keydown', (e) => {
+  if (screen === 'title' && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault();
+    startNewGame();
+  } else if (screen === 'entry') {
+    if (e.key === 'Enter') typeEntryKey('OK');
+    else if (e.key === 'Backspace') typeEntryKey('DEL');
+    else if (e.key === ' ') typeEntryKey('SPACE');
+    else if (/^[a-zA-Z0-9-]$/.test(e.key)) typeEntryKey(e.key.toUpperCase());
+    else return;
+    e.preventDefault();
+  }
+});
 
 canvas.addEventListener('mousedown', (e) => handleTapAt(e.offsetX, e.offsetY));
 canvas.addEventListener(
@@ -856,6 +949,15 @@ let bombTextTtl = 0;
 const BOMB_FLASH_SEC = 0.25;
 const BOMB_TEXT_SEC = 2.5;
 
+// Rank-up banner: each promotion flashes its new rank and credit bonus mid-screen for a few
+// seconds; several close together (the early ranks come quickly) queue and play in turn.
+// Reaching Elite shows "RIGHT ON, COMMANDER!". [ROC-RTG-3]
+interface RankBanner { rank: string; bonus: number; elite: boolean; ttl: number; ttlMax: number }
+const rankBanners: RankBanner[] = [];
+const RANK_BANNER_SEC = 3;
+const ELITE_BANNER_SEC = 6;
+const RANK_FLASH_HZ = 4;
+
 function drainFloaters(events: ReturnType<typeof sim.step>): void {
   for (const ev of events) {
     if (ev.type === 'floatingText' && (ev.category === 'bounty' || ev.category === 'cargo')) {
@@ -869,7 +971,15 @@ function drainFloaters(events: ReturnType<typeof sim.step>): void {
     } else if (ev.type === 'energyBombDeployed') {
       bombFlashTtl = BOMB_FLASH_SEC;
       bombTextTtl = BOMB_TEXT_SEC;
+    } else if (ev.type === 'rankUp') {
+      const elite = !!ev.elite;
+      const ttl = elite ? ELITE_BANNER_SEC : RANK_BANNER_SEC;
+      rankBanners.push({ rank: String(ev.rank), bonus: Number(ev.bonus) || 0, elite, ttl, ttlMax: ttl });
     }
+  }
+  if (rankBanners.length) {
+    rankBanners[0].ttl -= DT; // only the front banner counts down; the rest wait their turn
+    if (rankBanners[0].ttl <= 0) rankBanners.shift();
   }
   ecmFlashTtl = Math.max(0, ecmFlashTtl - DT);
   ecmTextTtl = Math.max(0, ecmTextTtl - DT);
@@ -1060,6 +1170,8 @@ function drawEntities(now: number): void {
 startGameLoop({
   step: () => {
     const frame = input.sample(DT); // always drain one-shot input edges, even while paused/designing
+    screenT += DT;
+    if (screen !== 'play') return; // the title and name entry don't run the sim
     if (designMode) {
       // Forward auto-play advances one frame per tick (cheap: sim.design.replayTo's forward
       // path is just one incremental step). Rewind is throttled since every backward step is a
@@ -1105,8 +1217,22 @@ startGameLoop({
     curr = readPlayerPose();
     drainFloaters(events);
     captureRewindSnapshot();
+    // Game over: hold the message, then name entry (if the score makes the table) or the title.
+    if (sim.state.mode === 'GAME_OVER') {
+      gameOverSec += DT;
+      if (gameOverSec >= GAME_OVER_HOLD_SEC) finishRun();
+    }
   },
   render: (alpha) => {
+    if (screen !== 'play') {
+      renderer.beginFrame(1);
+      const { w, h } = renderer.getViewport().box;
+      if (screen === 'title') drawTitleScreen(renderer, w, h, screenT, highScores, MESHES.sidewinder, highlightRow);
+      else drawEntryScreen(renderer, w, h, screenT, entryName, sim.state.econ.score, sim.state.rating.rank);
+      renderer.endFrame(alpha);
+      drawRotateHint();
+      return;
+    }
     renderer.beginFrame(paused ? 0 : sim.state.scroll); // sim-owned: 0 halts for bosses/pause, >1 is hyperspace [ROC-BOSS-1, ROC-HYP-3]
 
     if (designMode) {
@@ -1226,6 +1352,29 @@ startGameLoop({
       ctx!.fillStyle = `rgba(255,255,255,${(0.85 * (bombFlashTtl / BOMB_FLASH_SEC)).toFixed(2)})`;
       ctx!.fillRect(0, 0, w, h);
     }
+    if (rankBanners.length) {
+      // Flashes on/off for the first half, then holds and fades out. [ROC-RTG-3]
+      const b = rankBanners[0];
+      const age = b.ttlMax - b.ttl;
+      const flashing = age < b.ttlMax / 2;
+      const on = !flashing || Math.floor(age * RANK_FLASH_HZ * 2) % 2 === 0;
+      if (on) {
+        const a = Math.min(1, b.ttl / (b.ttlMax * 0.25));
+        const fill = `rgba(255,255,255,${a.toFixed(2)})`;
+        const gold = `rgba(255,215,107,${a.toFixed(2)})`;
+        // Dark backing panel so the banner reads over ships and bullets.
+        ctx!.fillStyle = `rgba(0,0,0,${(0.75 * a).toFixed(2)})`;
+        ctx!.fillRect(w / 2 - 230, h * 0.3 - 34, 460, 76);
+        if (b.elite) {
+          renderer.drawText('RIGHT ON, COMMANDER!', { x: w / 2, y: h * 0.3 }, { fill, font: 'bold 30px monospace', align: 'center' });
+          renderer.drawText(`Rated ELITE   +${b.bonus}cr`, { x: w / 2, y: h * 0.3 + 30 }, { fill: gold, font: '18px monospace', align: 'center' });
+        } else {
+          renderer.drawText(`RANK UP: ${b.rank.toUpperCase()}`, { x: w / 2, y: h * 0.3 }, { fill, font: 'bold 24px monospace', align: 'center' });
+          renderer.drawText(`+${b.bonus}cr bonus`, { x: w / 2, y: h * 0.3 + 26 }, { fill: gold, font: '16px monospace', align: 'center' });
+        }
+      }
+    }
+
     if (bombTextTtl > 0) {
       const a = Math.min(1, bombTextTtl / (BOMB_TEXT_SEC * 0.4));
       renderer.drawText('Emergency energy bomb deployed', { x: w / 2, y: 24 }, {
@@ -1393,7 +1542,7 @@ startGameLoop({
         { fill: '#9ab', font: '12px monospace', align: 'center' },
       );
       renderer.drawText(
-        `Score ${sim.state.econ.score}   Credits ${sim.state.econ.wallet}cr   Lives ${ps.lives}`,
+        `Score ${sim.state.econ.score}   Credits ${sim.state.econ.wallet}cr   Lives ${ps.lives}   ${sim.state.rating.rank}`,
         { x: w / 2, y: h - 14 },
         { fill: '#9ab', font: '12px monospace', align: 'center' },
       );

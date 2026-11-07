@@ -1,5 +1,5 @@
 // Station shop intents. While docked the player sells cargo, buys the next hull, fits lasers,
-// buys ECM / energy bomb / energy bank / extra lives, upgrades the (still-timed) missile level,
+// buys an energy bomb / energy bank / extra lives (ECM is no longer sold), upgrades the (still-timed) missile level,
 // and launches after a confirmation. Each action is a pure function over the World returning a
 // result, so the station screen is just render + intents and is fully testable headlessly.
 // [tasks T6.2, ROC-STN-1..7, ROC-ECO-6,7,8,9]
@@ -20,7 +20,7 @@ import {
 
 export interface PricesContent {
   lasers: Record<LaserType, number>;
-  equipment: { ecm: number; bomb: number; bank: number; life: number; missile: number };
+  equipment: { bomb: number; bank: number; life: number; missile: number };
   cargo: Record<string, number>;
 }
 
@@ -100,13 +100,6 @@ export function fitLaserAt(world: World, ctx: StationContext, dir: Direction, ty
   }
 
   return fail('no free hardpoint in that direction');
-}
-
-export function buyEcm(world: World, ctx: StationContext): StationResult {
-  const err = charge(world, ctx.prices.equipment.ecm);
-  if (err) return err;
-  world.player.ecm += 1;
-  return { ok: true };
 }
 
 // Max 1 energy bomb, or 2 in the Fer-de-Lance's extra bay. [ROC-BOMB-2]
