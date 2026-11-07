@@ -5,7 +5,7 @@
 
 import { type Vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
-import { PLAYER_ID, type World } from '../world.js';
+import { PLAYER_ID, playerInert, type World } from '../world.js';
 import { collectMissile } from './missiles.js';
 import { CLOAK_PICKUP_SEC } from './cloak.js';
 import { energyBombCap, bestPickupSlot, type LaserType } from './ships.js';
@@ -143,8 +143,8 @@ export function pickupsSystem(world: World, dt: number, cfg: PickupsConfig = DEF
     }
 
     // Collectables are inert to weapons fire — bullets and missiles pass straight through. Only
-    // the player scoop collects them. [ROC-PWR-2a, ROC-CARGO-2]
-    if (player) {
+    // the player scoop collects them, and only while the ship is in play. [ROC-PWR-2a, ROC-CARGO-2]
+    if (player && !playerInert(world)) {
       const r = scoopRadius(player, cfg);
       if (dist2(player.pos, e.pos) <= r * r) collect(world, e, player, cfg);
     }

@@ -127,6 +127,13 @@ export interface World {
   pool: { projectiles: Entity[]; particles: Entity[]; missiles: Entity[] }; // recycled; not serialised
 }
 
+// The player ship is out of play: a wreck waiting to respawn, or gone for good at game over.
+// Movement, weapons, missiles, the energy bank and the cargo scoop all stop while this is true.
+// [ROC-LIFE-2,3]
+export function playerInert(world: World): boolean {
+  return !!world.player.respawnPending || world.mode === 'GAME_OVER';
+}
+
 export function makeWorld(seed: number): World {
   const player: Entity = {
     id: PLAYER_ID,

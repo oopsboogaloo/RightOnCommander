@@ -2,12 +2,12 @@
 // shields — one ring every ENERGY_BANK_INTERVAL_SEC, whether or not the previous tick actually
 // had a ring to give, so the cadence never drifts. [ROC-BANK-1,2]
 
-import { PLAYER_ID, type World } from '../world.js';
+import { PLAYER_ID, playerInert, type World } from '../world.js';
 
 export const ENERGY_BANK_INTERVAL_SEC = 15;
 
 export function energyBankSystem(world: World, dt: number): void {
-  if (!world.player.energyBank || world.player.respawnPending) return;
+  if (!world.player.energyBank || playerInert(world)) return;
   const player = world.entities.get(PLAYER_ID);
   if (!player) return;
 

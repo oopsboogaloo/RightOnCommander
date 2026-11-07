@@ -12,7 +12,7 @@
 import type { InputFrame } from '../../interfaces.js';
 import type { Entity } from '../components.js';
 import { type Vec3, vec3, add, scale } from '../math/vec3.js';
-import { PLAYER_ID, type World } from '../world.js';
+import { PLAYER_ID, playerInert, type World } from '../world.js';
 import { applyDamage } from './damage.js';
 import { type Pt, rayEntryDistanceToConvexPolygon, rayEntryDistanceToEllipse } from '../math/geom2.js';
 import { transformSilhouette, hullRadius, shieldGap } from './collision.js';
@@ -200,7 +200,7 @@ export function weaponsSystem(
   world.beams = []; // beams are instantaneous: recomputed fresh every step
 
   const player = world.entities.get(PLAYER_ID);
-  if (player && !world.player.respawnPending) {
+  if (player && !playerInert(world)) {
     world.player.fireCooldown = Math.max(0, world.player.fireCooldown - dt);
     world.player.militaryCooldown = Math.max(0, world.player.militaryCooldown - dt);
 

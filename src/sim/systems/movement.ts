@@ -6,7 +6,7 @@
 // moveTarget.y addresses world z (the screen-vertical axis).
 
 import type { InputFrame } from '../../interfaces.js';
-import { PLAYER_ID, type World } from '../world.js';
+import { PLAYER_ID, playerInert, type World } from '../world.js';
 
 export interface MovementConfig {
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
@@ -56,7 +56,7 @@ export function movementSystem(
 ): void {
   const p = world.entities.get(PLAYER_ID);
   if (!p) return;
-  if (world.player.respawnPending) return; // the wreck sits inert through its explosion [ROC-LIFE-3]
+  if (playerInert(world)) return; // the wreck sits inert through its explosion, and after game over [ROC-LIFE-3]
 
   // Follow the target (or hold position when there is none). [ROC-MOV-1]
   const targetX = input.moveTarget ? input.moveTarget.x : p.pos.x;
