@@ -1290,14 +1290,5 @@
       "params": { "x0": 1.05, "x1": -1.05, "z0": 1, "z1": 0.7, "arc": 0.2 }
     }
   ],
-  "endBoss": "cobra_ace",
-  "viper": {
-    "id": "l3v",
-    "pattern": "side_stream",
-    "enemy": "viper",
-    "count": 5,
-    "spacingMs": 300,
-    "durationMs": 6000,
-    "fire": { "rate": 0.7, "aimed": true }
-  }
+  "endBoss": "cobra_ace"
 }

@@ -1,5 +1,5 @@
 // T5.1/T5a scenario: the level FSM runs LAUNCH -> HYPERSPACE -> INFO -> WAVES_A -> MID_BOSS ->
-// MID_DOCKING -> MID_DOCK -> WAVES_B -> END_BOSS -> [VIPER_INTERCEPT] -> DOCKING -> DOCK headless,
+// MID_DOCKING -> MID_DOCK -> WAVES_B -> END_BOSS -> DOCKING -> DOCK headless,
 // with the player clearing every wave and boss, then flying into the station's aligned port.
 // [ROC-LVL-1,2, ROC-BOSS-4, ROC-HYP-*, ROC-DCKG-3, ROC-MDCK-1,2]
 
@@ -37,7 +37,6 @@ const level: LevelDef = {
   midBoss: 'midboss',
   wavesB: [wave('b', 'grunt')],
   endBoss: 'endboss',
-  viper: { ...wave('v', 'viper'), pattern: 'side_stream' },
 };
 
 // One frame of "the player wins": kill every enemy/boss, and when docking, fly straight into
@@ -58,10 +57,9 @@ function playerWins(w: ReturnType<typeof makeWorld>, def: LevelDef, wctx: WaveCo
 }
 
 // Drive the FSM to DOCK. Returns the distinct state order.
-function runToDock(contraband: boolean, withField = false): string[] {
+function runToDock(withField = false): string[] {
   const w = makeWorld(1);
   const rng = createRng(1);
-  if (contraband) w.cargo.contraband = 1;
   const def: LevelDef = withField ? { ...level, asteroidWaves: [{ count: 2, spacingMs: 0 }] } : level;
   startLevel(w, def, ctx);
 
@@ -85,8 +83,8 @@ function runToDock(contraband: boolean, withField = false): string[] {
 }
 
 describe('level FSM', () => {
-  it('runs every state through to DOCK (no contraband)', () => {
-    const seq = runToDock(false);
+  it('runs every state through to DOCK', () => {
+    const seq = runToDock();
     expect(seq).toEqual([
       'LAUNCH',
       'HYPERSPACE',
@@ -97,31 +95,13 @@ describe('level FSM', () => {
       'MID_DOCK',
       'WAVES_B',
       'END_BOSS',
-      'DOCKING',
-      'DOCK',
-    ]);
-  });
-
-  it('inserts the Viper interception when carrying contraband', () => {
-    const seq = runToDock(true);
-    expect(seq).toEqual([
-      'LAUNCH',
-      'HYPERSPACE',
-      'INFO',
-      'WAVES_A',
-      'MID_BOSS',
-      'MID_DOCKING',
-      'MID_DOCK',
-      'WAVES_B',
-      'END_BOSS',
-      'VIPER_INTERCEPT',
       'DOCKING',
       'DOCK',
     ]);
   });
 
   it('inserts an opening ASTEROIDS phase when the level has an asteroid field', () => {
-    const seq = runToDock(false, true);
+    const seq = runToDock(true);
     expect(seq).toEqual([
       'LAUNCH',
       'HYPERSPACE',

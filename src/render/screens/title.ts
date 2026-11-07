@@ -31,22 +31,37 @@ function drawTable(r: Renderer2D, w: number, y0: number, table: HighScore[], hig
   });
 }
 
-// The title screen. `t` is seconds since it opened (drives the rotation and the flashing prompt);
-// `highlight` marks a just-entered score's row (or -1).
-export function drawTitleScreen(r: Renderer2D, w: number, h: number, t: number, table: HighScore[], sidewinder: Mesh | undefined, highlight = -1): void {
-  r.drawText('RIGHT ON COMMANDER', { x: w / 2, y: h * 0.09 }, { fill: '#fff', font: 'bold 40px monospace', align: 'center' });
-  r.drawText(`A game by ${AUTHOR}`, { x: w / 2, y: h * 0.09 + 30 }, { fill: FAINT, font: '16px monospace', align: 'center' });
-  r.drawText(`© ${COPYRIGHT_YEAR} ${AUTHOR}. An unofficial fan homage.`, { x: w / 2, y: h * 0.09 + 52 }, { fill: FAINT, font: '12px monospace', align: 'center' });
+// The title's rotating Sidewinder: where it sits and how it turns, at `t` seconds. Shared with the
+// shell's fly-in so the transition starts exactly where the title ship is. [ROC-TTL-1,3]
+export const TITLE_SHIP = { z: 0.42, scale: 0.75 };
+export function titleShipPose(t: number): { yaw: number; bank: number } {
+  return { yaw: t * 0.6, bank: 0.35 * Math.sin(t * 0.5) };
+}
+
+// Title and credits, at an opacity (they fade out as the ship flies into play). [ROC-TTL-2]
+export function drawTitleHeading(r: Renderer2D, w: number, h: number, alpha = 1): void {
+  const a = alpha.toFixed(2);
+  const white = `rgba(255,255,255,${a})`;
+  const faint = `rgba(153,170,187,${a})`;
+  r.drawText('RIGHT ON COMMANDER', { x: w / 2, y: h * 0.09 }, { fill: white, font: 'bold 40px monospace', align: 'center' });
+  r.drawText(`A game by ${AUTHOR}`, { x: w / 2, y: h * 0.09 + 30 }, { fill: faint, font: '16px monospace', align: 'center' });
+  r.drawText(`© ${COPYRIGHT_YEAR} ${AUTHOR}. An unofficial fan homage.`, { x: w / 2, y: h * 0.09 + 52 }, { fill: faint, font: '12px monospace', align: 'center' });
   r.drawText('Based on Elite by David Braben & Ian Bell (Acornsoft, 1984).', { x: w / 2, y: h * 0.09 + 68 }, {
-    fill: FAINT,
+    fill: faint,
     font: '12px monospace',
     align: 'center',
   });
+}
+
+// The title screen. `t` is seconds since it opened (drives the rotation and the flashing prompt);
+// `highlight` marks a just-entered score's row (or -1).
+export function drawTitleScreen(r: Renderer2D, w: number, h: number, t: number, table: HighScore[], sidewinder: Mesh | undefined, highlight = -1): void {
+  drawTitleHeading(r, w, h);
 
   // The slowly rotating Sidewinder. [ROC-TTL-1]
   if (sidewinder) {
-    const model = modelMatrix(vec3(0, 0, 0.42), t * 0.6, 0.35 * Math.sin(t * 0.5), 0.75);
-    r.drawMesh(sidewinder, model);
+    const pose = titleShipPose(t);
+    r.drawMesh(sidewinder, modelMatrix(vec3(0, 0, TITLE_SHIP.z), pose.yaw, pose.bank, TITLE_SHIP.scale));
   }
 
   drawTable(r, w, h * 0.5, table, highlight, t);

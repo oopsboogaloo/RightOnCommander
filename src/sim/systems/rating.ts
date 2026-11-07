@@ -41,7 +41,7 @@ export const killPoints = (bounty: number): number => 1 + Math.floor(Math.max(0,
 
 // Every point the campaign can award if every enemy it spawns is destroyed: all wave members
 // (both halves and the witchspace wave) and every boss. Open-ended extras — hermit escorts,
-// Thargons, the contraband Vipers — are left out, so the estimate never assumes them.
+// Thargons — are left out, so the estimate never assumes them.
 export function campaignPoints(levels: LevelDef[], enemies: Record<string, EnemyDef>): number {
   const pts = (name: string): number => killPoints(enemies[name]?.bounty ?? 0);
   let total = 0;

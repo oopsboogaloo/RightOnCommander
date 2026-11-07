@@ -91,7 +91,7 @@ import laser_pickup from '../content/meshes/laser_pickup.json';
 import cougar from '../content/meshes/cougar.json';
 import { COMPLETION_BONUS } from '../sim/systems/levelstate.js';
 import { loadHighScores, saveHighScores, qualifies, insertScore, type HighScore } from './highScores.js';
-import { drawTitleScreen, drawEntryScreen, entryKeys, entryKeyAt, applyEntryKey } from '../render/screens/title.js';
+import { drawTitleScreen, drawTitleHeading, drawEntryScreen, entryKeys, entryKeyAt, applyEntryKey, titleShipPose, TITLE_SHIP } from '../render/screens/title.js';
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
 if (!canvas) throw new Error('gameCanvas element not found');
@@ -170,7 +170,7 @@ const input = new DomInput({ canvas, storage });
 
 // Which screen the shell is showing. The game opens on the title; a run ends at game over, then
 // (if the score makes the table) name entry, then back to the title. [ROC-TTL-*, ROC-LBD-1a]
-type Screen = 'title' | 'play' | 'entry';
+type Screen = 'title' | 'launching' | 'play' | 'entry';
 let screen: Screen = 'title';
 let screenT = 0; // seconds on the current screen (title rotation, flashing prompts)
 let highScores: HighScore[] = loadHighScores(storage);
@@ -185,6 +185,10 @@ let completeBonus = 0;
 const COMPLETE_HOLD_SEC = 10;
 const COMPLETE_MIN_SEC = 2.5;
 const LAST_NAME_KEY = 'roc.lastName';
+// Start: the title's rotating Sidewinder flies down into the player's start position, levelling
+// out as it goes, while the title fades — a continuous hand-off into play. [ROC-TTL-3]
+const FLY_IN_SEC = 1.4;
+let flyFromT = 0; // the title clock when start was pressed, to pick up the ship's pose exactly
 
 // Station shop wiring: the dock screen shows when the level reaches DOCK; taps route to intents.
 // Earned unlocks persist across runs (completing the game unlocks the Thargoid ship). [ROC-PROG-2]
@@ -722,6 +726,7 @@ function handleTapAt(physX: number, physY: number): void {
     startNewGame();
     return;
   }
+  if (screen === 'launching') return; // mid fly-in: control hands over when it lands
   if (screen === 'entry') {
     const key = entryKeyAt(entryKeys(w, h), px, py);
     if (key) typeEntryKey(key.key);
@@ -773,8 +778,35 @@ function startNewGame(): void {
   renderer.resetBackdrops();
   prev = readPlayerPose();
   curr = prev;
-  screen = 'play';
+  flyFromT = screenT; // the title ship's pose right now is where the fly-in starts
+  screen = 'launching';
   screenT = 0;
+}
+
+// The fly-in frame: the new run's scene (the departure station) with the title Sidewinder easing
+// from its title pose — big, high, turning — down to the player's start: position, size and a
+// level attitude, the yaw unwinding to the nearest full turn so it never spins backwards. The
+// title and credits fade out above it. [ROC-TTL-3]
+function renderFlyIn(): void {
+  renderer.beginFrame(1);
+  const { w, h } = renderer.getViewport().box;
+  drawEntities(performance.now() / 1000);
+  const u = Math.min(1, screenT / FLY_IN_SEC);
+  const k = u * u * (3 - 2 * u); // smoothstep
+  const lerp = (a: number, b: number): number => a + (b - a) * k;
+  const from = titleShipPose(flyFromT + screenT); // keeps turning as it sets off
+  const to = readPlayerPose();
+  const player = sim.state.entities.get(PLAYER_ID);
+  const toYaw = to.yaw + Math.PI * 2 * Math.round((from.yaw - to.yaw) / (Math.PI * 2));
+  const mesh = (player?.meshId && MESHES[player.meshId]) || MESHES.sidewinder;
+  const model = modelMatrix(
+    vec3(lerp(0, to.x), 0, lerp(TITLE_SHIP.z, to.z)),
+    lerp(from.yaw, toYaw),
+    lerp(from.bank, to.bank),
+    lerp(TITLE_SHIP.scale, SHIP_SCALE * (player?.scale ?? 1)),
+  );
+  renderer.drawMesh(mesh, model);
+  drawTitleHeading(renderer, w, h, 1 - k);
 }
 
 // The game is won: unlock the Thargoid ship for good (for the next run's shop) and clear any
@@ -1201,7 +1233,11 @@ startGameLoop({
   step: () => {
     const frame = input.sample(DT); // always drain one-shot input edges, even while paused/designing
     screenT += DT;
-    if (screen !== 'play') return; // the title and name entry don't run the sim
+    if (screen === 'launching' && screenT >= FLY_IN_SEC) {
+      screen = 'play'; // the fly-in has landed: hand over control
+      screenT = 0;
+    }
+    if (screen !== 'play') return; // the title, fly-in and name entry don't run the sim
     if (designMode) {
       // Forward auto-play advances one frame per tick (cheap: sim.design.replayTo's forward
       // path is just one incremental step). Rewind is throttled since every backward step is a
@@ -1258,6 +1294,12 @@ startGameLoop({
     }
   },
   render: (alpha) => {
+    if (screen === 'launching') {
+      renderFlyIn();
+      renderer.endFrame(alpha);
+      drawRotateHint();
+      return;
+    }
     if (screen !== 'play') {
       renderer.showAsteroidBackdrop = false; // the title stands alone, no level scenery behind it
       renderer.showWreckageBackdrop = false;

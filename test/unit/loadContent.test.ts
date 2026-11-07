@@ -20,6 +20,8 @@ describe('loadContent', () => {
     expect(enemies.hermit.behavior).toBe('hermit');
     expect(enemies.hermit.meshId).toBe('rock_hermit'); // bespoke rock-hermit hull with a modelled bay [ROC-HERM-1]
     expect(enemies.thargoid.missileImmune).toBe(true); // ECM jams player missile lock-on [Thargoid tuning]
+    expect(enemies.thargoid.hull + (enemies.thargoid.shield ?? 0)).toBe(90); // twice as tough as the original 30+15
+    expect(enemies.thargoid.meshId).toBe('thargoid_saucer'); // the flat saucer, not the edge-on sliver
     expect(enemies.cougar.missileImmune).toBe(true); // [ROC-CLK-3]
     expect(enemies.cougar.drops).toBe('cloak'); // guaranteed cloak-device drop [ROC-CLK-4]
     expect(enemies.cougar.cloakCycle).toEqual({ visibleSec: 4, transitionSec: 1, cloakedSec: 5 }); // [ROC-CLK-1]
