@@ -85,7 +85,6 @@ export interface Entity {
   missileImmune?: boolean; // player missiles won't lock onto or home toward this entity (Thargoids)
   port?: boolean; // has a centred docking-port rectangle (hermit / stations): rendered, dockable,
   // and worth triple damage on a direct hit [ROC-HERM-1,8, ROC-DCKG-3]
-  contraband?: boolean; // different shape [ROC-ECO-4]
   indestructible?: boolean; // shrugs off all damage; a solid navigational obstacle, not a target [ROC-GIANT-1]
   cloak?: CloakState; // periodic cloak/decloak cycle (the rare Cougar); rendering-only — still
   // damageable and targetable by lasers throughout [ROC-CLK-*]

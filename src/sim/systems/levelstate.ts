@@ -2,15 +2,14 @@
 // away behind the player), jumps through hyperspace with a countdown and starfield stretch,
 // shows a system info card, drifts through an opening asteroid field, plays wave combat around
 // a mid-boss and an end-boss (starfield scroll stops for each fight; "RIGHT ON COMMANDER" fades
-// after each kill), optionally fights a Viper interception if the player is carrying contraband,
-// then docks at a rotating Coriolis by flying into its port. A level whose jump lingers in
+// after each kill), then docks at a rotating Coriolis by flying into its port. A level whose jump lingers in
 // witchspace (only Level 3's, for the L2->3 transition) skips the settle-back at the end of
 // HYPERSPACE and instead holds the stretched starfield for a Thargoid wave, only settling and
 // proceeding to INFO once it's cleared. [tasks T5.1/T5a.*/T7.1a, design §12/§12a, ROC-LVL-1,2,
 // ROC-L1-1, ROC-BOSS-1..4, ROC-HYP-1..5, ROC-DCKG-1..4, ROC-WITCH-1..4]
 //
 //   LAUNCH -> HYPERSPACE -> [WITCHSPACE_COMBAT] -> INFO -> [ASTEROIDS] -> WAVES_A -> MID_BOSS
-//     -> MID_DOCKING -> MID_DOCK -> WAVES_B -> END_BOSS -> [VIPER_INTERCEPT] -> DOCKING -> DOCK
+//     -> MID_DOCKING -> MID_DOCK -> WAVES_B -> END_BOSS -> DOCKING -> DOCK  (or COMPLETE, final level)
 //
 // A level with no midBoss (Level 4) goes WAVES_A -> END_BOSS directly. [ROC-L4-4]
 //
@@ -41,7 +40,6 @@ export type LevelState =
   | 'MID_DOCK'
   | 'WAVES_B'
   | 'END_BOSS'
-  | 'VIPER_INTERCEPT'
   | 'DOCKING'
   | 'DOCK'
   | 'COMPLETE'; // the final level's end boss is dead: the game is won [ROC-PROG-1,2]
@@ -60,7 +58,6 @@ export interface LevelDef {
   // pair) [ROC-L3-3]. Omitted on Level 4, whose waves run straight into the end boss [ROC-L4-4]
   wavesB: WaveDef[];
   endBoss: string;
-  viper?: WaveDef; // contraband interception wave
   witchspace?: WaveDef; // a Thargoid wave that must be cleared before the jump resolves; set only
   // on the level entered via the witchspace interlude (Level 3, L2->3) [ROC-WITCH-1..4]
 }
@@ -141,7 +138,6 @@ const hasKind = (world: World, kind: Entity['kind']): boolean => {
 // A wave group is clear when no waves remain active and no members are alive. [ROC-ENM-1]
 const groupCleared = (world: World): boolean => world.waves.active.size === 0 && !hasKind(world, 'enemy');
 const bossCleared = (world: World): boolean => !hasKind(world, 'boss');
-const hasContraband = (world: World): boolean => (world.cargo.contraband ?? 0) > 0; // [ROC-ECO-4, ROC-LVL-4]
 
 // Clear once every wave has finished spawning and no asteroid remains (large or splinter). [ROC-L1-1]
 const asteroidFieldCleared = (world: World): boolean =>
@@ -325,9 +321,6 @@ export function enterLevelState(world: World, state: LevelState, level: LevelDef
       spawnBoss(world, level.endBoss, ctx);
       break;
     }
-    case 'VIPER_INTERCEPT':
-      if (level.viper) startWave(world, level.viper, ctx);
-      break;
     case 'DOCKING':
       // Scrolling has resumed; the station scrolls into view and holds, rolling (it just looks
       // good). Spawned facing away (yaw π) so the Coriolis's own modelled slot faces the player.
@@ -507,11 +500,8 @@ export function levelStateSystem(world: World, dt: number, level: LevelDef, ctx:
     case 'END_BOSS':
       tickBossFade(() => {
         if (finalLevel) enterLevelState(world, 'COMPLETE', level, ctx); // the game is won [ROC-PROG-1]
-        else enterLevelState(world, hasContraband(world) ? 'VIPER_INTERCEPT' : 'DOCKING', level, ctx);
+        else enterLevelState(world, 'DOCKING', level, ctx);
       });
-      break;
-    case 'VIPER_INTERCEPT':
-      if (groupCleared(world)) enterLevelState(world, 'DOCKING', level, ctx);
       break;
     case 'DOCKING':
       dockingCheck(world, dt, level, ctx, 'DOCK', 'docked');

@@ -1562,17 +1562,5 @@
       }
     }
   ],
-  "endBoss": "fer_de_lance_boss",
-  "viper": {
-    "id": "l1v",
-    "pattern": "side_stream",
-    "enemy": "viper",
-    "count": 3,
-    "spacingMs": 400,
-    "durationMs": 6000,
-    "fire": {
-      "rate": 0.6,
-      "aimed": true
-    }
-  }
+  "endBoss": "fer_de_lance_boss"
 }

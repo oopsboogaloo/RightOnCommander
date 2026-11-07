@@ -1,10 +1,12 @@
 # Right on Commander — Requirements Specification
 
-**Version:** 1.15 (draft — all design decisions resolved)
+**Version:** 1.16 (draft — all design decisions resolved)
 **Author:** Chloe
 **Notation:** EARS (Easy Approach to Requirements Syntax)
 **Status:** Spec under construction — review
 
+> **Changelog 1.15 → 1.16:** **Removed the contraband concept** — no contraband cargo and no Viper interception before docking (ROC-ECO-4 and ROC-LVL-4 withdrawn). Level 3's witchspace **Thargoids are twice as tough** and drawn as the flat saucer. The title Sidewinder now **flies into play** on start (ROC-TTL-3 built).
+>
 > **Changelog 1.14 → 1.15:** **Completing the game** (killing Level 4's mothership) now rates the commander **Elite** whatever their tally, shows a congratulations screen, pays a **completion bonus** and goes to the high-score table (ROC-PROG-1 revised). It also **unlocks the Thargoid ship directly** — no longer gated behind Elite mode (ROC-PROG-2 revised; Elite mode is deferred). The **Thargoid ship** is specified: Asp-like with 50% more shield, launching friendly Thargons that attack enemies (ROC-SHIP-6). The mothership's hull is doubled.
 >
 > **Changelog 1.13 → 1.14:** **ECM is no longer sold at the station** (ROC-STN-5 revised). **Rank-ups pay a credit bonus** (ROC-RTG-3 extended), and the rating ladder's thresholds are set from the campaign itself (ROC-RTG-2): Elite at 60% of every point the levels can award. Added the **title screen** (title, author, copyright, Elite credit, high-score table seeded with Elite characters, local-storage notice) and the **game over → high-score name entry → title** flow (ROC-TTL-1,2,4, ROC-LBD-1a).
@@ -164,7 +166,7 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
 - **ROC-ECO-1b** When a wave bounty is awarded, the system shall **flash it prominently on screen** (a brief full-screen-readable wave-bonus announcement, distinct from the small per-kill floating text).
 - **ROC-ECO-2** The system shall define **score as the running total of all credits earned** (lifetime/gross), distinct from the spendable **credit balance** (wallet, reduced by purchases).
 - **ROC-ECO-3** When the player collects cargo, the system shall show floating text naming the commodity and tonnage (e.g. **"Computers 3T"**).
-- **ROC-ECO-4** The system shall render **illegal/contraband cargo with a visibly different shape** so the player can choose to avoid it.
+- ~~**ROC-ECO-4**~~ *(v1.16 — withdrawn: there is no contraband cargo.)*
 - **ROC-ECO-5** If a cargo canister is shot, then the system shall **destroy it**.
 - **ROC-ECO-6** While docked, the system shall let the player **sell collected cargo** (and any banked surplus pickups) for credits.
 - **ROC-ECO-7** While docked, the system shall let the player spend credits on weapons and equipment at the following prices:
@@ -190,7 +192,7 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
 - **ROC-LVL-1** The system shall **begin every level launching from a Coriolis station** and **end every level docking at a Coriolis station** (then the dock/sell/equip screen). The Coriolis is the non-combat bookend, not a boss.
 - **ROC-LVL-2** The system shall stage, within each level, scrolling wave combat (§3.13) plus a **mid-level boss** and an **end-of-level boss** as below — **except Level 4**, which drops the mid-boss (ROC-L4-4).
 - **ROC-LVL-3** The system shall pace each level so its **combat/wave phase lasts roughly 3–5 minutes**, plus **about 1 minute for the end-of-level boss**.
-- **ROC-LVL-4** If the player is carrying **illegal/contraband cargo** at the end of a level, then before docking the system shall stage an **extra interception fight against a number of Vipers**; this fight yields **no credit reward (kills still count toward rating)** and scales the Viper count with the amount of contraband / difficulty.
+- ~~**ROC-LVL-4**~~ *(v1.16 — withdrawn: no contraband, so no Viper interception before docking.)*
 
 **Level 1 — Asteroid field**
 - **ROC-L1-1** The system shall fill the level with **drifting asteroids that fragment into boulders** when shot.

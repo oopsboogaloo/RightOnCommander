@@ -198,7 +198,6 @@ A lightweight **entity + components** model (struct-of-fields, not a heavy ECS �
  *  @property {Object} [path]      // spline + t for enemies [ROC-ENM-2]
  *  @property {Object} [ai]        // fire cadence, pattern, boss phase
  *  @property {Object} [pickup]    // {type:'fuel'|'gems'|'alloys'|'laser'|'missile'|'ecm'|'bomb'|...}
- *  @property {boolean}[contraband]// different shape [ROC-ECO-4]
  */
 ```
 
@@ -376,7 +375,7 @@ A single `difficulty` value scales **enemy count per wave** (primary live lever)
 
 - **Two counters:** `econ.wallet` (spendable, decremented by purchases) and `econ.score` (lifetime gross credits, monotonic). `[ROC-ECO-2]`
 - **Bounty** on kill → both counters + floating text; **wave bonus** = 50% of wave bountySum on full clear → both + screen flash. `[ROC-ECO-1,1a,1b]`
-- **Cargo** inventory (type→tonnage), sold at dock; contraband flagged for the Viper interception. `[ROC-ECO-3,6; ROC-LVL-4]`
+- **Cargo** inventory (type→tonnage), sold at dock. *(Contraband and the Viper interception were removed in requirements v1.16.)* `[ROC-ECO-3,6]`
 - **Rating** is the separate kill-weighted tally → rank ladder (`systems/rating.ts`, after `economySystem`): a destroyed enemy/boss scores `1 + floor(bounty/50)`; thresholds are built at `createSim` from the loaded campaign (`buildRanks(campaignPoints(...))`: Elite = 60% of all wave-member and boss points, other ranks at fixed shares of it); crossing each threshold sets `rating.rank`, pays that rank's bonus to wallet + score and emits `rankUp {rank, bonus, elite}`, which the shell flashes mid-screen (queued if several land together). `[ROC-RTG-1..3]`
 - **High scores (built):** `platform/highScores.ts` keeps an 8-row table `{name, score, rank}` under `roc.highScores`, seeded with Elite characters (The Dark Wheel's cast + Commander Jameson). The shell's screen flow is `title → play → (game over hold) → entry (if the score qualifies) → title`; `sim.newGame(seed)` resets the world in place for each run. `[ROC-TTL-1,2,4, ROC-LBD-1a]`
 - **Persistence (Storage):** one save object — `{ highScores[], bestRating, unlocks, settings, controls }` — under a single localStorage key; the **title screen discloses this**. `[ROC-LBD-1,1a; ROC-TTL-4]` Online submit + consent only where enabled. `[ROC-LBD-2,3]`
@@ -396,7 +395,7 @@ A single `difficulty` value scales **enemy count per wave** (primary live lever)
 ## 12. State machines
 
 ### Level FSM (`levelstate.js`) `[ROC-LVL-1,2, ROC-BOSS, ROC-DCKG, ROC-HYP, ROC-WITCH]`
-`LAUNCH (Coriolis departure) → HYPERSPACE → [WITCHSPACE_COMBAT, L2→3 only (v1.10): starfield held stretched, Thargoid wave must clear before the jump resolves] → INFO → [ASTEROIDS] → WAVES_A → MID_BOSS (skipped for Level 4, v1.10 ROC-L4-4) → WAVES_B → END_BOSS → [VIPER_INTERCEPT if contraband] → DOCKING → DOCK → STATION`. Death respawns in place per §3.16/ROC-LIFE-2 (v1.8) — the level state is never touched by a death, so nothing here resets. `MID_BOSS`/`END_BOSS` set `world.scroll = 0` and run the boss-bar/kill-text framing; `WITCHSPACE_COMBAT` holds `world.scroll` at its hyperspace-stretched value instead of resuming it, until the Thargoid wave resolves; `DOCKING` is a backdrop-only approach (no collision, opens the shop automatically); `DOCK` remains the shop.
+`LAUNCH (Coriolis departure) → HYPERSPACE → [WITCHSPACE_COMBAT, L2→3 only (v1.10): starfield held stretched, Thargoid wave must clear before the jump resolves] → INFO → [ASTEROIDS] → WAVES_A → MID_BOSS (skipped for Level 4, v1.10 ROC-L4-4) → WAVES_B → END_BOSS → DOCKING → DOCK → STATION`. Death respawns in place per §3.16/ROC-LIFE-2 (v1.8) — the level state is never touched by a death, so nothing here resets. `MID_BOSS`/`END_BOSS` set `world.scroll = 0` and run the boss-bar/kill-text framing; `WITCHSPACE_COMBAT` holds `world.scroll` at its hyperspace-stretched value instead of resuming it, until the Thargoid wave resolves; `DOCKING` is a backdrop-only approach (no collision, opens the shop automatically); `DOCK` remains the shop.
 
 ### Game FSM (`gamestate.js`) `[ROC-PROG-1,2]`
 `TITLE → (fly-in) → LEVEL[1..4] → COMPLETE → (unlock Elite) → ELITE LEVEL[1..4] → (unlock Thargoid) → TITLE`. Death (v1.8): if an energy bomb is carried it auto-triggers instead (ROC-DEF-2) — no life lost, ship survives at 1 hull; otherwise `lives--` immediately, then once the player's in-place, momentum-free explosion has fully played out (`PLAYER_EXPLOSION_SEC`) plus a 500ms beat (`respawnDelaySec`), the ship **respawns at the exact death position** — always, regardless of `levelState` (boss fights, part 2, anywhere); `lives==0` ⇒ GAME_OVER → score submit, deferred the same way. Runs start with **4 lives** (v1.9, up from 3). The ship no longer has graduated hull damage — once unshielded, any hit is instantly lethal (v1.9) — and blinks on screen only during this respawn's invulnerability window, never for an ordinary hit's brief contact i-frames. `[ROC-LIFE-1,2,2a,2b,2c,5; ROC-DEF-2; ROC-DMG-2a,6b]`
@@ -444,7 +443,7 @@ Screens are pure render + emit intents back as `InputFrame` flags (e.g. `confirm
   - rating tally monotonic non-decreasing;
   - every spawned enemy eventually dies or exits (no off-field stall) within a frame bound;
   - `0 ≤ lives ≤ 5`; wallet never negative after a permitted purchase. `[ROC-TEST-6]`
-- **Scenario:** script a level headless; assert mid-boss reached, end-boss reached, dock entered; carrying contraband triggers the Viper fight with zero credit reward but counted kills. `[ROC-LVL-4]`
+- **Scenario:** script a level headless; assert mid-boss reached, end-boss reached, dock entered. `[ROC-LVL-1,2]`
 - **Balance-sim** (`test/balance/autoplayer.js`): a heuristic bot (dodge nearest projectile, target nearest enemy, hold fire, scoop pickups) runs each level across K seeds at difficulty D and reports **bounty income, deaths, time-to-clear, shots-faced**. This feeds the price/difficulty tuning **before** human playtests and regression-guards it after. `[ROC-TEST-7, ROC-SHIP-1a]`
 
 All of the above run headless in CI with no display. `[ROC-TEST-8]`

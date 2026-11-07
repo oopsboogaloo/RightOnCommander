@@ -123,7 +123,7 @@ Dependencies flow top-down unless noted. IDs are stable; insert with letters (T4
 ## Phase 5 — Level 1 playable 🏁
 
 - [x] **T5.1 — Level FSM.**
-  **Do:** `systems/levelstate.ts` — LAUNCH(Coriolis) → WAVES_A → MID_BOSS → WAVES_B → END_BOSS → [VIPER if contraband] → DOCK.
+  **Do:** `systems/levelstate.ts` — LAUNCH(Coriolis) → WAVES_A → MID_BOSS → WAVES_B → END_BOSS → DOCK (the contraband Viper fight was removed in v1.16).
   **Done-when:** **scenario test** drives the FSM through every state headless.
   **Refs:** ROC-LVL-1,2.
 
@@ -353,17 +353,17 @@ have nowhere to load into until the campaign can actually advance between levels
 - [x] **T7.3 — Level 4 (Alien warzone).** *(v1.10 — renamed; ordinary launch entry, no mid-boss, shorter pacing)* Thargoids + **saucer variants** + Thargon swarms (inert on parent death) + **broken Galactic Navy wrecks** as scenery/hazard; **mothership end**, no mid-boss. **Refs:** ROC-L4-0,1,1a,2,3,4; ROC-ENM-6.
   *Built:* `content/level4.json` (Zaonce): one ~1:30 wave section of 39 dense Thargoid waves (halved from 75 after playtesting), straight into the mothership (`midBoss`/`wavesB` now optional; WAVES_A → END_BOSS). Saucer variants scout / warrior / carrier on a new flat `thargoid_saucer` mesh (derived in `tools/bbcelite_to_mesh.py`); `systems/thargons.ts` (launchers, chasing Thargons, inert on parent death); fanned enemy volleys (`fire.spread`/`arc`); `mothership` boss behaviour (rings / fans / spirals, faster below half hull). Wreckage is a render-only backdrop (`renderer2d.ts` `BackgroundWreckage`), not yet a collidable hazard. Tests: `test/unit/thargons.test.ts`, `test/scenario/level4.test.ts`.
 - [ ] **T7.4 — Player ECM** *(v1.14: ECM is no longer sold at the station; this task is on hold unless ECM returns)* *(Energy Bomb half done — see below)*. ECM is bought (station/pickups increment `player.ecm`) but cannot be fired yet: add the trigger (partly transparent touch button + bindable control) that destroys every enemy missile and bullet on screen, then a cooldown; show its countdown in the status bar. **Done already (v1.8 rework):** the Energy Bomb fires automatically instead of the ship dying — clears non-boss enemies, asteroids and enemy shots, deals a boss 50% of its current hull (this *can* kill a weakened boss, replacing the old "bomb never kills a boss" rule), leaves the ship at 1 hull, cap 1 (2 in the Fer-de-Lance); see `gamestate.ts` `detonateEnergyBomb`. **Refs:** ROC-DEF-1,2,2a,3.
-- [ ] **T7.5 — Contraband interception.** Carrying illegal cargo at level end ⇒ extra Viper fight, no credits, kills count. Scenario test. **Refs:** ROC-LVL-4, ROC-ECO-4. *Status:* partly built — the level FSM inserts `VIPER_INTERCEPT` before docking when `cargo.contraband > 0`, each level has a `viper` wave, and `test/scenario/levelstate.test.ts` covers the branch. Still to do: a way to pick up contraband (with its own shape), zero bounty for Viper kills (kills still count for rating), and more Vipers the more contraband you carry and the higher the difficulty.
+- ~~**T7.5 — Contraband interception.**~~ *Dropped (requirements v1.16): contraband removed from the game, along with the Viper interception state and each level's `viper` wave.*
 - [ ] **T7.6 — Density profiles.** L1–2 sparse/readable; L3–4 Xenon-2 bullet-hell via difficulty/count curves. **Refs:** ROC-ENM-13.
 
-🏁 **Milestone M3 — "Full campaign":** all four levels, all bosses, ECM/bomb, contraband path — start to finish.
+🏁 **Milestone M3 — "Full campaign":** all four levels, all bosses, energy bomb — start to finish.
 
 ---
 
 ## Phase 8 — Title, audio, flavour
 
-- [ ] **T8.1 — Title/intro screen.** Rotating Sidewinder; title/credits top; **local-storage privacy disclaimer** bottom; start ⇒ ship flies into play, control transfers (continuous). **Refs:** ROC-TTL-1..5.
-  *Status:* mostly built — `render/screens/title.ts`: rotating Sidewinder, title, author/copyright/Elite credit, high-score table, local-storage notice; tap/Enter starts a fresh run (`sim.newGame`); game over → name entry (on-screen keyboard + typing) → title. Still to do: the Sidewinder flying into play on start (ROC-TTL-3) — it is a hard cut for now.
+- [x] **T8.1 — Title/intro screen.** Rotating Sidewinder; title/credits top; **local-storage privacy disclaimer** bottom; start ⇒ ship flies into play, control transfers (continuous). **Refs:** ROC-TTL-1..5.
+  *Status:* mostly built — `render/screens/title.ts`: rotating Sidewinder, title, author/copyright/Elite credit, high-score table, local-storage notice; tap/Enter starts a fresh run (`sim.newGame`); game over → name entry (on-screen keyboard + typing) → title. On start the title Sidewinder flies down into the player's start position (~1.4 s) while the title fades, then control hands over (ROC-TTL-3).
 - [ ] **T8.2 — Audio.** `audio/webaudio.ts` (optional, file-loaded) + `nullaudio.ts`; wire the SFX event set; silent-playable. Null backend asserts events (e.g. kill ⇒ `explode_small`+`cash`). **Refs:** ROC-SFX-1,2, ROC-NFR-3.
 - [ ] **T8.3 — Lore & flavour.** `blurbs.json` + named systems (Riedquat for Elite mode), Jameson default name, **Dark Wheel** ace waves, **Raxxla** hidden secret, dock-geometry variety (Coriolis/Dodo/icosahedral), Blue-Danube-style cue (PD arrangement). **Refs:** ROC-LORE-1..7.
 

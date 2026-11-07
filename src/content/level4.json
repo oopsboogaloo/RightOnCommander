@@ -456,17 +456,5 @@
       "fire": { "rate": 1.3, "aimed": false }
     }
   ],
-  "endBoss": "thargoid_mothership",
-  "viper": {
-    "id": "l4v",
-    "pattern": "side_stream",
-    "enemy": "viper",
-    "count": 5,
-    "spacingMs": 300,
-    "durationMs": 6000,
-    "fire": {
-      "rate": 0.7,
-      "aimed": true
-    }
-  }
+  "endBoss": "thargoid_mothership"
 }
