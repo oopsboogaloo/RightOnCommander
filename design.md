@@ -1,6 +1,8 @@
 # Right on Commander — Design
 
-**Version:** 1.0 (draft — all design decisions resolved)
+**Version:** 1.1 (draft — all design decisions resolved)
+
+> **Changelog 1.0 → 1.1 (2026-11-07):** Documentation catch-up only. Added §10 **Design mode (dev tool)** for the shipped wave designer (`wave-designer-spec.md`). Noted in §7 that the player's horizontal field is now ±4/3 to fill the 4:3 box, and that the movement clamp uses the ship's drawn reach. "Derives from" corrected to requirements v1.13.
 
 > **Changelog 0.9 → 1.0:** **Reversed the play/render area from portrait to a fixed 4:3 landscape "game box"** — supersedes ROC-HUD-1/ROC-NFR-4 as documented in requirements.md (a matching requirements.md update is tracked separately). New `render/viewport.ts` (`computeViewportBox`/`computeViewport`, pure) is the single source of truth for the box, consumed independently by `Renderer2D` (render scale, HUD/button layout) and `DomInput` (pointer-to-field mapping) so the two always agree without being wired together. `Renderer2D.beginFrame`/`endFrame` now draw through a box-local, letterboxed transform each frame with a 1px white border around the box; on a portrait **touch** device the frame draws through an additional 90° rotation so the box fills the screen instead of shrinking, with a persistent on-screen hint telling the player to turn their device sideways — a narrow **desktop** window (no touch) falls back to a plain shrink-to-fit box instead of rotating. See §7 (Viewport & aspect lock) and §17.
 >
@@ -17,7 +19,7 @@
 > **Changelog 0.3 → 0.4:** Project renamed **EliteShooter → Right on Commander**; requirement-ID prefix `ES-` → `ROC-`.
 
 > **Changelog 0.2 → 0.3:** All §19 design decisions confirmed — TS, Vitest+fast-check (TS, not Python), Vite, convex-polygon hull collision, 1/120 s sim tick, 25° perspective camera. Ready to build.
-**Derives from:** requirements.md v1.6
+**Derives from:** requirements.md v1.13
 **Stack:** **TypeScript** (ES modules, bundled by Vite) + HTML5 Canvas 2D; Python for offline tooling only.
 
 > **Changelog 0.1 → 0.2:** Language locked to **TypeScript** (was JS+JSDoc). The interface typedefs in §4 become real TS `interface`s, and the sim/render/audio/input seam is enforced by the TS compiler. Vitest + fast-check run the TS sim directly.
@@ -261,6 +263,8 @@ The play/render area is a fixed **4:3 landscape box**, not the raw canvas — so
 
 `Renderer2D` and `DomInput` each call `computeViewport` independently (from the same canvas CSS dimensions + touch capability) rather than sharing a live object — being a pure function of the same inputs, they agree by construction with no coordination needed. `Renderer2D.beginFrame`/`endFrame` bracket each frame with the rotation + box-offset transform (plus a clip to the box, and the 1px white border drawn just inside it once the clip is lifted), so every draw call for the rest of the frame — including `main.ts`'s own HUD/button/overlay drawing — works in plain box-local pixel coordinates with no per-call offset math. `DomInput.toField` and `main.ts`'s cheat/station tap handling map incoming client coordinates through the same box (via `physicalToLogical`, the inverse of the render rotation), so a drag or tap that lands outside the box — in a letterbox bar, or past the device's physical rotation — clamps to the nearest field edge rather than reading as an out-of-sync or ignored position.
 
+**Field bounds in the box:** the renderer uses a uniform `box.h/2` px-per-unit scale, so the visible field is ±4/3 world units across and ±1.6 along the scroll. The player's horizontal bound is `FIELD_HALF_WIDTH = 4/3` (`sim/systems/movement.ts`, mirrored in `DomInput`'s `DEFAULT_FIELD_BOUNDS`) so the ship can reach both sides. The clamp insets by the current hull's drawn half-reach per direction (`hullInset`, passed in by the shell from the silhouette extent × entity scale), falling back to a uniform `shipRadius` when none is given (as in the headless tests).
+
 This is a real-renderer/real-input concern only — the abstract `Renderer` interface (§4) and the headless test harness are untouched; null/recording backends in tests have no notion of a box or aspect ratio.
 
 ### Per-object draw (`drawMesh`)
@@ -343,6 +347,15 @@ Pattern, enemy and stats are orthogonal: swap `enemy` to re-skin a pattern; the 
 }
 ```
 Level 4 reverts to `"entry": "launch"` (v1.10 — the misjump framing moved to level3's `witchspace_interlude` above) and omits `midBoss` entirely (v1.10, ROC-L4-4).
+
+### Design mode (dev tool) `[wave-designer-spec.md]`
+A dev-only wave/asteroid authoring mode, opened from the cheat buttons (DESIGN) during the four phases that have authored content: `ASTEROIDS`, `WAVES_A`, `ASTEROIDS_B`, `WAVES_B`. Not a player feature, so it has no `ROC-*` requirement.
+
+- **Sim side** (`sim/systems/designMode.ts`, pure): maps a phase to its content (`wavesA`/`wavesB`/`asteroidWaves`/`midAsteroids`/`combatAsteroids`/`giantAsteroids`), add/remove mutators, a static path sampler for ghost trails, and a scrub-span estimate.
+- **`sim.design` API** (`sim/index.ts`): `enter()` (clears combat, restarts the phase and snapshots its start; `false` outside a designable phase), `content()`, `spanMs()`, `replayTo(frameOffset)`, and `addWave`/`removeWave`/`addAsteroidField`/`removeAsteroidFieldAt`/`addGiantAsteroid`/`removeGiantAsteroid`.
+- **Scrubbing is re-simulation, not an approximation:** `replayTo` restores the phase-start snapshot and steps forward. Scrubbing forward from the last position just steps on (cheap enough to auto-play every tick); only scrubbing backward pays for a full restore-and-replay. Determinism (§3) is what makes this exact.
+- **Every edit re-enters the phase**, because `enterLevelState` is what turns content into live wave/asteroid records and only runs at phase entry.
+- **Shell side** (`render/screens/designer.ts`): scrub bar, transport, add/remove/export buttons, pick-lists and ghost trails, drawn with the same `drawEntities()` as live play. Export writes the phase's content as JSON to paste into `content/level*.json`. Placement uses the 4:3 box (§7) as its coordinate surface.
 
 ### Difficulty scaling `[ROC-DIF-1,2, ROC-ENM-13,14]`
 A single `difficulty` value scales **enemy count per wave** (primary live lever) and applies hull/shield/fire-rate multipliers; Elite mode raises the floor. Density profiles per level give L1–2 sparse, L3–4 bullet-hell.

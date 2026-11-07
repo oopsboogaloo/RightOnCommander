@@ -1,7 +1,9 @@
 # Right on Commander — Tasks
 
-**Version:** 0.4 (draft)
-**Derives from:** requirements.md v1.7, design.md v0.6
+**Version:** 0.5 (draft)
+**Derives from:** requirements.md v1.13, design.md v1.0
+
+> **Changelog 0.4 → 0.5 (2026-11-07):** Ticked every Phase 0–6 task that is built and tested (343 tests green, lint clean). Still open: **T6.3 Rating** (only the `world.rating` shape exists — no tally/ladder logic) and **T6.5 Persistence** (only the generic JSON `Storage` round-trip used by control remapping — no save object or high-score table). Added notes where later requirements changed a task's scope (T5a.6, T5a.7, T6.4 — escape pod removed in v1.8). Rewrote **T7.4** for the v1.8 auto-triggered Energy Bomb (already built) and left player ECM open. Noted T7.5 as partly built. Added **T7.2b** (fixed 4:3 viewport, `viewport-spec.md`) and **T7.2c** (wave designer, `wave-designer-spec.md`), both shipped.
 **Stack:** TypeScript + Canvas 2D + Vite + Vitest/fast-check; Python for the ship-data parser only.
 
 ## How to read this
@@ -14,17 +16,17 @@ Dependencies flow top-down unless noted. IDs are stable; insert with letters (T4
 
 ## Phase 0 — Scaffolding
 
-- [ ] **T0.1 — Project setup.**
+- [x] **T0.1 — Project setup.**
   **Do:** Vite + TS (strict) + Vitest + fast-check + ESLint; folder tree per design §2; npm scripts `dev`/`build`/`test`/`balance`; CI runs `test` headless; ESLint boundary rule "no DOM/Canvas/audio symbols in `sim/`".
   **Done-when:** `npm run dev` serves a blank canvas; `npm test` runs (zero tests ok); CI green; importing `document` inside `sim/` fails lint.
   **Refs:** AS-1, AS-1a, ROC-TEST-1.
 
-- [ ] **T0.2 — Interfaces & core types.**
+- [x] **T0.2 — Interfaces & core types.**
   **Do:** `interfaces.ts` (Renderer, AudioOut, InputFrame, Storage, Clock); `components.ts`; `world.ts` World shape; `vec3`/matrix math.
   **Done-when:** types compile; null/stub backends implement the interfaces; no logic yet.
   **Refs:** design §4–5, ROC-TEST-3.
 
-- [ ] **T0.3 — RNG, snapshot & harness skeleton.**
+- [x] **T0.3 — RNG, snapshot & harness skeleton.**
   **Do:** `mulberry32` PRNG with state in/out; `snapshot()/restore()`; `test/harness.ts` (`makeSim`, `runFrames`, `replay`) with null backends + recording event sink.
   **Done-when:** **property test** — for random seeds and input logs, `restore(snapshot())` then N steps == N steps then snapshot (determinism + round-trip). `[ROC-TEST-2,4,5]`
 
@@ -32,17 +34,17 @@ Dependencies flow top-down unless noted. IDs are stable; insert with letters (T4
 
 ## Phase 1 — Render foundation
 
-- [ ] **T1.1 — Ship-data parser (the parser).** 🔧 *Python*
+- [x] **T1.1 — Ship-data parser (the parser).** 🔧 *Python*
   **Do:** `tools/bbcelite_to_mesh.py` — parse bbcelite `VERTEX/EDGE/FACE` blueprints (and/or Ian Bell archive) → normalise the ±255 box → emit `src/content/meshes/<ship>.json` = `{vertices, edges, faces:{loop,normal}}`. First batch: Sidewinder, Cobra Mk III, Asp, Fer-de-Lance, Krait, Mamba, Gecko, Adder, Viper, Coriolis, Thargoid.
   **Done-when:** outputs schema-valid JSON; a Python check asserts known vertex/edge counts for ≥2 ships and that every face index is in range; meshes committed.
   **Refs:** design §16; data refs in requirements §References.
 
-- [ ] **T1.2 — Software-3D Canvas renderer.**
+- [x] **T1.2 — Software-3D Canvas renderer.**
   **Do:** `render/camera.ts`, `project.ts`, `renderer2d.ts` — model matrix (yaw∘bank∘translate), project, **back-face cull**, **painter sort**, **black fill + white stroke**; slow starfield layer.
   **Done-when:** a rotating Sidewinder renders solid (no back faces, nearer faces occlude); **unit tests** on `project.ts` for cull decision and face depth-ordering on a known cube.
   **Refs:** ROC-VIS-1..5,7; design §7.
 
-- [ ] **T1.3 — Loop & wiring.**
+- [x] **T1.3 — Loop & wiring.**
   **Do:** `platform/loop.ts` fixed-timestep (1/120 s) + interpolation; `main.ts` wires sim + real renderer.
   **Done-when:** rotating ship animates smoothly at display rate while sim steps at fixed DT; harness drives same `sim.step` with no rAF.
   **Refs:** AS-2, ROC-TEST-5; design §3.
@@ -51,17 +53,17 @@ Dependencies flow top-down unless noted. IDs are stable; insert with letters (T4
 
 ## Phase 2 — Player slice
 
-- [ ] **T2.1 — Input layer.**
+- [x] **T2.1 — Input layer.**
   **Do:** `input/domInput.ts` mouse/touch/keyboard/gamepad → `InputFrame`; remap; transparent ECM/bomb touch buttons (render hooks).
   **Done-when:** each input source produces correct `InputFrame`s; remap persists; sim consumes frames identically regardless of source.
   **Refs:** ROC-CTL-1..6.
 
-- [ ] **T2.2 — Movement & banking.**
+- [x] **T2.2 — Movement & banking.**
   **Do:** `systems/movement.ts` — follow `moveTarget`, full-screen clamp, bank ∝ lateral velocity, level-out on release, engine-flame flag on forward thrust.
   **Done-when:** **unit tests** — ship never exits bounds for any target; bank sign matches lateral direction; flames flag true only when thrusting up.
   **Refs:** ROC-MOV-1..5.
 
-- [ ] **T2.3 — Pulse laser.**
+- [x] **T2.3 — Pulse laser.**
   **Do:** `systems/weapons.ts` — autofire-while-held + tap single-shot; pulse projectile entities; object pool.
   **Done-when:** firing cadence correct under held vs tapped; **unit test** rounds-per-second; pool reuses, no leak.
   **Refs:** ROC-CTL-1, ROC-LAS-3,4.
@@ -77,17 +79,17 @@ Dependencies flow top-down unless noted. IDs are stable; insert with letters (T4
   **Done-when:** **unit tests** for point/segment-in-ellipse, segment-in-dilated-polygon and polygon-vs-polygon distance on known shapes; broadphase returns same pairs as brute force.
   **Refs:** ROC-DMG-1,5; design §8.
 
-- [ ] **T3.2 — Damage & shields.**
+- [x] **T3.2 — Damage & shields.**
   **Do:** `systems/damage.ts` — shield-ring depletion → hull; `shieldFlashTtl` vs white `flashTtl`; destruction → fragments; smoke/fire on heavy hull damage.
   **Done-when:** **property tests** — shields always deplete before hull; a shielded hit flashes shield not hull; destruction fires exactly at hull≤0; flash rule applies to every damageable kind.
   **Refs:** ROC-DMG-2,3,6,6a,7.
 
-- [ ] **T3.3 — Economy: bounty & counters.**
+- [x] **T3.3 — Economy: bounty & counters.**
   **Do:** `systems/economy.ts` — bounty on kill → wallet **and** lifetime score; floating-text events.
   **Done-when:** **unit tests** — wallet vs score diverge correctly across kills + spends; events emitted.
   **Refs:** ROC-ECO-1,2.
 
-- [ ] **T3.4 — Explosions & particles.**
+- [x] **T3.4 — Explosions & particles.**
   **Do:** `systems/particles.ts` — edges fly apart + white circular particles; all seeded via `world.rng`; pooled.
   **Done-when:** deterministic across a seed; **unit test** particle count/lifetime bounds.
   **Refs:** ROC-VIS-6.
@@ -96,22 +98,22 @@ Dependencies flow top-down unless noted. IDs are stable; insert with letters (T4
 
 ## Phase 4 — Enemies & waves
 
-- [ ] **T4.1 — Paths & pattern library.**
+- [x] **T4.1 — Paths & pattern library.**
   **Do:** `systems/paths.ts` + patterns `vform`, `loop`, `sine_column`, `side_stream`, `pincer`, `orbit`, `drop_hold`; tangent orientation + banking.
   **Done-when:** each pattern is a pure `(t,params,rng)→{pos,tangent}`; **unit tests** for path continuity and that orientation tracks tangent.
   **Refs:** ROC-ENM-2,3,9.
 
-- [ ] **T4.2 — Wave manager & bonus.**
+- [x] **T4.2 — Wave manager & bonus.**
   **Do:** `systems/waves.ts` — data-driven spawn from wave JSON; membership tracking; **50%-on-full-clear** bonus + screen flash; escapees forfeit.
   **Done-when:** **property tests** — bonus = exactly 0.5×Σ member bounty, once, only when killed==count; any escape ⇒ no bonus; **no off-field stalls** within a frame bound.
   **Refs:** ROC-ENM-1,7,8; ROC-ECO-1a,1b.
 
-- [ ] **T4.3 — Enemy AI & difficulty.**
+- [x] **T4.3 — Enemy AI & difficulty.**
   **Do:** `systems/ai.ts` — slow, dodgeable enemy projectiles (aimed/patterned); difficulty scaler = enemy-count multiplier + hp/shield/fire-rate multipliers.
   **Done-when:** **unit tests** — projectile speed band; count scaler changes spawn totals; stat multipliers applied.
   **Refs:** ROC-ENM-11,12,13,14; ROC-DIF-1,2.
 
-- [ ] **T4.4 — Missiles power-up.**
+- [x] **T4.4 — Missiles power-up.**
   **Do:** `systems/missiles.ts` — homing, continuous autofire, grade 1→4, 60 s timer, downgrade on expiry, destructible.
   **Done-when:** **property tests** — re-collect restarts timer & raises grade (cap 4); expiry drops one grade then removes at 0; volley size == grade; missiles can be shot.
   **Refs:** ROC-MIS-1..5.
@@ -120,17 +122,17 @@ Dependencies flow top-down unless noted. IDs are stable; insert with letters (T4
 
 ## Phase 5 — Level 1 playable 🏁
 
-- [ ] **T5.1 — Level FSM.**
+- [x] **T5.1 — Level FSM.**
   **Do:** `systems/levelstate.ts` — LAUNCH(Coriolis) → WAVES_A → MID_BOSS → WAVES_B → END_BOSS → [VIPER if contraband] → DOCK.
   **Done-when:** **scenario test** drives the FSM through every state headless.
   **Refs:** ROC-LVL-1,2.
 
-- [ ] **T5.2 — Level 1 content.**
+- [x] **T5.2 — Level 1 content.**
   **Do:** `content/level1.json` + asteroids (fragment→boulders, yield alloys/metals/gems/crystals), lone Sidewinder/Krait/Gecko/Adder, **hermit-asteroid mid-boss (guaranteed laser drop)**, **Fer-de-Lance end boss**.
   **Done-when:** plays start→dock; mid-boss always drops a laser; **scenario test** asserts both bosses reached and laser dropped.
   **Refs:** ROC-L1-1..5, ROC-PWR-6.
 
-- [ ] **T5.3 — Pickups.**
+- [x] **T5.3 — Pickups.**
   **Do:** `systems/pickups.ts` — fuel/gems→shield (surplus→cargo), alloys→hull; shot-effects (fuel explode-no-splash, alloys/gems shatter); cargo scoop text; laser pickups fit.
   **Done-when:** **unit tests** for each pickup's collect + shot behaviour; surplus banks as cargo.
   **Refs:** ROC-PWR-1..6, ROC-ECO-3.
@@ -143,42 +145,44 @@ Dependencies flow top-down unless noted. IDs are stable; insert with letters (T4
 
 Turns the placeholder bosses into the specified fights and adds the level bookends. Order: T5a.1 → T5a.2 → T5a.3 → {T5a.4, T5a.5 in either order} → T5a.6 → T5a.7 → T5a.8.
 
-- [ ] **T5a.1 — Sim-owned scroll & boss framing.**
+- [x] **T5a.1 — Sim-owned scroll & boss framing.**
   **Do:** add `world.scroll` (default 1; 0 through `MID_BOSS`/`END_BOSS` and the kill-text fade); starfield drift multiplies by it (renderer reads sim state, drops its wall-clock drift); render the horizontal black-and-white boss health bar top-of-screen from `boss.hull/hullMax`; on boss death emit `bossKilled` → shell fades "RIGHT ON COMMANDER" in white; FSM holds the boss state until the fade elapses, then restores scroll and advances.
   **Done-when:** **scenario test** — entering a boss state sets `scroll` 0; killing the boss emits `bossKilled`; `scroll` returns to 1 only after the fade timer; bar fraction tracks damage in state.
   **Refs:** ROC-BOSS-1..4; design §12a.
 
-- [ ] **T5a.2 — Per-entity scale (render + collision).**
+- [x] **T5a.2 — Per-entity scale (render + collision).**
   **Do:** `Entity.scale` multiplier over `SHIP_SCALE`, honoured by the renderer model matrix, silhouette collision (`hullRadius`, dilation) and the ram test; content plumbs it — **Fer-de-Lance 1.5× everywhere incl. the player hull** (ships.json/enemies.json), boss FdL 2.0×, hermit & docking Coriolis 2× the Coriolis' drawn size.
   **Done-when:** **unit tests** — a scaled entity's collision silhouette matches its drawn size; player FdL and enemy FdL both come out 1.5×; boss override 2.0×.
   **Refs:** ROC-FDL-1, ROC-HERM-2, ROC-DCKG-1.
 
-- [ ] **T5a.3 — Boss ECM.**
+- [x] **T5a.3 — Boss ECM.**
   **Do:** `systems/ecm.ts` — while an ECM-flagged boss lives, a player missile launch arms a 300 ms fuse; on expiry remove **all player missiles harmlessly** (no damage path), emit `{type:'ecm'}` (shell: screen flash + "ECM" caption bottom-of-screen), 500 ms cooldown; dies with the boss.
   **Done-when:** **unit tests** — fuse and cooldown timings; detonation damages nothing; missiles fired after the boss dies fly unaffected.
   **Refs:** ROC-BECM-1..4.
 
-- [ ] **T5a.4 — Hermit-asteroid mid-boss.**
+- [x] **T5a.4 — Hermit-asteroid mid-boss.**
   **Do:** composite hermit visual (asteroid mesh at 2× Coriolis size + the station's docking-port rectangle) fixed top-centre, slow y-spin with the port on the rotation axis; hits inside the port rect deal **3× damage**; hull 30 / no shields; boss ECM on; adder launcher — every 5 s while <3 alive, either launch-from-rock (spawn yaw = rock's current angle, unwinding in flight) or side entry, winding medium-fast paths that never collide with the rock, until the rock dies; on death: 1,000 cr, guaranteed laser drop, 10 random cargo, survivors flee off-screen; one whole-fight wave record → 50% bonus only if **every** adder (incl. fleers) died.
   **Done-when:** **scenario tests** — port hits triple; spawn cadence/cap; flee-on-death; bonus paid only on total clearance; rewards land.
   **Refs:** ROC-HERM-1..12, ROC-PWR-6, ROC-ECO-1a.
 
-- [ ] **T5a.5 — Fer-de-Lance end boss.**
+- [x] **T5a.5 — Fer-de-Lance end boss.**
   **Do:** `strafe` boss ai — fast rounded-rectangle track, direction reverses on an rng timer in [200, 2000] ms, aimed shot every 400 ms; 8 shield rings; boss ECM on; 2.0× scale; on death: 10 cargo items + 1,000 cr + `bossKilled` text.
   **Done-when:** **unit tests** — track position is continuous, reversal intervals stay in-bounds, fire cadence 400 ms; **scenario test** on rewards and shield count.
   **Refs:** ROC-FDL-1..5.
 
-- [ ] **T5a.6 — Death checkpoints & respawn-in-place.**
+- [x] **T5a.6 — Death checkpoints & respawn-in-place.**
   **Do:** death resolution branches on `levelState` — boss states: respawn in place, **keep all entities** (boss damage persists); `WAVES_B`: clear combat, restart part 2 only; earlier states: today's restart-level; escape pod unchanged and checked first.
   **Done-when:** **scenario tests** for all three branches; boss hull is identical before/after a player death mid-fight.
   **Refs:** ROC-BOSS-5..7, ROC-LIFE-2,3.
+  *Superseded by requirements v1.8:* every death now respawns in place once the explosion finishes; nothing restarts (ROC-LIFE-2,2b). Covered by `test/scenario/checkpoints.test.ts`.
 
-- [ ] **T5a.7 — Docking sequence.**
+- [x] **T5a.7 — Docking sequence.**
   **Do:** `DOCKING` state after the end-boss fade — scroll resumes, 2× Coriolis scrolls into view spinning slowly on y; guns + missiles disabled; dock test = player inside the port rect while the port is within 30° of horizontal ⇒ `DOCK` (shop); hull contact ⇒ death (life loss) then, with lives remaining, `DOCK` anyway; zero lives ⇒ game over.
   **Done-when:** **scenario tests** — aligned entry docks; misaligned/hull contact kills then still reaches the shop; firing inputs are inert throughout.
   **Refs:** ROC-DCKG-1..4.
+  *Revised in requirements v1.8:* the Coriolis is a backdrop with no collision; the shop opens once the station has been in view for a moment (ROC-DCKG-3). Covered by `test/scenario/docking.test.ts`.
 
-- [ ] **T5a.8 — Launch & hyperspace.**
+- [x] **T5a.8 — Launch & hyperspace.**
   **Do:** `LAUNCH` renders the up-pointing Coriolis scrolling away behind the player; `HYPERSPACE` emits "Hyperspace [system] 5…1" countdown events (system name from level content), ramps `world.scroll` up (starfield dots stretch to full-height lines), holds a few seconds, ramps back; `INFO` shows a card of Elite facts for the system, then the level proper begins. Runs on **every** launch, including the first.
   **Done-when:** **scenario test** drives LAUNCH → HYPERSPACE → INFO → level start headless; countdown events carry the right system name; `world.scroll` follows the ramp profile.
   **Refs:** ROC-HYP-1..5, ROC-LORE-1,2.
@@ -189,12 +193,12 @@ Turns the placeholder bosses into the specified fights and adds the level booken
 
 ## Phase 6 — Station, ships & progression
 
-- [ ] **T6.1 — Ships content & fitting.**
+- [x] **T6.1 — Ships content & fitting.**
   **Do:** `content/ships.json` (stats + hardpoints per design table); laser-fit-per-direction rules; weapons carry forward on ship change.
   **Done-when:** **unit tests** — hardpoint cap + one-laser-per-direction; buying next ship re-fits lasers with no loss.
   **Refs:** ROC-SHIP-1..6, ROC-LAS-1,2.
 
-- [ ] **T6.2 — Station screen.**
+- [x] **T6.2 — Station screen.**
   **Do:** `screens/station.ts` — wireframe dock + docked ship, blurb, Sell Cargo, Upgrade Ship, fit lasers, buy ECM/bomb/pod/life/missile-level, **Launch (confirm)**, balance shown.
   **Done-when:** **headless tests** on intents — sell converts cargo→credits; upgrade with sufficient wallet changes ship + carries lasers; insufficient funds disables; launch needs confirm.
   **Refs:** ROC-STN-1..7, ROC-ECO-6,7,9.
@@ -203,16 +207,19 @@ Turns the placeholder bosses into the specified fights and adds the level booken
   **Do:** `systems` kill-weighted tally → Harmless…Elite ladder; rank-up notice; "RIGHT ON, COMMANDER!".
   **Done-when:** **property test** — tally monotonic; threshold crossing fires once; Thargoid weighted highest.
   **Refs:** ROC-RTG-1,2,3.
+  *Status:* not started — `world.rating` (`kills`/`weightedTally`/`rank`) exists and is snapshotted, but nothing updates it.
 
-- [ ] **T6.4 — Lives, death, escape pod, difficulty.**
+- [x] **T6.4 — Lives, death, escape pod, difficulty.**
   **Do:** 3 lives; death→lose life + restart level; escape-pod→respawn at death point, consume pod; buy lives max 5; global difficulty.
   **Done-when:** **unit/scenario tests** — 0≤lives≤5; pod path vs restart path; game-over at 0.
   **Refs:** ROC-LIFE-1..5, ROC-DIF-1,2.
+  *Revised in requirements v1.8/v1.9:* the escape pod is gone, every death respawns in place, and a run starts with 4 lives (max 5 bought). The auto-triggered Energy Bomb (ROC-LIFE-2a) is checked before death.
 
 - [ ] **T6.5 — Persistence.**
   **Do:** `platform/storage.ts` save object (high scores, best rating, unlocks, settings, controls); high-score table.
   **Done-when:** round-trips via Storage interface; **unit test** with in-memory Storage stub.
   **Refs:** ROC-LBD-1,1a; ROC-PROG-3.
+  *Status:* partly built — `platform/storage.ts` round-trips JSON and persists control remaps only. Save object and high-score table still to do.
 
 ---
 
@@ -333,9 +340,19 @@ have nowhere to load into until the campaign can actually advance between levels
   lint/build clean.
   **Refs:** ROC-ENM-4 (distinct enemy types); requirements §References (ship-data provenance).
 
+- [x] **T7.2b — Fixed 4:3 landscape viewport.** *(shipped out of phase; spec `viewport-spec.md`)*
+  **Do:** `render/viewport.ts` (`computeViewportBox`/`computeViewport`, pure) is the single source of the letterboxed 4:3 box, used separately by `Renderer2D` (scale, HUD, 1px white border) and `DomInput` (pointer → field, clamping outside the box). Portrait + touch draws rotated 90° with a "turn sideways" hint; portrait desktop just shrinks. Follow-ups: horizontal player field widened to ±4/3 (`FIELD_HALF_WIDTH`), and the movement clamp uses the ship's real drawn reach.
+  **Done-when:** `test/unit/viewport.test.ts` green; requirements v1.13 (ROC-HUD-1, ROC-NFR-4) and design v1.0 §7 "Viewport & aspect lock" updated.
+  **Refs:** ROC-HUD-1, ROC-NFR-4; design §7, §17.
+
+- [x] **T7.2c — Interactive attack-wave designer (dev tool).** *(shipped out of phase; spec `wave-designer-spec.md`)*
+  **Do:** dev-only design mode from the cheat buttons (DESIGN), for ASTEROIDS / WAVES_A / ASTEROIDS_B / WAVES_B. `sim/systems/designMode.ts` (phase content, add/remove, ghost-trail path sampler, scrub span) + `sim.design` API (deterministic replay scrub) + `render/screens/designer.ts` (toolbar, pickers, ghost trails); export the phase as JSON.
+  **Done-when:** `test/unit/designMode.test.ts`, `test/unit/designer.test.ts`, `test/scenario/designApi.test.ts` green; design §10 "Design mode" documents the API.
+  **Refs:** design §10.
+
 - [ ] **T7.3 — Level 4 (Alien warzone).** *(v1.10 — renamed; ordinary launch entry, no mid-boss, shorter pacing)* Thargoids + **saucer variants** + Thargon swarms (inert on parent death) + **broken Galactic Navy wrecks** as scenery/hazard; **mothership end**, no mid-boss. **Refs:** ROC-L4-0,1,1a,2,3,4; ROC-ENM-6.
-- [ ] **T7.4 — ECM & Energy Bomb.** ECM clears projectiles+missiles on cooldown; Energy Bomb clears non-boss + projectiles, **boss-safe (non-lethal)**. Property test: bomb never kills a boss. **Refs:** ROC-DEF-1,2,3.
-- [ ] **T7.5 — Contraband interception.** Carrying illegal cargo at level end ⇒ extra Viper fight, no credits, kills count. Scenario test. **Refs:** ROC-LVL-4, ROC-ECO-4.
+- [ ] **T7.4 — Player ECM** *(Energy Bomb half done — see below)*. ECM is bought (station/pickups increment `player.ecm`) but cannot be fired yet: add the trigger (partly transparent touch button + bindable control) that destroys every enemy missile and bullet on screen, then a cooldown; show its countdown in the status bar. **Done already (v1.8 rework):** the Energy Bomb fires automatically instead of the ship dying — clears non-boss enemies, asteroids and enemy shots, deals a boss 50% of its current hull (this *can* kill a weakened boss, replacing the old "bomb never kills a boss" rule), leaves the ship at 1 hull, cap 1 (2 in the Fer-de-Lance); see `gamestate.ts` `detonateEnergyBomb`. **Refs:** ROC-DEF-1,2,2a,3.
+- [ ] **T7.5 — Contraband interception.** Carrying illegal cargo at level end ⇒ extra Viper fight, no credits, kills count. Scenario test. **Refs:** ROC-LVL-4, ROC-ECO-4. *Status:* partly built — the level FSM inserts `VIPER_INTERCEPT` before docking when `cargo.contraband > 0`, each level has a `viper` wave, and `test/scenario/levelstate.test.ts` covers the branch. Still to do: a way to pick up contraband (with its own shape), zero bounty for Viper kills (kills still count for rating), and more Vipers the more contraband you carry and the higher the difficulty.
 - [ ] **T7.6 — Density profiles.** L1–2 sparse/readable; L3–4 Xenon-2 bullet-hell via difficulty/count curves. **Refs:** ROC-ENM-13.
 
 🏁 **Milestone M3 — "Full campaign":** all four levels, all bosses, ECM/bomb, contraband path — start to finish.
@@ -357,7 +374,7 @@ have nowhere to load into until the campaign can actually advance between levels
 - [ ] **T9.3 — Accessibility.** Reduced-flash mode (shield-flash/explosions/star activity), audio toggle, remap UI. **Refs:** ROC-NFR-3.
 - [ ] **T9.4 — Performance pass.** Pools, pre-rendered particle dot, dPR cap, mobile entity/particle budgets; validate 60 fps at ≥50 entities incl. swarm+bomb. **Refs:** ROC-NFR-1,4.
 - [ ] **T9.5 — Leaderboard (optional).** Firebase submit + **GDPR consent**; decline ⇒ local only. **Refs:** ROC-LBD-2,3,4.
-- [ ] **T9.6 — Publish prep.** Portrait build, itch.io/CrazyGames packaging, IP/licensing sanity-check (hull/name homage; PD music arrangement).
+- [ ] **T9.6 — Publish prep.** Mobile build (landscape 4:3 box, portrait-rotate on touch — T7.2b), itch.io/CrazyGames packaging, IP/licensing sanity-check (hull/name homage; PD music arrangement).
 
 🏁 **Milestone M4 — "Ship it":** tuned, accessible, performant, optionally online.
 
