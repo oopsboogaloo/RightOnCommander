@@ -1,7 +1,9 @@
 # Viewport & Aspect-Ratio Lock — Spec (draft)
 
-**Status:** agreed in discussion, not yet implemented. Not wired into `requirements.md` / `design.md`
-/ `tasks.md` — see "Doc updates needed" below before/when this lands.
+**Status:** **Implemented** (commit `32138a0`, plus input/field follow-ups `5a58ff3`, `fdb40ea`,
+`92a51ad`, `48c84e4`, `fbb97db`). Folded into `requirements.md` v1.13 (ROC-HUD-1, ROC-NFR-4),
+`design.md` v1.0 §7 "Viewport & aspect lock", and `tasks.md` T7.2b. Those docs win if they
+disagree with this draft; it is kept for the reasoning behind the change.
 
 ## Problem
 
@@ -99,7 +101,7 @@ no "turn your phone" text, since there's no phone to turn.
 | Rotate-to-fill-and-instruct scope | **Touch devices only** — desktop narrow windows get shrink-to-fit, not the rotate treatment |
 | "Turn your phone" hint lifecycle | **Persistent** while portrait, not a one-time dismissable banner |
 
-## Doc updates needed once implemented
+## Doc updates needed once implemented (done)
 
 - `requirements.md` ROC-HUD-1 ("shall run in portrait aspect ratio") and ROC-NFR-4 ("fit a
   portrait field responsively") need rewriting for the fixed 4:3 landscape box + portrait-rotate

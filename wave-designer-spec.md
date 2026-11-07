@@ -1,8 +1,8 @@
 # Interactive Attack-Wave Designer — Spec (draft)
 
-**Status:** agreed in discussion, not yet implemented. Depends on the fixed 4:3 viewport/box
-(`viewport-spec.md`) landing first — placement uses that box as its coordinate surface. Not wired
-into `requirements.md` / `design.md` / `tasks.md` yet — see "Doc updates needed" below.
+**Status:** **Implemented** (commit `a22ca6d`). Documented in `design.md` §10 "Design mode
+(dev tool)" and `tasks.md` T7.2c. Those docs win if they disagree with this draft; it is kept for
+the reasoning and the open questions below.
 
 **Target devices:** iPad and desktop only. No phone/portrait handling needed for this tool.
 
@@ -160,7 +160,7 @@ rule):
 | Entry/exit UX | New `DESIGN` button beside `SKIP`/`PAUSE`/`REWIND`; `PLAY` returns to live cheat-mode play |
 | Speed/spacing on add | Both settable per wave, with defaults **speed 1.0**, **spacing 400ms** |
 
-## Doc updates needed once implemented
+## Doc updates needed once implemented (done)
 
 - New `tasks.md` entry (this is squarely a dev-tooling task, not a `requirements.md` player-facing
   item — no new `ROC-*` player requirement, but worth a design.md subsection under §10 documenting

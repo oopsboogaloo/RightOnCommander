@@ -11,7 +11,8 @@ A vertically scrolling space shooter for web and mobile, themed on the classic 8
   vector renderer. Tests with **Vitest + fast-check**. **Python** is used for offline tooling only
   (the bbcelite ship-data → mesh parser).
 
-> Authoritative specs live in `requirements.md` (v1.7), `design.md` (v0.6) and `tasks.md`.
+> Authoritative specs live in `requirements.md` (v1.13), `design.md` (v1.1) and `tasks.md` (v0.5).
+> `viewport-spec.md` and `wave-designer-spec.md` are implemented drafts kept for background; `DEFECTS.md` logs bugs.
 > If anything here disagrees with those, the design/tasks docs win — update this file to match.
 
 ## Architecture (one-line version)
@@ -37,10 +38,11 @@ src/
     math/           — vec3 / matrix math
     systems/        — intent, movement, paths, weapons, missiles, collision,
                       damage, particles, pickups, economy, waves, ai,
-                      levelstate, gamestate
+                      levelstate, gamestate, boss, ecm, dock, station,
+                      designMode, …
     content/        — loadContent.ts (parse + schema-validate JSON)
   content/          — DATA: ships/lasers/enemies/economy/ratings/blurbs/levels/waves/meshes (.json)
-  render/           — Canvas 2D backend (renderer2d, project, camera, screens/)
+  render/           — Canvas 2D backend (renderer2d, project, camera, viewport, screens/)
   audio/            — webaudio.ts, nullaudio.ts
   input/            — domInput.ts, remap.ts
   platform/         — storage.ts, loop.ts, main.ts (browser entry)
