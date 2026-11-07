@@ -18,7 +18,6 @@ export type StationAction =
   | 'fitRear'
   | 'fitLeft'
   | 'fitRight'
-  | 'ecm'
   | 'bomb'
   | 'bank'
   | 'life'
@@ -74,7 +73,6 @@ export function stationButtons(world: World, ctx: StationContext, w: number, h: 
         action: fitAction[dir] as StationAction,
       };
     }),
-    { label: `Buy ECM  ${prices.equipment.ecm}cr`, enabled: affordable(world, prices.equipment.ecm), action: 'ecm' },
     (() => {
       const bombCap = energyBombCap(world.player.shipClass);
       return {
@@ -145,7 +143,8 @@ export function drawStation(
     `Ship: ${ctx.ships.ships[world.player.shipClass]?.name ?? world.player.shipClass}`,
     `Lasers (${equippedCount(lasers)}/${totalHp} hp): ${fitted}`,
     `Lives: ${world.player.lives}   Bank: ${world.player.energyBank ? 'yes' : 'no'}`,
-    `ECM: ${world.player.ecm}  Bombs: ${world.player.energyBombs}/${energyBombCap(world.player.shipClass)}  Missile: L${world.player.missileGrade}`,
+    `Bombs: ${world.player.energyBombs}/${energyBombCap(world.player.shipClass)}  Missile: L${world.player.missileGrade}`,
+    `Rank: ${world.rating.rank}`,
   ];
   lines.forEach((t, i) => renderer.drawText(t, { x: 20, y: h - 130 + i * 20 }, { fill: '#9ab', font: '13px monospace', align: 'left' }));
 

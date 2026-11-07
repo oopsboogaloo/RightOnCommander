@@ -377,7 +377,7 @@ A single `difficulty` value scales **enemy count per wave** (primary live lever)
 - **Two counters:** `econ.wallet` (spendable, decremented by purchases) and `econ.score` (lifetime gross credits, monotonic). `[ROC-ECO-2]`
 - **Bounty** on kill → both counters + floating text; **wave bonus** = 50% of wave bountySum on full clear → both + screen flash. `[ROC-ECO-1,1a,1b]`
 - **Cargo** inventory (type→tonnage), sold at dock; contraband flagged for the Viper interception. `[ROC-ECO-3,6; ROC-LVL-4]`
-- **Rating** is the separate kill-weighted tally → rank ladder. `[ROC-RTG-1..3]`
+- **Rating** is the separate kill-weighted tally → rank ladder (`systems/rating.ts`, after `economySystem`): a destroyed enemy/boss scores `1 + floor(bounty/50)`; crossing each threshold sets `rating.rank`, pays that rank's bonus to wallet + score and emits `rankUp {rank, bonus, elite}`, which the shell flashes mid-screen (queued if several land together). `[ROC-RTG-1..3]`
 - **Persistence (Storage):** one save object — `{ highScores[], bestRating, unlocks, settings, controls }` — under a single localStorage key; the **title screen discloses this**. `[ROC-LBD-1,1a; ROC-TTL-4]` Online submit + consent only where enabled. `[ROC-LBD-2,3]`
 
 ```json

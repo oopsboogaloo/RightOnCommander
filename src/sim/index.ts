@@ -42,6 +42,7 @@ import {
 import { gamestateSystem, DEFAULT_GAMESTATE } from './systems/gamestate.js';
 import { bossSystem } from './systems/boss.js';
 import { thargonSystem } from './systems/thargons.js';
+import { ratingSystem } from './systems/rating.js';
 import { ecmSystem } from './systems/ecm.js';
 import { cloakSystem } from './systems/cloak.js';
 import { energyBankSystem } from './systems/energyBank.js';
@@ -240,6 +241,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     dropsSystem(world, rng);
     pickupsSystem(world, SIM_DT, { ...DEFAULT_PICKUPS, getHullRadius: (id) => hullRadii[id] });
     economySystem(world);
+    ratingSystem(world); // Harmless -> Elite kill tally, rank-up bonus [ROC-RTG-1,2,3]
     particlesSystem(world, rng, SIM_DT, DEFAULT_PARTICLES, fragGeom);
 
     world.rngState = rng.getState();

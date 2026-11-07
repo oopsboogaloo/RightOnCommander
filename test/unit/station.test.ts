@@ -1,5 +1,5 @@
 // T6.2: station shop intents — sell cargo, buy the next ship (carrying lasers), fit lasers,
-// buy ECM/bomb/bank/lives, upgrade the missile level, and launch only after confirmation.
+// buy bomb/bank/lives (no ECM — dropped from the shop), upgrade the missile level, and launch only after confirmation.
 // Insufficient credits disable a purchase and report the shortfall. [ROC-STN-1..7, ROC-ECO-6,7,8,9]
 
 import { describe, it, expect } from 'vitest';
@@ -11,7 +11,6 @@ import {
   sellCargo,
   buyShip,
   fitLaserAt,
-  buyEcm,
   buyEnergyBomb,
   buyEnergyBank,
   buyLife,
@@ -117,13 +116,11 @@ describe('fit lasers', () => {
 });
 
 describe('equipment', () => {
-  it('buys ECM / bomb / bank with credits', () => {
+  it('buys bomb / bank with credits', () => {
     const w = makeWorld(1);
     w.econ.wallet = 20000;
-    expect(buyEcm(w, ctx).ok).toBe(true);
     expect(buyEnergyBomb(w, ctx).ok).toBe(true);
     expect(buyEnergyBank(w, ctx).ok).toBe(true);
-    expect(w.player.ecm).toBe(1);
     expect(w.player.energyBombs).toBe(1);
     expect(w.player.energyBank).toBe(true);
     expect(w.player.energyBankTimer).toBe(ENERGY_BANK_INTERVAL_SEC);

@@ -21,7 +21,6 @@ import {
   sellCargo,
   buyShip,
   fitLaserAt,
-  buyEcm,
   buyEnergyBomb,
   buyEnergyBank,
   buyLife,
@@ -184,7 +183,6 @@ function runStationAction(action: StationAction): void {
     case 'fitRear': fitLaserAt(w, stationCtx, 'rear', selectedLaser); break;
     case 'fitLeft': fitLaserAt(w, stationCtx, 'left', selectedLaser); break;
     case 'fitRight': fitLaserAt(w, stationCtx, 'right', selectedLaser); break;
-    case 'ecm': buyEcm(w, stationCtx); break;
     case 'bomb': buyEnergyBomb(w, stationCtx); break;
     case 'bank': buyEnergyBank(w, stationCtx); break;
     case 'life': buyLife(w, stationCtx); break;
@@ -856,6 +854,15 @@ let bombTextTtl = 0;
 const BOMB_FLASH_SEC = 0.25;
 const BOMB_TEXT_SEC = 2.5;
 
+// Rank-up banner: each promotion flashes its new rank and credit bonus mid-screen for a few
+// seconds; several close together (the early ranks come quickly) queue and play in turn.
+// Reaching Elite shows "RIGHT ON, COMMANDER!". [ROC-RTG-3]
+interface RankBanner { rank: string; bonus: number; elite: boolean; ttl: number; ttlMax: number }
+const rankBanners: RankBanner[] = [];
+const RANK_BANNER_SEC = 3;
+const ELITE_BANNER_SEC = 6;
+const RANK_FLASH_HZ = 4;
+
 function drainFloaters(events: ReturnType<typeof sim.step>): void {
   for (const ev of events) {
     if (ev.type === 'floatingText' && (ev.category === 'bounty' || ev.category === 'cargo')) {
@@ -869,7 +876,15 @@ function drainFloaters(events: ReturnType<typeof sim.step>): void {
     } else if (ev.type === 'energyBombDeployed') {
       bombFlashTtl = BOMB_FLASH_SEC;
       bombTextTtl = BOMB_TEXT_SEC;
+    } else if (ev.type === 'rankUp') {
+      const elite = !!ev.elite;
+      const ttl = elite ? ELITE_BANNER_SEC : RANK_BANNER_SEC;
+      rankBanners.push({ rank: String(ev.rank), bonus: Number(ev.bonus) || 0, elite, ttl, ttlMax: ttl });
     }
+  }
+  if (rankBanners.length) {
+    rankBanners[0].ttl -= DT; // only the front banner counts down; the rest wait their turn
+    if (rankBanners[0].ttl <= 0) rankBanners.shift();
   }
   ecmFlashTtl = Math.max(0, ecmFlashTtl - DT);
   ecmTextTtl = Math.max(0, ecmTextTtl - DT);
@@ -1226,6 +1241,29 @@ startGameLoop({
       ctx!.fillStyle = `rgba(255,255,255,${(0.85 * (bombFlashTtl / BOMB_FLASH_SEC)).toFixed(2)})`;
       ctx!.fillRect(0, 0, w, h);
     }
+    if (rankBanners.length) {
+      // Flashes on/off for the first half, then holds and fades out. [ROC-RTG-3]
+      const b = rankBanners[0];
+      const age = b.ttlMax - b.ttl;
+      const flashing = age < b.ttlMax / 2;
+      const on = !flashing || Math.floor(age * RANK_FLASH_HZ * 2) % 2 === 0;
+      if (on) {
+        const a = Math.min(1, b.ttl / (b.ttlMax * 0.25));
+        const fill = `rgba(255,255,255,${a.toFixed(2)})`;
+        const gold = `rgba(255,215,107,${a.toFixed(2)})`;
+        // Dark backing panel so the banner reads over ships and bullets.
+        ctx!.fillStyle = `rgba(0,0,0,${(0.75 * a).toFixed(2)})`;
+        ctx!.fillRect(w / 2 - 230, h * 0.3 - 34, 460, 76);
+        if (b.elite) {
+          renderer.drawText('RIGHT ON, COMMANDER!', { x: w / 2, y: h * 0.3 }, { fill, font: 'bold 30px monospace', align: 'center' });
+          renderer.drawText(`Rated ELITE   +${b.bonus}cr`, { x: w / 2, y: h * 0.3 + 30 }, { fill: gold, font: '18px monospace', align: 'center' });
+        } else {
+          renderer.drawText(`RANK UP: ${b.rank.toUpperCase()}`, { x: w / 2, y: h * 0.3 }, { fill, font: 'bold 24px monospace', align: 'center' });
+          renderer.drawText(`+${b.bonus}cr bonus`, { x: w / 2, y: h * 0.3 + 26 }, { fill: gold, font: '16px monospace', align: 'center' });
+        }
+      }
+    }
+
     if (bombTextTtl > 0) {
       const a = Math.min(1, bombTextTtl / (BOMB_TEXT_SEC * 0.4));
       renderer.drawText('Emergency energy bomb deployed', { x: w / 2, y: 24 }, {
@@ -1393,7 +1431,7 @@ startGameLoop({
         { fill: '#9ab', font: '12px monospace', align: 'center' },
       );
       renderer.drawText(
-        `Score ${sim.state.econ.score}   Credits ${sim.state.econ.wallet}cr   Lives ${ps.lives}`,
+        `Score ${sim.state.econ.score}   Credits ${sim.state.econ.wallet}cr   Lives ${ps.lives}   ${sim.state.rating.rank}`,
         { x: w / 2, y: h - 14 },
         { fill: '#9ab', font: '12px monospace', align: 'center' },
       );

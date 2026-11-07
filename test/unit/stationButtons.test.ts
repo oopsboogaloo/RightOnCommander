@@ -33,7 +33,8 @@ describe('station menu', () => {
     const buttons = stationButtons(w, ctx, 800, 600, false, 'pulse');
     const actions = buttons.map((b) => b.action);
     expect(actions).toEqual(
-      expect.arrayContaining(['sell', 'buyShip', 'laserType', 'fitFront', 'fitRear', 'fitLeft', 'fitRight', 'ecm', 'bomb', 'bank', 'life', 'missile', 'launch']),
+      expect.arrayContaining(['sell', 'buyShip', 'laserType', 'fitFront', 'fitRear', 'fitLeft', 'fitRight', 'bomb', 'bank', 'life', 'missile', 'launch']),
     );
+    expect(actions as string[]).not.toContain('ecm'); // ECM is no longer sold
   });
 });
