@@ -26,6 +26,7 @@ import { type World } from '../world.js';
 import { startWave, launchState, type WaveDef, type WaveContext } from './waves.js';
 import { startAsteroidWaves, startGiantAsteroids, type AsteroidFieldDef, type GiantAsteroidDef, type GiantAsteroidPhase } from './asteroids.js';
 import { bossPlacement } from './boss.js';
+import { ELITE } from './rating.js';
 
 export type LevelState =
   | 'LAUNCH'
@@ -42,7 +43,8 @@ export type LevelState =
   | 'END_BOSS'
   | 'VIPER_INTERCEPT'
   | 'DOCKING'
-  | 'DOCK';
+  | 'DOCK'
+  | 'COMPLETE'; // the final level's end boss is dead: the game is won [ROC-PROG-1,2]
 
 export interface LevelDef {
   id: string;
@@ -344,8 +346,24 @@ export function enterLevelState(world: World, state: LevelState, level: LevelDef
       deleteStations(world);
       world.events.push({ type: 'dock' }); // [ROC-LVL-1]
       break;
+    case 'COMPLETE': {
+      // Game won. The commander is rated Elite whatever the tally says, the score takes the
+      // completion bonus, and the shell shows the congratulations, unlocks the Thargoid ship and
+      // moves on to the high scores. [ROC-PROG-1,2, ROC-RTG-3]
+      world.mode = 'COMPLETE';
+      world.scroll = 1;
+      const wasElite = world.rating.rank === ELITE;
+      world.rating.rank = ELITE;
+      world.econ.score += COMPLETION_BONUS;
+      world.econ.wallet += COMPLETION_BONUS;
+      world.events.push({ type: 'gameComplete', bonus: COMPLETION_BONUS, wasElite });
+      break;
+    }
   }
 }
+
+// Score bonus for completing the game. [ROC-PROG-1]
+export const COMPLETION_BONUS = 25000;
 
 export function startLevel(world: World, level: LevelDef, ctx: WaveContext): void {
   world.scroll = 1;
@@ -388,7 +406,8 @@ function dockingCheck(world: World, dt: number, level: LevelDef, ctx: WaveContex
   }
 }
 
-export function levelStateSystem(world: World, dt: number, level: LevelDef, ctx: WaveContext): void {
+// `finalLevel`: this is the campaign's last level, so killing its end boss wins the game.
+export function levelStateSystem(world: World, dt: number, level: LevelDef, ctx: WaveContext, finalLevel = false): void {
   stationTick(world, dt);
 
   // Boss-kill framing: hold the boss state while "RIGHT ON COMMANDER" fades, then resume
@@ -486,9 +505,10 @@ export function levelStateSystem(world: World, dt: number, level: LevelDef, ctx:
       if (groupCleared(world)) enterLevelState(world, 'END_BOSS', level, ctx);
       break;
     case 'END_BOSS':
-      tickBossFade(() =>
-        enterLevelState(world, hasContraband(world) ? 'VIPER_INTERCEPT' : 'DOCKING', level, ctx),
-      );
+      tickBossFade(() => {
+        if (finalLevel) enterLevelState(world, 'COMPLETE', level, ctx); // the game is won [ROC-PROG-1]
+        else enterLevelState(world, hasContraband(world) ? 'VIPER_INTERCEPT' : 'DOCKING', level, ctx);
+      });
       break;
     case 'VIPER_INTERCEPT':
       if (groupCleared(world)) enterLevelState(world, 'DOCKING', level, ctx);
@@ -498,5 +518,7 @@ export function levelStateSystem(world: World, dt: number, level: LevelDef, ctx:
       break;
     case 'DOCK':
       break; // terminal — gamestate takes over at the station
+    case 'COMPLETE':
+      break; // terminal — the shell shows the congratulations and the high scores
   }
 }

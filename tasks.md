@@ -371,7 +371,8 @@ have nowhere to load into until the campaign can actually advance between levels
 
 ## Phase 9 — Endgame, tuning, polish
 
-- [ ] **T9.1 — Unlocks.** Completing campaign ⇒ **Elite mode**; completing Elite mode ⇒ **playable Thargoid**. Scenario tests on the gate logic. **Refs:** ROC-PROG-1,2; ROC-SHIP-6.
+- [x] **T9.1 — Unlocks.** *(v1.15 — revised)* Completing the campaign ⇒ Elite rating, congratulations, completion bonus, high scores, and the **playable Thargoid** unlocked (persisted as `roc.unlocks`). Elite mode is deferred. **Refs:** ROC-PROG-1,2,3; ROC-SHIP-6.
+  *Built:* `COMPLETE` level state on the final level's end-boss kill (`levelstate.ts`, `COMPLETION_BONUS`); the shell's congratulations overlay → name entry → title; `thargoid` ship in `ships.json` (off-ladder, `unlock: thargoidShip`, `drones`), `buyUnlockedShip`, friendly `drone` Thargons in `thargons.ts`. Tests: `test/scenario/level4.test.ts`, `test/unit/thargoidShip.test.ts`.
 - [ ] **T9.2 — Balance-sim & tuning.** `test/balance/autoplayer.ts` heuristic bot; run across seeds/difficulties; report income/deaths/time-to-clear; **set ship/pod/life/missile prices and difficulty curves** so "~one ship per level if keeping up" holds. **Refs:** ROC-TEST-7, ROC-SHIP-1a, decisions-log item 4.
 - [ ] **T9.3 — Accessibility.** Reduced-flash mode (shield-flash/explosions/star activity), audio toggle, remap UI. **Refs:** ROC-NFR-3.
 - [ ] **T9.4 — Performance pass.** Pools, pre-rendered particle dot, dPR cap, mobile entity/particle budgets; validate 60 fps at ≥50 entities incl. swarm+bomb. **Refs:** ROC-NFR-1,4.

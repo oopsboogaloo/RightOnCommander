@@ -20,6 +20,7 @@ import { meshSilhouette, hullRadius } from '../sim/systems/collision.js';
 import {
   sellCargo,
   buyShip,
+  buyUnlockedShip,
   fitLaserAt,
   buyEnergyBomb,
   buyEnergyBank,
@@ -88,6 +89,7 @@ import gem from '../content/meshes/gem.json';
 import missile_pickup from '../content/meshes/missile_pickup.json';
 import laser_pickup from '../content/meshes/laser_pickup.json';
 import cougar from '../content/meshes/cougar.json';
+import { COMPLETION_BONUS } from '../sim/systems/levelstate.js';
 import { loadHighScores, saveHighScores, qualifies, insertScore, type HighScore } from './highScores.js';
 import { drawTitleScreen, drawEntryScreen, entryKeys, entryKeyAt, applyEntryKey } from '../render/screens/title.js';
 
@@ -176,10 +178,20 @@ let highlightRow = -1; // the row a just-entered score landed on, blinking on th
 let entryName = '';
 let gameOverSec = 0;
 const GAME_OVER_HOLD_SEC = 3; // "GAME OVER" holds this long before moving on
+// Game won: the congratulations hold this long (a tap skips after COMPLETE_MIN_SEC), then on to
+// the high scores. [ROC-PROG-1,2]
+let completeSec = 0;
+let completeBonus = 0;
+const COMPLETE_HOLD_SEC = 10;
+const COMPLETE_MIN_SEC = 2.5;
 const LAST_NAME_KEY = 'roc.lastName';
 
 // Station shop wiring: the dock screen shows when the level reaches DOCK; taps route to intents.
-const stationCtx: StationContext = { ships: loadShips(shipsJson), prices: economyJson as PricesContent };
+// Earned unlocks persist across runs (completing the game unlocks the Thargoid ship). [ROC-PROG-2]
+const UNLOCKS_KEY = 'roc.unlocks';
+const storedUnlocks = storage.load(UNLOCKS_KEY);
+const unlocks: Record<string, boolean> = storedUnlocks && typeof storedUnlocks === 'object' ? { ...(storedUnlocks as Record<string, boolean>) } : {};
+const stationCtx: StationContext = { ships: loadShips(shipsJson), prices: economyJson as PricesContent, unlocks };
 let launchArmed = false;
 let selectedLaser: LaserType = 'pulse';
 const LASER_CYCLE: LaserType[] = ['pulse', 'beam', 'military'];
@@ -193,6 +205,7 @@ function runStationAction(action: StationAction): void {
   switch (action) {
     case 'sell': sellCargo(w, stationCtx); break;
     case 'buyShip': buyShip(w, stationCtx); break;
+    case 'buyThargoid': buyUnlockedShip(w, stationCtx, 'thargoid'); break;
     case 'laserType': selectedLaser = LASER_CYCLE[(LASER_CYCLE.indexOf(selectedLaser) + 1) % LASER_CYCLE.length]; break;
     case 'fitFront': fitLaserAt(w, stationCtx, 'front', selectedLaser); break;
     case 'fitRear': fitLaserAt(w, stationCtx, 'rear', selectedLaser); break;
@@ -714,9 +727,13 @@ function handleTapAt(physX: number, physY: number): void {
     if (key) typeEntryKey(key.key);
     return;
   }
-  // A tap during the game-over hold skips straight on.
+  // A tap during the game-over hold, or once the congratulations have been up a moment, skips on.
   if (sim.state.mode === 'GAME_OVER' && gameOverSec > 0.8) {
     finishRun();
+    return;
+  }
+  if (sim.state.mode === 'COMPLETE') {
+    if (completeSec > COMPLETE_MIN_SEC) finishRun();
     return;
   }
 
@@ -751,6 +768,7 @@ function startNewGame(): void {
   launchArmed = false;
   paused = false;
   gameOverSec = 0;
+  completeSec = 0;
   highlightRow = -1;
   renderer.resetBackdrops();
   prev = readPlayerPose();
@@ -759,9 +777,20 @@ function startNewGame(): void {
   screenT = 0;
 }
 
+// The game is won: unlock the Thargoid ship for good (for the next run's shop) and clear any
+// queued rank-up so the congratulations have the screen. Keyed off the sim's COMPLETE mode, not
+// its one-off event, so it can't be missed. [ROC-PROG-2, ROC-SHIP-6]
+function onGameComplete(): void {
+  completeBonus = COMPLETION_BONUS;
+  unlocks.thargoidShip = true;
+  storage.save(UNLOCKS_KEY, unlocks);
+  rankBanners.length = 0;
+}
+
 // The run is over: enter a name if the score makes the table, otherwise straight to the title.
 function finishRun(): void {
   gameOverSec = 0;
+  completeSec = 0;
   screenT = 0;
   if (qualifies(highScores, sim.state.econ.score)) {
     const last = storage.load(LAST_NAME_KEY);
@@ -1113,6 +1142,7 @@ function drawEntities(now: number): void {
         break;
       }
       case 'enemy':
+      case 'drone':
       case 'boss':
       case 'station': {
         const m = e.meshId ? MESHES[e.meshId] : undefined;
@@ -1221,10 +1251,16 @@ startGameLoop({
     if (sim.state.mode === 'GAME_OVER') {
       gameOverSec += DT;
       if (gameOverSec >= GAME_OVER_HOLD_SEC) finishRun();
+    } else if (sim.state.mode === 'COMPLETE') {
+      if (completeSec === 0) onGameComplete();
+      completeSec += DT;
+      if (completeSec >= COMPLETE_HOLD_SEC) finishRun();
     }
   },
   render: (alpha) => {
     if (screen !== 'play') {
+      renderer.showAsteroidBackdrop = false; // the title stands alone, no level scenery behind it
+      renderer.showWreckageBackdrop = false;
       renderer.beginFrame(1);
       const { w, h } = renderer.getViewport().box;
       if (screen === 'title') drawTitleScreen(renderer, w, h, screenT, highScores, MESHES.sidewinder, highlightRow);
@@ -1524,7 +1560,20 @@ startGameLoop({
       });
     }
 
-    if (sim.state.mode === 'GAME_OVER') {
+    if (sim.state.mode === 'COMPLETE') {
+      // Game won: congratulations, Elite, the completion bonus and the unlock. [ROC-PROG-1,2]
+      ctx!.fillStyle = 'rgba(0,0,0,0.8)';
+      ctx!.fillRect(w * 0.08, h * 0.2, w * 0.84, h * 0.5);
+      const flash = Math.floor(completeSec * 4) % 2 === 0;
+      renderer.drawText('CONGRATULATIONS, COMMANDER!', { x: w / 2, y: h * 0.28 }, { fill: '#fff', font: 'bold 30px monospace', align: 'center' });
+      renderer.drawText('The Thargoid mothership is destroyed. The war is won.', { x: w / 2, y: h * 0.28 + 32 }, { fill: '#9ab', font: '15px monospace', align: 'center' });
+      renderer.drawText('RIGHT ON, COMMANDER!  Rated ELITE', { x: w / 2, y: h * 0.42 }, { fill: '#ffd76b', font: 'bold 22px monospace', align: 'center' });
+      renderer.drawText(`Completion bonus +${completeBonus}`, { x: w / 2, y: h * 0.42 + 28 }, { fill: '#ffd76b', font: '17px monospace', align: 'center' });
+      if (flash) {
+        renderer.drawText('THARGOID SHIP NOW PURCHASABLE', { x: w / 2, y: h * 0.58 }, { fill: '#7cd0ff', font: 'bold 22px monospace', align: 'center' });
+      }
+      renderer.drawText(`Final score ${sim.state.econ.score}`, { x: w / 2, y: h * 0.58 + 34 }, { fill: '#fff', font: '16px monospace', align: 'center' });
+    } else if (sim.state.mode === 'GAME_OVER') {
       renderer.drawText('GAME OVER', { x: w / 2, y: h / 2 }, { fill: '#f55', font: '32px monospace', align: 'center' });
     } else {
       // Persistent status bar, bottom of the screen: shield, missile level + countdown, energy

@@ -27,5 +27,5 @@
   "thargoid_warrior": { "hull": 8, "shield": 3, "bounty": 150, "meshId": "thargoid_saucer", "scale": 0.55, "colliderRx": 0.25, "colliderRz": 0.25, "missileImmune": true, "launches": { "enemy": "thargon", "everySec": 5, "max": 1 } },
   "thargoid_carrier": { "hull": 20, "shield": 6, "bounty": 400, "meshId": "thargoid_saucer", "scale": 0.9, "colliderRx": 0.36, "colliderRz": 0.36, "missileImmune": true, "launches": { "enemy": "thargon", "everySec": 2.5, "max": 2 } },
   "thargon": { "hull": 1, "bounty": 12, "meshId": "thargoid_saucer", "scale": 0.2, "colliderRx": 0.08, "colliderRz": 0.08 },
-  "thargoid_mothership": { "hull": 220, "shield": 20, "bounty": 5000, "meshId": "thargoid_saucer", "scale": 3.8, "behavior": "mothership", "ecm": true, "cargoDrops": 10, "missileImmune": true, "colliderRx": 1.1, "colliderRz": 1.1, "launches": { "enemy": "thargon", "everySec": 1.6, "max": 6 } }
+  "thargoid_mothership": { "hull": 440, "shield": 20, "bounty": 5000, "meshId": "thargoid_saucer", "scale": 3.8, "behavior": "mothership", "ecm": true, "cargoDrops": 10, "missileImmune": true, "colliderRx": 1.1, "colliderRz": 1.1, "launches": { "enemy": "thargon", "everySec": 1.6, "max": 6 } }
 }

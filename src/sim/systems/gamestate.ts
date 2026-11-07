@@ -153,7 +153,7 @@ export function gamestateSystem(
   dt: number,
   cfg: GamestateConfig = DEFAULT_GAMESTATE,
 ): void {
-  if (world.mode === 'GAME_OVER') return;
+  if (world.mode === 'GAME_OVER' || world.mode === 'COMPLETE') return;
 
   // Giant asteroids are level geography, not just a player hazard: any enemy or boss that flies
   // into one is wrecked too, independent of the player's own state — and an ordinary (drifting)

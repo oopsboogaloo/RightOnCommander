@@ -11,7 +11,7 @@ A vertically scrolling space shooter for web and mobile, themed on the classic 8
   vector renderer. Tests with **Vitest + fast-check**. **Python** is used for offline tooling only
   (the bbcelite ship-data → mesh parser).
 
-> Authoritative specs live in `requirements.md` (v1.14), `design.md` (v1.2) and `tasks.md` (v0.5).
+> Authoritative specs live in `requirements.md` (v1.15), `design.md` (v1.2) and `tasks.md` (v0.5).
 > `viewport-spec.md` and `wave-designer-spec.md` are implemented drafts kept for background; `DEFECTS.md` logs bugs.
 > If anything here disagrees with those, the design/tasks docs win — update this file to match.
 

@@ -4,11 +4,18 @@
 // ramming rather than shooting; it goes inert (stops steering, tumbles, drifts off the field)
 // when its parent dies — or once it has chased long enough, so a wave section can always end.
 // [ROC-ENM-6, ROC-L4-1a]
+//
+// The player's own Thargoid ship (unlocked by completing the game) launches friendly Thargons
+// through the same launcher: `drone` entities that fly to the nearest enemy, hover just below it
+// and shoot it with ordinary player bolts. They never collide with anything and expire after a
+// while, so they can't be shot down or hold up the end of a wave section. [ROC-SHIP-6]
 
-import { vec3 } from '../math/vec3.js';
+import { vec3, normalize } from '../math/vec3.js';
+import { spawnBolt, DEFAULT_WEAPONS } from './weapons.js';
+import { DRONE } from './ships.js';
 import type { Entity } from '../components.js';
 import type { Rng } from '../rng.js';
-import { PLAYER_ID, type World } from '../world.js';
+import { PLAYER_ID, playerInert, type World } from '../world.js';
 import type { WaveContext } from './waves.js';
 
 export const THARGON = {
@@ -137,10 +144,121 @@ function moveThargon(world: World, e: Entity, dt: number): void {
   if (Math.abs(e.pos.x) > CULL.x || e.pos.z < CULL.zMin || e.pos.z > CULL.zMax) world.entities.delete(e.id);
 }
 
+// ---- the player's friendly Thargons ---------------------------------------
+
+export const DRONE_CFG = {
+  lifeSec: 10,
+  maxSpeed: 1.4,
+  follow: 3, // proportional steering gain toward its hover point
+  hoverBelow: 0.55, // hovers this far below (in front of the player relative to) its target
+  orbitRadius: 0.35, // with nothing to shoot it circles the player
+  orbitRate: 2.2, // rad/s
+  range: 1.6, // fires at a target within this distance
+  fireEvery: 0.6, // seconds between bolts
+  boltTtl: 0.6,
+  scale: 0.2,
+};
+
+export interface DroneAi {
+  kind: 'drone';
+  age: number;
+  orbit: number; // angle round the player while idle
+  fireCd: number;
+}
+
+// The nearest live enemy or boss on screen, if any.
+function nearestTarget(world: World, from: { x: number; z: number }): Entity | undefined {
+  let best: Entity | undefined;
+  let bestD = Infinity;
+  for (const e of world.entities.values()) {
+    if ((e.kind !== 'enemy' && e.kind !== 'boss') || e.dying || (e.hull ?? 0) <= 0) continue;
+    if (Math.abs(e.pos.x) > LAUNCH_FIELD.x || e.pos.z < LAUNCH_FIELD.zMin || e.pos.z > LAUNCH_FIELD.zMax) continue;
+    const d = Math.hypot(e.pos.x - from.x, e.pos.z - from.z);
+    if (d < bestD) {
+      bestD = d;
+      best = e;
+    }
+  }
+  return best;
+}
+
+function launchDrone(world: World, player: Entity): void {
+  const ai: DroneAi = { kind: 'drone', age: 0, orbit: world.frame * 0.7, fireCd: DRONE_CFG.fireEvery };
+  const id = world.nextId++;
+  world.entities.set(id, {
+    id,
+    kind: 'drone',
+    team: 'player',
+    pos: vec3(player.pos.x, 0, player.pos.z),
+    vel: vec3(),
+    yaw: 0,
+    bank: 0,
+    meshId: 'thargoid_saucer',
+    scale: DRONE_CFG.scale,
+    ai,
+  });
+  world.events.push({ type: 'droneLaunched' });
+}
+
+function moveDrone(world: World, e: Entity, dt: number): void {
+  const ai = e.ai as DroneAi;
+  ai.age += dt;
+  if (ai.age >= DRONE_CFG.lifeSec) {
+    world.entities.delete(e.id);
+    return;
+  }
+  const player = world.entities.get(PLAYER_ID);
+  const target = nearestTarget(world, e.pos);
+  let want: { x: number; z: number };
+  if (target) {
+    want = { x: target.pos.x, z: target.pos.z - DRONE_CFG.hoverBelow };
+  } else {
+    ai.orbit += DRONE_CFG.orbitRate * dt;
+    const c = player ? player.pos : e.pos;
+    want = { x: c.x + Math.cos(ai.orbit) * DRONE_CFG.orbitRadius, z: c.z + Math.sin(ai.orbit) * DRONE_CFG.orbitRadius };
+  }
+  let vx = (want.x - e.pos.x) * DRONE_CFG.follow;
+  let vz = (want.z - e.pos.z) * DRONE_CFG.follow;
+  const sp = Math.hypot(vx, vz);
+  if (sp > DRONE_CFG.maxSpeed) {
+    vx *= DRONE_CFG.maxSpeed / sp;
+    vz *= DRONE_CFG.maxSpeed / sp;
+  }
+  e.vel = vec3(vx, 0, vz);
+  e.pos = vec3(e.pos.x + vx * dt, 0, e.pos.z + vz * dt);
+  e.yaw += 2 * dt; // a slow saucer spin
+
+  ai.fireCd -= dt;
+  if (target && ai.fireCd <= 0 && Math.hypot(target.pos.x - e.pos.x, target.pos.z - e.pos.z) <= DRONE_CFG.range) {
+    ai.fireCd = DRONE_CFG.fireEvery;
+    const dir = normalize(vec3(target.pos.x - e.pos.x, 0, target.pos.z - e.pos.z));
+    spawnBolt(world, e.pos, dir, DEFAULT_WEAPONS.pulseSpeed, DRONE_CFG.boltTtl, DEFAULT_WEAPONS.pulseDamage, false);
+  }
+}
+
+const activeDrones = (world: World): number => {
+  let n = 0;
+  for (const e of world.entities.values()) if (e.kind === 'drone') n++;
+  return n;
+};
+
 export function thargonSystem(world: World, rng: Rng, dt: number, ctx: WaveContext): void {
   for (const e of [...world.entities.values()]) {
     if (e.kind === 'enemy' && isThargon(e)) {
       moveThargon(world, e, dt);
+      continue;
+    }
+    if (e.kind === 'drone') {
+      moveDrone(world, e, dt);
+      continue;
+    }
+    // The player's Thargoid ship: launch a friendly Thargon on its own cadence. [ROC-SHIP-6]
+    if (e.kind === 'player' && e.launch?.enemy === DRONE) {
+      if (playerInert(world)) continue;
+      e.launch.timer -= dt;
+      if (e.launch.timer > 0) continue;
+      e.launch.timer += e.launch.everySec;
+      if (activeDrones(world) < e.launch.max) launchDrone(world, e);
       continue;
     }
     const launch = e.launch;
