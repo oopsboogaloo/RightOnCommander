@@ -47,11 +47,11 @@
       "enemy": "thargoid_scout",
       "count": 8,
       "spacingMs": 260,
-      "delayMs": 3100,
+      "delayMs": 5200,
       "durationMs": 5200,
       "speed": 1.2,
       "params": { "amplitude": 0.5, "cycles": 2, "x0": -0.6 },
-      "fire": { "rate": 0.92, "aimed": false }
+      "fire": { "rate": 0.93, "aimed": false }
     },
     {
       "id": "l4a4",
@@ -59,10 +59,10 @@
       "enemy": "thargoid_warrior",
       "count": 4,
       "spacingMs": 450,
-      "delayMs": 5200,
+      "delayMs": 9400,
       "durationMs": 9000,
       "params": { "x0": -1.3, "z1": -1.8 },
-      "fire": { "rate": 0.41, "aimed": true }
+      "fire": { "rate": 0.42, "aimed": true }
     },
     {
       "id": "l4a5",
@@ -70,10 +70,10 @@
       "enemy": "thargoid_warrior",
       "count": 4,
       "spacingMs": 450,
-      "delayMs": 5200,
+      "delayMs": 9400,
       "durationMs": 9000,
       "params": { "x0": 1.3, "z1": -1.8 },
-      "fire": { "rate": 0.41, "aimed": true }
+      "fire": { "rate": 0.42, "aimed": true }
     },
     {
       "id": "l4a6",
@@ -81,11 +81,11 @@
       "enemy": "thargoid_scout",
       "count": 8,
       "spacingMs": 260,
-      "delayMs": 6700,
+      "delayMs": 12400,
       "durationMs": 5200,
       "speed": 1.2,
       "params": { "amplitude": 0.5, "cycles": 2, "x0": 0.6 },
-      "fire": { "rate": 0.93, "aimed": false }
+      "fire": { "rate": 0.96, "aimed": false }
     },
     {
       "id": "l4a7",
@@ -93,10 +93,10 @@
       "enemy": "thargoid_scout",
       "count": 6,
       "spacingMs": 300,
-      "delayMs": 7400,
+      "delayMs": 13100,
       "durationMs": 6500,
       "params": { "radius": 0.5, "loops": 1, "x0": -0.4 },
-      "fire": { "rate": 0.47, "aimed": true, "spread": 3, "arc": 0.45 }
+      "fire": { "rate": 0.48, "aimed": true, "spread": 3, "arc": 0.45 }
     },
     {
       "id": "l4a8",
@@ -104,10 +104,10 @@
       "enemy": "thargoid_carrier",
       "count": 2,
       "spacingMs": 900,
-      "delayMs": 8800,
+      "delayMs": 16600,
       "durationMs": 9500,
       "params": { "x0": -0.6, "zHold": 0.8, "dropFraction": 0.25 },
-      "fire": { "rate": 0.37, "aimed": false, "spread": 5, "arc": 1.2 }
+      "fire": { "rate": 0.38, "aimed": false, "spread": 5, "arc": 1.2 }
     },
     {
       "id": "l4a9",
@@ -115,10 +115,10 @@
       "enemy": "thargoid_scout",
       "count": 8,
       "spacingMs": 260,
-      "delayMs": 10900,
+      "delayMs": 20800,
       "durationMs": 7000,
       "params": { "cx": 0.2, "cz": 0.55, "r": 0.5, "turns": 1.5 },
-      "fire": { "rate": 0.37, "aimed": true }
+      "fire": { "rate": 0.39, "aimed": true }
     },
     {
       "id": "l4a10",
@@ -126,10 +126,10 @@
       "enemy": "thargoid_warrior",
       "count": 4,
       "spacingMs": 380,
-      "delayMs": 12400,
+      "delayMs": 23800,
       "durationMs": 6000,
       "params": { "x0": -1.4, "x1": 1.4, "arc": 0.5 },
-      "fire": { "rate": 0.64, "aimed": false, "spread": 3, "arc": 0.7 }
+      "fire": { "rate": 0.68, "aimed": false, "spread": 3, "arc": 0.7 }
     },
     {
       "id": "l4a11",
@@ -137,10 +137,10 @@
       "enemy": "thargoid_warrior",
       "count": 4,
       "spacingMs": 380,
-      "delayMs": 13000,
+      "delayMs": 24400,
       "durationMs": 6000,
       "params": { "x0": 1.4, "x1": -1.4, "arc": 0.35 },
-      "fire": { "rate": 0.64, "aimed": false, "spread": 3, "arc": 0.7 }
+      "fire": { "rate": 0.68, "aimed": false, "spread": 3, "arc": 0.7 }
     },
     {
       "id": "l4a12",
@@ -148,10 +148,10 @@
       "enemy": "thargoid_scout",
       "count": 6,
       "spacingMs": 300,
-      "delayMs": 14500,
+      "delayMs": 28000,
       "durationMs": 6500,
       "params": { "radius": 0.5, "loops": 1, "x0": 0.4 },
-      "fire": { "rate": 0.49, "aimed": true, "spread": 3, "arc": 0.45 }
+      "fire": { "rate": 0.52, "aimed": true, "spread": 3, "arc": 0.45 }
     },
     {
       "id": "l4a13",
@@ -159,11 +159,11 @@
       "enemy": "thargoid_scout",
       "count": 8,
       "spacingMs": 260,
-      "delayMs": 15000,
+      "delayMs": 28500,
       "durationMs": 5200,
       "speed": 1.2,
       "params": { "amplitude": 0.5, "cycles": 2, "x0": -0.2 },
-      "fire": { "rate": 0.97, "aimed": false }
+      "fire": { "rate": 1.04, "aimed": false }
     },
     {
       "id": "l4a14",
@@ -171,10 +171,10 @@
       "enemy": "thargoid_carrier",
       "count": 2,
       "spacingMs": 900,
-      "delayMs": 16600,
+      "delayMs": 32200,
       "durationMs": 9500,
       "params": { "x0": 0.6, "zHold": 0.8, "dropFraction": 0.25 },
-      "fire": { "rate": 0.38, "aimed": false, "spread": 5, "arc": 1.2 }
+      "fire": { "rate": 0.41, "aimed": false, "spread": 5, "arc": 1.2 }
     },
     {
       "id": "l4a15",
@@ -182,10 +182,10 @@
       "enemy": "thargoid_scout",
       "count": 7,
       "spacingMs": 280,
-      "delayMs": 17800,
+      "delayMs": 33400,
       "durationMs": 6000,
       "params": { "x0": -0.9, "x1": 0.3 },
-      "fire": { "rate": 0.98, "aimed": false, "spread": 3, "arc": 0.5 }
+      "fire": { "rate": 1.06, "aimed": false, "spread": 3, "arc": 0.5 }
     },
     {
       "id": "l4a16",
@@ -193,10 +193,10 @@
       "enemy": "thargoid_scout",
       "count": 8,
       "spacingMs": 260,
-      "delayMs": 18100,
+      "delayMs": 35200,
       "durationMs": 7000,
       "params": { "cx": -0.2, "cz": 0.55, "r": 0.5, "turns": 1.5 },
-      "fire": { "rate": 0.39, "aimed": true }
+      "fire": { "rate": 0.42, "aimed": true }
     },
     {
       "id": "l4a17",
@@ -204,10 +204,10 @@
       "enemy": "thargoid_warrior",
       "count": 4,
       "spacingMs": 450,
-      "delayMs": 18900,
+      "delayMs": 36000,
       "durationMs": 9000,
       "params": { "x0": -1.3, "z1": -1.8 },
-      "fire": { "rate": 0.44, "aimed": true }
+      "fire": { "rate": 0.48, "aimed": true }
     },
     {
       "id": "l4a18",
@@ -215,214 +215,13 @@
       "enemy": "thargoid_warrior",
       "count": 4,
       "spacingMs": 450,
-      "delayMs": 18900,
+      "delayMs": 36000,
       "durationMs": 9000,
       "params": { "x0": 1.3, "z1": -1.8 },
-      "fire": { "rate": 0.44, "aimed": true }
+      "fire": { "rate": 0.48, "aimed": true }
     },
     {
       "id": "l4a19",
-      "pattern": "vform",
-      "enemy": "thargoid_scout",
-      "count": 7,
-      "spacingMs": 280,
-      "delayMs": 20200,
-      "durationMs": 6000,
-      "params": { "x0": -0.9, "x1": 0.3 },
-      "fire": { "rate": 1.0, "aimed": false, "spread": 3, "arc": 0.5 }
-    },
-    {
-      "id": "l4a20",
-      "pattern": "vform",
-      "enemy": "thargoid_scout",
-      "count": 7,
-      "spacingMs": 280,
-      "delayMs": 21100,
-      "durationMs": 6000,
-      "params": { "x0": 0.9, "x1": -0.3 },
-      "fire": { "rate": 1.0, "aimed": false, "spread": 3, "arc": 0.5 }
-    },
-    {
-      "id": "l4a21",
-      "pattern": "sine_column",
-      "enemy": "thargoid_scout",
-      "count": 8,
-      "spacingMs": 260,
-      "delayMs": 22300,
-      "durationMs": 5200,
-      "speed": 1.2,
-      "params": { "amplitude": 0.5, "cycles": 2, "x0": -0.6 },
-      "fire": { "rate": 1.01, "aimed": false }
-    },
-    {
-      "id": "l4a22",
-      "pattern": "pincer",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 450,
-      "delayMs": 23800,
-      "durationMs": 9000,
-      "params": { "x0": -1.3, "z1": -1.8 },
-      "fire": { "rate": 0.45, "aimed": true }
-    },
-    {
-      "id": "l4a23",
-      "pattern": "pincer",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 450,
-      "delayMs": 23800,
-      "durationMs": 9000,
-      "params": { "x0": 1.3, "z1": -1.8 },
-      "fire": { "rate": 0.45, "aimed": true }
-    },
-    {
-      "id": "l4a24",
-      "pattern": "sine_column",
-      "enemy": "thargoid_scout",
-      "count": 8,
-      "spacingMs": 260,
-      "delayMs": 25900,
-      "durationMs": 5200,
-      "speed": 1.2,
-      "params": { "amplitude": 0.5, "cycles": 2, "x0": 0.6 },
-      "fire": { "rate": 1.03, "aimed": false }
-    },
-    {
-      "id": "l4a25",
-      "pattern": "loop",
-      "enemy": "thargoid_scout",
-      "count": 6,
-      "spacingMs": 300,
-      "delayMs": 26600,
-      "durationMs": 6500,
-      "params": { "radius": 0.5, "loops": 1, "x0": -0.4 },
-      "fire": { "rate": 0.51, "aimed": true, "spread": 3, "arc": 0.45 }
-    },
-    {
-      "id": "l4a26",
-      "pattern": "drop_hold",
-      "enemy": "thargoid_carrier",
-      "count": 2,
-      "spacingMs": 900,
-      "delayMs": 28000,
-      "durationMs": 9500,
-      "params": { "x0": -0.6, "zHold": 0.8, "dropFraction": 0.25 },
-      "fire": { "rate": 0.4, "aimed": false, "spread": 5, "arc": 1.2 }
-    },
-    {
-      "id": "l4a27",
-      "pattern": "orbit",
-      "enemy": "thargoid_scout",
-      "count": 8,
-      "spacingMs": 260,
-      "delayMs": 29500,
-      "durationMs": 7000,
-      "params": { "cx": 0.2, "cz": 0.55, "r": 0.5, "turns": 1.5 },
-      "fire": { "rate": 0.41, "aimed": true }
-    },
-    {
-      "id": "l4a28",
-      "pattern": "side_stream",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 380,
-      "delayMs": 31600,
-      "durationMs": 6000,
-      "params": { "x0": -1.4, "x1": 1.4, "arc": 0.5 },
-      "fire": { "rate": 0.71, "aimed": false, "spread": 3, "arc": 0.7 }
-    },
-    {
-      "id": "l4a29",
-      "pattern": "side_stream",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 380,
-      "delayMs": 32200,
-      "durationMs": 6000,
-      "params": { "x0": 1.4, "x1": -1.4, "arc": 0.35 },
-      "fire": { "rate": 0.71, "aimed": false, "spread": 3, "arc": 0.7 }
-    },
-    {
-      "id": "l4a30",
-      "pattern": "loop",
-      "enemy": "thargoid_scout",
-      "count": 6,
-      "spacingMs": 300,
-      "delayMs": 33700,
-      "durationMs": 6500,
-      "params": { "radius": 0.5, "loops": 1, "x0": 0.4 },
-      "fire": { "rate": 0.53, "aimed": true, "spread": 3, "arc": 0.45 }
-    },
-    {
-      "id": "l4a31",
-      "pattern": "sine_column",
-      "enemy": "thargoid_scout",
-      "count": 8,
-      "spacingMs": 260,
-      "delayMs": 34200,
-      "durationMs": 5200,
-      "speed": 1.2,
-      "params": { "amplitude": 0.5, "cycles": 2, "x0": -0.2 },
-      "fire": { "rate": 1.07, "aimed": false }
-    },
-    {
-      "id": "l4a32",
-      "pattern": "drop_hold",
-      "enemy": "thargoid_carrier",
-      "count": 2,
-      "spacingMs": 900,
-      "delayMs": 35200,
-      "durationMs": 9500,
-      "params": { "x0": 0.6, "zHold": 0.8, "dropFraction": 0.25 },
-      "fire": { "rate": 0.42, "aimed": false, "spread": 5, "arc": 1.2 }
-    },
-    {
-      "id": "l4a33",
-      "pattern": "vform",
-      "enemy": "thargoid_scout",
-      "count": 7,
-      "spacingMs": 280,
-      "delayMs": 36400,
-      "durationMs": 6000,
-      "params": { "x0": -0.9, "x1": 0.3 },
-      "fire": { "rate": 1.08, "aimed": false, "spread": 3, "arc": 0.5 }
-    },
-    {
-      "id": "l4a34",
-      "pattern": "orbit",
-      "enemy": "thargoid_scout",
-      "count": 8,
-      "spacingMs": 260,
-      "delayMs": 37300,
-      "durationMs": 7000,
-      "params": { "cx": -0.2, "cz": 0.55, "r": 0.5, "turns": 1.5 },
-      "fire": { "rate": 0.42, "aimed": true }
-    },
-    {
-      "id": "l4a35",
-      "pattern": "pincer",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 450,
-      "delayMs": 38100,
-      "durationMs": 9000,
-      "params": { "x0": -1.3, "z1": -1.8 },
-      "fire": { "rate": 0.48, "aimed": true }
-    },
-    {
-      "id": "l4a36",
-      "pattern": "pincer",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 450,
-      "delayMs": 38100,
-      "durationMs": 9000,
-      "params": { "x0": 1.3, "z1": -1.8 },
-      "fire": { "rate": 0.48, "aimed": true }
-    },
-    {
-      "id": "l4a37",
       "pattern": "vform",
       "enemy": "thargoid_scout",
       "count": 7,
@@ -433,7 +232,7 @@
       "fire": { "rate": 1.1, "aimed": false, "spread": 3, "arc": 0.5 }
     },
     {
-      "id": "l4a38",
+      "id": "l4a20",
       "pattern": "vform",
       "enemy": "thargoid_scout",
       "count": 7,
@@ -444,414 +243,213 @@
       "fire": { "rate": 1.1, "aimed": false, "spread": 3, "arc": 0.5 }
     },
     {
+      "id": "l4a21",
+      "pattern": "sine_column",
+      "enemy": "thargoid_scout",
+      "count": 8,
+      "spacingMs": 260,
+      "delayMs": 43600,
+      "durationMs": 5200,
+      "speed": 1.2,
+      "params": { "amplitude": 0.5, "cycles": 2, "x0": -0.6 },
+      "fire": { "rate": 1.12, "aimed": false }
+    },
+    {
+      "id": "l4a22",
+      "pattern": "pincer",
+      "enemy": "thargoid_warrior",
+      "count": 4,
+      "spacingMs": 450,
+      "delayMs": 46600,
+      "durationMs": 9000,
+      "params": { "x0": -1.3, "z1": -1.8 },
+      "fire": { "rate": 0.5, "aimed": true }
+    },
+    {
+      "id": "l4a23",
+      "pattern": "pincer",
+      "enemy": "thargoid_warrior",
+      "count": 4,
+      "spacingMs": 450,
+      "delayMs": 46600,
+      "durationMs": 9000,
+      "params": { "x0": 1.3, "z1": -1.8 },
+      "fire": { "rate": 0.5, "aimed": true }
+    },
+    {
+      "id": "l4a24",
+      "pattern": "sine_column",
+      "enemy": "thargoid_scout",
+      "count": 8,
+      "spacingMs": 260,
+      "delayMs": 50800,
+      "durationMs": 5200,
+      "speed": 1.2,
+      "params": { "amplitude": 0.5, "cycles": 2, "x0": 0.6 },
+      "fire": { "rate": 1.15, "aimed": false }
+    },
+    {
+      "id": "l4a25",
+      "pattern": "loop",
+      "enemy": "thargoid_scout",
+      "count": 6,
+      "spacingMs": 300,
+      "delayMs": 51500,
+      "durationMs": 6500,
+      "params": { "radius": 0.5, "loops": 1, "x0": -0.4 },
+      "fire": { "rate": 0.58, "aimed": true, "spread": 3, "arc": 0.45 }
+    },
+    {
+      "id": "l4a26",
+      "pattern": "drop_hold",
+      "enemy": "thargoid_carrier",
+      "count": 2,
+      "spacingMs": 900,
+      "delayMs": 55000,
+      "durationMs": 9500,
+      "params": { "x0": -0.6, "zHold": 0.8, "dropFraction": 0.25 },
+      "fire": { "rate": 0.46, "aimed": false, "spread": 5, "arc": 1.2 }
+    },
+    {
+      "id": "l4a27",
+      "pattern": "orbit",
+      "enemy": "thargoid_scout",
+      "count": 8,
+      "spacingMs": 260,
+      "delayMs": 58000,
+      "durationMs": 7000,
+      "params": { "cx": 0.2, "cz": 0.55, "r": 0.5, "turns": 1.5 },
+      "fire": { "rate": 0.46, "aimed": true }
+    },
+    {
+      "id": "l4a28",
+      "pattern": "side_stream",
+      "enemy": "thargoid_warrior",
+      "count": 4,
+      "spacingMs": 380,
+      "delayMs": 62200,
+      "durationMs": 6000,
+      "params": { "x0": -1.4, "x1": 1.4, "arc": 0.5 },
+      "fire": { "rate": 0.81, "aimed": false, "spread": 3, "arc": 0.7 }
+    },
+    {
+      "id": "l4a29",
+      "pattern": "side_stream",
+      "enemy": "thargoid_warrior",
+      "count": 4,
+      "spacingMs": 380,
+      "delayMs": 62800,
+      "durationMs": 6000,
+      "params": { "x0": 1.4, "x1": -1.4, "arc": 0.35 },
+      "fire": { "rate": 0.81, "aimed": false, "spread": 3, "arc": 0.7 }
+    },
+    {
+      "id": "l4a30",
+      "pattern": "loop",
+      "enemy": "thargoid_scout",
+      "count": 6,
+      "spacingMs": 300,
+      "delayMs": 66400,
+      "durationMs": 6500,
+      "params": { "radius": 0.5, "loops": 1, "x0": 0.4 },
+      "fire": { "rate": 0.62, "aimed": true, "spread": 3, "arc": 0.45 }
+    },
+    {
+      "id": "l4a31",
+      "pattern": "sine_column",
+      "enemy": "thargoid_scout",
+      "count": 8,
+      "spacingMs": 260,
+      "delayMs": 66900,
+      "durationMs": 5200,
+      "speed": 1.2,
+      "params": { "amplitude": 0.5, "cycles": 2, "x0": -0.2 },
+      "fire": { "rate": 1.23, "aimed": false }
+    },
+    {
+      "id": "l4a32",
+      "pattern": "drop_hold",
+      "enemy": "thargoid_carrier",
+      "count": 2,
+      "spacingMs": 900,
+      "delayMs": 69400,
+      "durationMs": 9500,
+      "params": { "x0": 0.6, "zHold": 0.8, "dropFraction": 0.25 },
+      "fire": { "rate": 0.48, "aimed": false, "spread": 5, "arc": 1.2 }
+    },
+    {
+      "id": "l4a33",
+      "pattern": "vform",
+      "enemy": "thargoid_scout",
+      "count": 7,
+      "spacingMs": 280,
+      "delayMs": 70600,
+      "durationMs": 6000,
+      "params": { "x0": -0.9, "x1": 0.3 },
+      "fire": { "rate": 1.25, "aimed": false, "spread": 3, "arc": 0.5 }
+    },
+    {
+      "id": "l4a34",
+      "pattern": "orbit",
+      "enemy": "thargoid_scout",
+      "count": 8,
+      "spacingMs": 260,
+      "delayMs": 73600,
+      "durationMs": 7000,
+      "params": { "cx": -0.2, "cz": 0.55, "r": 0.5, "turns": 1.5 },
+      "fire": { "rate": 0.49, "aimed": true }
+    },
+    {
+      "id": "l4a35",
+      "pattern": "pincer",
+      "enemy": "thargoid_warrior",
+      "count": 4,
+      "spacingMs": 450,
+      "delayMs": 74400,
+      "durationMs": 9000,
+      "params": { "x0": -1.3, "z1": -1.8 },
+      "fire": { "rate": 0.56, "aimed": true }
+    },
+    {
+      "id": "l4a36",
+      "pattern": "pincer",
+      "enemy": "thargoid_warrior",
+      "count": 4,
+      "spacingMs": 450,
+      "delayMs": 74400,
+      "durationMs": 9000,
+      "params": { "x0": 1.3, "z1": -1.8 },
+      "fire": { "rate": 0.56, "aimed": true }
+    },
+    {
+      "id": "l4a37",
+      "pattern": "vform",
+      "enemy": "thargoid_scout",
+      "count": 7,
+      "spacingMs": 280,
+      "delayMs": 77800,
+      "durationMs": 6000,
+      "params": { "x0": -0.9, "x1": 0.3 },
+      "fire": { "rate": 1.29, "aimed": false, "spread": 3, "arc": 0.5 }
+    },
+    {
+      "id": "l4a38",
+      "pattern": "vform",
+      "enemy": "thargoid_scout",
+      "count": 7,
+      "spacingMs": 280,
+      "delayMs": 78700,
+      "durationMs": 6000,
+      "params": { "x0": 0.9, "x1": -0.3 },
+      "fire": { "rate": 1.29, "aimed": false, "spread": 3, "arc": 0.5 }
+    },
+    {
       "id": "l4a39",
       "pattern": "sine_column",
       "enemy": "thargoid_scout",
       "count": 8,
       "spacingMs": 260,
-      "delayMs": 40900,
-      "durationMs": 5200,
-      "speed": 1.2,
-      "params": { "amplitude": 0.5, "cycles": 2, "x0": -0.6 },
-      "fire": { "rate": 1.1, "aimed": false }
-    },
-    {
-      "id": "l4a40",
-      "pattern": "pincer",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 450,
-      "delayMs": 43000,
-      "durationMs": 9000,
-      "params": { "x0": -1.3, "z1": -1.8 },
-      "fire": { "rate": 0.5, "aimed": true }
-    },
-    {
-      "id": "l4a41",
-      "pattern": "pincer",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 450,
-      "delayMs": 43000,
-      "durationMs": 9000,
-      "params": { "x0": 1.3, "z1": -1.8 },
-      "fire": { "rate": 0.5, "aimed": true }
-    },
-    {
-      "id": "l4a42",
-      "pattern": "sine_column",
-      "enemy": "thargoid_scout",
-      "count": 8,
-      "spacingMs": 260,
-      "delayMs": 45100,
-      "durationMs": 5200,
-      "speed": 1.2,
-      "params": { "amplitude": 0.5, "cycles": 2, "x0": 0.6 },
-      "fire": { "rate": 1.13, "aimed": false }
-    },
-    {
-      "id": "l4a43",
-      "pattern": "loop",
-      "enemy": "thargoid_scout",
-      "count": 6,
-      "spacingMs": 300,
-      "delayMs": 45800,
-      "durationMs": 6500,
-      "params": { "radius": 0.5, "loops": 1, "x0": -0.4 },
-      "fire": { "rate": 0.56, "aimed": true, "spread": 3, "arc": 0.45 }
-    },
-    {
-      "id": "l4a44",
-      "pattern": "drop_hold",
-      "enemy": "thargoid_carrier",
-      "count": 2,
-      "spacingMs": 900,
-      "delayMs": 46600,
-      "durationMs": 9500,
-      "params": { "x0": -0.6, "zHold": 0.8, "dropFraction": 0.25 },
-      "fire": { "rate": 0.44, "aimed": false, "spread": 5, "arc": 1.2 }
-    },
-    {
-      "id": "l4a45",
-      "pattern": "orbit",
-      "enemy": "thargoid_scout",
-      "count": 8,
-      "spacingMs": 260,
-      "delayMs": 48700,
-      "durationMs": 7000,
-      "params": { "cx": 0.2, "cz": 0.55, "r": 0.5, "turns": 1.5 },
-      "fire": { "rate": 0.44, "aimed": true }
-    },
-    {
-      "id": "l4a46",
-      "pattern": "side_stream",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 380,
-      "delayMs": 50800,
-      "durationMs": 6000,
-      "params": { "x0": -1.4, "x1": 1.4, "arc": 0.5 },
-      "fire": { "rate": 0.77, "aimed": false, "spread": 3, "arc": 0.7 }
-    },
-    {
-      "id": "l4a47",
-      "pattern": "side_stream",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 380,
-      "delayMs": 51400,
-      "durationMs": 6000,
-      "params": { "x0": 1.4, "x1": -1.4, "arc": 0.35 },
-      "fire": { "rate": 0.77, "aimed": false, "spread": 3, "arc": 0.7 }
-    },
-    {
-      "id": "l4a48",
-      "pattern": "loop",
-      "enemy": "thargoid_scout",
-      "count": 6,
-      "spacingMs": 300,
-      "delayMs": 52300,
-      "durationMs": 6500,
-      "params": { "radius": 0.5, "loops": 1, "x0": 0.4 },
-      "fire": { "rate": 0.58, "aimed": true, "spread": 3, "arc": 0.45 }
-    },
-    {
-      "id": "l4a49",
-      "pattern": "sine_column",
-      "enemy": "thargoid_scout",
-      "count": 8,
-      "spacingMs": 260,
-      "delayMs": 52800,
-      "durationMs": 5200,
-      "speed": 1.2,
-      "params": { "amplitude": 0.5, "cycles": 2, "x0": -0.2 },
-      "fire": { "rate": 1.16, "aimed": false }
-    },
-    {
-      "id": "l4a50",
-      "pattern": "drop_hold",
-      "enemy": "thargoid_carrier",
-      "count": 2,
-      "spacingMs": 900,
-      "delayMs": 54400,
-      "durationMs": 9500,
-      "params": { "x0": 0.6, "zHold": 0.8, "dropFraction": 0.25 },
-      "fire": { "rate": 0.46, "aimed": false, "spread": 5, "arc": 1.2 }
-    },
-    {
-      "id": "l4a51",
-      "pattern": "vform",
-      "enemy": "thargoid_scout",
-      "count": 7,
-      "spacingMs": 280,
-      "delayMs": 55600,
-      "durationMs": 6000,
-      "params": { "x0": -0.9, "x1": 0.3 },
-      "fire": { "rate": 1.17, "aimed": false, "spread": 3, "arc": 0.5 }
-    },
-    {
-      "id": "l4a52",
-      "pattern": "orbit",
-      "enemy": "thargoid_scout",
-      "count": 8,
-      "spacingMs": 260,
-      "delayMs": 56500,
-      "durationMs": 7000,
-      "params": { "cx": -0.2, "cz": 0.55, "r": 0.5, "turns": 1.5 },
-      "fire": { "rate": 0.46, "aimed": true }
-    },
-    {
-      "id": "l4a53",
-      "pattern": "pincer",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 450,
-      "delayMs": 57300,
-      "durationMs": 9000,
-      "params": { "x0": -1.3, "z1": -1.8 },
-      "fire": { "rate": 0.53, "aimed": true }
-    },
-    {
-      "id": "l4a54",
-      "pattern": "pincer",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 450,
-      "delayMs": 57300,
-      "durationMs": 9000,
-      "params": { "x0": 1.3, "z1": -1.8 },
-      "fire": { "rate": 0.53, "aimed": true }
-    },
-    {
-      "id": "l4a55",
-      "pattern": "vform",
-      "enemy": "thargoid_scout",
-      "count": 7,
-      "spacingMs": 280,
-      "delayMs": 58000,
-      "durationMs": 6000,
-      "params": { "x0": -0.9, "x1": 0.3 },
-      "fire": { "rate": 1.19, "aimed": false, "spread": 3, "arc": 0.5 }
-    },
-    {
-      "id": "l4a56",
-      "pattern": "vform",
-      "enemy": "thargoid_scout",
-      "count": 7,
-      "spacingMs": 280,
-      "delayMs": 58900,
-      "durationMs": 6000,
-      "params": { "x0": 0.9, "x1": -0.3 },
-      "fire": { "rate": 1.19, "aimed": false, "spread": 3, "arc": 0.5 }
-    },
-    {
-      "id": "l4a57",
-      "pattern": "sine_column",
-      "enemy": "thargoid_scout",
-      "count": 8,
-      "spacingMs": 260,
-      "delayMs": 60100,
-      "durationMs": 5200,
-      "speed": 1.2,
-      "params": { "amplitude": 0.5, "cycles": 2, "x0": -0.6 },
-      "fire": { "rate": 1.2, "aimed": false }
-    },
-    {
-      "id": "l4a58",
-      "pattern": "pincer",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 450,
-      "delayMs": 62200,
-      "durationMs": 9000,
-      "params": { "x0": -1.3, "z1": -1.8 },
-      "fire": { "rate": 0.54, "aimed": true }
-    },
-    {
-      "id": "l4a59",
-      "pattern": "pincer",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 450,
-      "delayMs": 62200,
-      "durationMs": 9000,
-      "params": { "x0": 1.3, "z1": -1.8 },
-      "fire": { "rate": 0.54, "aimed": true }
-    },
-    {
-      "id": "l4a60",
-      "pattern": "sine_column",
-      "enemy": "thargoid_scout",
-      "count": 8,
-      "spacingMs": 260,
-      "delayMs": 63700,
-      "durationMs": 5200,
-      "speed": 1.2,
-      "params": { "amplitude": 0.5, "cycles": 2, "x0": 0.6 },
-      "fire": { "rate": 1.22, "aimed": false }
-    },
-    {
-      "id": "l4a61",
-      "pattern": "loop",
-      "enemy": "thargoid_scout",
-      "count": 6,
-      "spacingMs": 300,
-      "delayMs": 64400,
-      "durationMs": 6500,
-      "params": { "radius": 0.5, "loops": 1, "x0": -0.4 },
-      "fire": { "rate": 0.61, "aimed": true, "spread": 3, "arc": 0.45 }
-    },
-    {
-      "id": "l4a62",
-      "pattern": "drop_hold",
-      "enemy": "thargoid_carrier",
-      "count": 2,
-      "spacingMs": 900,
-      "delayMs": 65800,
-      "durationMs": 9500,
-      "params": { "x0": -0.6, "zHold": 0.8, "dropFraction": 0.25 },
-      "fire": { "rate": 0.48, "aimed": false, "spread": 5, "arc": 1.2 }
-    },
-    {
-      "id": "l4a63",
-      "pattern": "orbit",
-      "enemy": "thargoid_scout",
-      "count": 8,
-      "spacingMs": 260,
-      "delayMs": 67900,
-      "durationMs": 7000,
-      "params": { "cx": 0.2, "cz": 0.55, "r": 0.5, "turns": 1.5 },
-      "fire": { "rate": 0.48, "aimed": true }
-    },
-    {
-      "id": "l4a64",
-      "pattern": "side_stream",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 380,
-      "delayMs": 69400,
-      "durationMs": 6000,
-      "params": { "x0": -1.4, "x1": 1.4, "arc": 0.5 },
-      "fire": { "rate": 0.83, "aimed": false, "spread": 3, "arc": 0.7 }
-    },
-    {
-      "id": "l4a65",
-      "pattern": "side_stream",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 380,
-      "delayMs": 70000,
-      "durationMs": 6000,
-      "params": { "x0": 1.4, "x1": -1.4, "arc": 0.35 },
-      "fire": { "rate": 0.83, "aimed": false, "spread": 3, "arc": 0.7 }
-    },
-    {
-      "id": "l4a66",
-      "pattern": "loop",
-      "enemy": "thargoid_scout",
-      "count": 6,
-      "spacingMs": 300,
-      "delayMs": 71500,
-      "durationMs": 6500,
-      "params": { "radius": 0.5, "loops": 1, "x0": 0.4 },
-      "fire": { "rate": 0.63, "aimed": true, "spread": 3, "arc": 0.45 }
-    },
-    {
-      "id": "l4a67",
-      "pattern": "sine_column",
-      "enemy": "thargoid_scout",
-      "count": 8,
-      "spacingMs": 260,
-      "delayMs": 72000,
-      "durationMs": 5200,
-      "speed": 1.2,
-      "params": { "amplitude": 0.5, "cycles": 2, "x0": -0.2 },
-      "fire": { "rate": 1.26, "aimed": false }
-    },
-    {
-      "id": "l4a68",
-      "pattern": "drop_hold",
-      "enemy": "thargoid_carrier",
-      "count": 2,
-      "spacingMs": 900,
-      "delayMs": 73600,
-      "durationMs": 9500,
-      "params": { "x0": 0.6, "zHold": 0.8, "dropFraction": 0.25 },
-      "fire": { "rate": 0.49, "aimed": false, "spread": 5, "arc": 1.2 }
-    },
-    {
-      "id": "l4a69",
-      "pattern": "vform",
-      "enemy": "thargoid_scout",
-      "count": 7,
-      "spacingMs": 280,
-      "delayMs": 74800,
-      "durationMs": 6000,
-      "params": { "x0": -0.9, "x1": 0.3 },
-      "fire": { "rate": 1.27, "aimed": false, "spread": 3, "arc": 0.5 }
-    },
-    {
-      "id": "l4a70",
-      "pattern": "orbit",
-      "enemy": "thargoid_scout",
-      "count": 8,
-      "spacingMs": 260,
-      "delayMs": 75100,
-      "durationMs": 7000,
-      "params": { "cx": -0.2, "cz": 0.55, "r": 0.5, "turns": 1.5 },
-      "fire": { "rate": 0.5, "aimed": true }
-    },
-    {
-      "id": "l4a71",
-      "pattern": "pincer",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 450,
-      "delayMs": 75900,
-      "durationMs": 9000,
-      "params": { "x0": -1.3, "z1": -1.8 },
-      "fire": { "rate": 0.57, "aimed": true }
-    },
-    {
-      "id": "l4a72",
-      "pattern": "pincer",
-      "enemy": "thargoid_warrior",
-      "count": 4,
-      "spacingMs": 450,
-      "delayMs": 75900,
-      "durationMs": 9000,
-      "params": { "x0": 1.3, "z1": -1.8 },
-      "fire": { "rate": 0.57, "aimed": true }
-    },
-    {
-      "id": "l4a73",
-      "pattern": "vform",
-      "enemy": "thargoid_scout",
-      "count": 7,
-      "spacingMs": 280,
-      "delayMs": 77200,
-      "durationMs": 6000,
-      "params": { "x0": -0.9, "x1": 0.3 },
-      "fire": { "rate": 1.29, "aimed": false, "spread": 3, "arc": 0.5 }
-    },
-    {
-      "id": "l4a74",
-      "pattern": "vform",
-      "enemy": "thargoid_scout",
-      "count": 7,
-      "spacingMs": 280,
-      "delayMs": 78100,
-      "durationMs": 6000,
-      "params": { "x0": 0.9, "x1": -0.3 },
-      "fire": { "rate": 1.29, "aimed": false, "spread": 3, "arc": 0.5 }
-    },
-    {
-      "id": "l4a75",
-      "pattern": "sine_column",
-      "enemy": "thargoid_scout",
-      "count": 8,
-      "spacingMs": 260,
-      "delayMs": 79300,
+      "delayMs": 80800,
       "durationMs": 5200,
       "speed": 1.2,
       "params": { "amplitude": 0.5, "cycles": 2, "x0": -0.6 },
