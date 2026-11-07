@@ -99,6 +99,11 @@ class BackgroundAsteroids {
     return this.revealed;
   }
 
+  // Back to hidden, for a fresh run (it drifts in again after the next hyperspace).
+  hide(): void {
+    this.revealed = false;
+  }
+
   // Called as the ship drops out of hyperspace: park every rock above the top edge (staggered) so
   // the belt drifts into view rather than being there from the start — "arriving at the field".
   reveal(): void {
@@ -214,6 +219,11 @@ class BackgroundWreckage {
 
   get isRevealed(): boolean {
     return this.revealed;
+  }
+
+  // Back to hidden, for a fresh run (it drifts in again after the next hyperspace).
+  hide(): void {
+    this.revealed = false;
   }
 
   // As the ship drops out of hyperspace it arrives among the wreckage: about half the pieces are
@@ -366,6 +376,12 @@ export class Renderer2D implements Renderer {
   // As the ship drops out of hyperspace into the warzone, the wreckage drifts into view.
   revealWreckage(): void {
     this.bgWreckage.reveal();
+  }
+
+  // A new game: hide the asteroid belt and wreckage until their level's hyperspace arrival.
+  resetBackdrops(): void {
+    this.bgAsteroids.hide();
+    this.bgWreckage.hide();
   }
 
   // The shell calls this as the ship exits hyperspace, so the belt drifts into view. [ROC-L1-1]

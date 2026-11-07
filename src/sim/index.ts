@@ -42,7 +42,7 @@ import {
 import { gamestateSystem, DEFAULT_GAMESTATE } from './systems/gamestate.js';
 import { bossSystem } from './systems/boss.js';
 import { thargonSystem } from './systems/thargons.js';
-import { ratingSystem } from './systems/rating.js';
+import { ratingSystem, buildRanks, campaignPoints, type Rank } from './systems/rating.js';
 import { ecmSystem } from './systems/ecm.js';
 import { cloakSystem } from './systems/cloak.js';
 import { energyBankSystem } from './systems/energyBank.js';
@@ -100,6 +100,8 @@ export interface Sim {
   relaunch(): void; // leave the station for a fresh level run, keeping ship/wallet/lives [ROC-STN-6]
   midDockLaunch(): void; // leave the mid-level trader: resume WAVES_B in place, no restart [ROC-MDCK-2]
   cheatSkipLevel(): void; // dev cheat: wipe the current combat and jump straight to docking
+  newGame(seed: number): void; // a fresh run from Level 1: new world, 4 lives, no credits, Harmless
+  readonly ranks: Rank[]; // the campaign's rating ladder, Harmless -> Elite [ROC-RTG-2]
   design: DesignApi;
 }
 
@@ -113,6 +115,10 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
   const levels: LevelDef[] = loaded.levels;
   const currentLevel = (): LevelDef | undefined => levels[world.levelIndex];
   if (currentLevel()) startLevel(world, currentLevel()!, waveCtx);
+
+  // The rating ladder for this campaign: Elite at 60% of every point its levels can award.
+  // [ROC-RTG-2]
+  const ranks: Rank[] = buildRanks(campaignPoints(levels, loaded.enemies));
 
   // Pre-project each mesh's edges to the play plane at the rendered hull size, so a destroyed
   // ship can shatter into its own wireframe deterministically. [ROC-DMG-6]
@@ -241,7 +247,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     dropsSystem(world, rng);
     pickupsSystem(world, SIM_DT, { ...DEFAULT_PICKUPS, getHullRadius: (id) => hullRadii[id] });
     economySystem(world);
-    ratingSystem(world); // Harmless -> Elite kill tally, rank-up bonus [ROC-RTG-1,2,3]
+    ratingSystem(world, ranks); // Harmless -> Elite kill tally, rank-up bonus [ROC-RTG-1,2,3]
     particlesSystem(world, rng, SIM_DT, DEFAULT_PARTICLES, fragGeom);
 
     world.rngState = rng.getState();
@@ -259,6 +265,18 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
       restore(world, snap);
       rng.setState(world.rngState);
     },
+    newGame: (seed: number): void => {
+      // Replace every field of the world in place (callers hold this same object), then launch
+      // Level 1 as at creation.
+      Object.assign(world, makeWorld(seed));
+      rng.setState(world.rngState);
+      designPhase = null;
+      designSnapshot = null;
+      designCurrentFrame = 0;
+      if (currentLevel()) startLevel(world, currentLevel()!, waveCtx);
+      world.mode = '';
+    },
+    ranks,
     relaunch: (): void => {
       // Undock: advance to the next level in the campaign (holding at the last one once the
       // campaign is out of levels — full campaign-complete handling lands with Elite mode,

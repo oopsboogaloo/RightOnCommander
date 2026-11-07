@@ -207,7 +207,7 @@ Turns the placeholder bosses into the specified fights and adds the level booken
   **Do:** `systems` kill-weighted tally → Harmless…Elite ladder; rank-up notice; "RIGHT ON, COMMANDER!".
   **Done-when:** **property test** — tally monotonic; threshold crossing fires once; Thargoid weighted highest.
   **Refs:** ROC-RTG-1,2,3.
-  *Built:* `systems/rating.ts` — 1 point per kill + 1 per 50cr bounty; Elite's thresholds scaled by 1/6.4 (Elite = 1000); a credit bonus per rank (requirements v1.14); `rankUp` events flash the rank + bonus mid-screen ("RIGHT ON, COMMANDER!" at Elite); rank shown in the status bar and station. Tests: `test/unit/rating.test.ts` (incl. fast-check property). Headless strong-player run: Dangerous by the end of L1, Deadly in L2, Elite late in L4.
+  *Built:* `systems/rating.ts` — 1 point per kill + 1 per 50cr bounty; Elite at 60% of all campaign points (`campaignPoints`/`buildRanks`, currently 1633), other ranks at fixed shares of it; a credit bonus per rank (requirements v1.14); `rankUp` events flash the rank + bonus mid-screen ("RIGHT ON, COMMANDER!" at Elite); rank shown in the status bar and station. Tests: `test/unit/rating.test.ts` (incl. fast-check property).
 
 - [x] **T6.4 — Lives, death, escape pod, difficulty.**
   **Do:** 3 lives; death→lose life + restart level; escape-pod→respawn at death point, consume pod; buy lives max 5; global difficulty.
@@ -219,7 +219,7 @@ Turns the placeholder bosses into the specified fights and adds the level booken
   **Do:** `platform/storage.ts` save object (high scores, best rating, unlocks, settings, controls); high-score table.
   **Done-when:** round-trips via Storage interface; **unit test** with in-memory Storage stub.
   **Refs:** ROC-LBD-1,1a; ROC-PROG-3.
-  *Status:* partly built — `platform/storage.ts` round-trips JSON and persists control remaps only. Save object and high-score table still to do.
+  *Status:* partly built — control remaps and the **high-score table** (`platform/highScores.ts`, key `roc.highScores`, seeded with Elite characters) persist. Best rating, unlocks and settings still to do.
 
 ---
 
@@ -363,6 +363,7 @@ have nowhere to load into until the campaign can actually advance between levels
 ## Phase 8 — Title, audio, flavour
 
 - [ ] **T8.1 — Title/intro screen.** Rotating Sidewinder; title/credits top; **local-storage privacy disclaimer** bottom; start ⇒ ship flies into play, control transfers (continuous). **Refs:** ROC-TTL-1..5.
+  *Status:* mostly built — `render/screens/title.ts`: rotating Sidewinder, title, author/copyright/Elite credit, high-score table, local-storage notice; tap/Enter starts a fresh run (`sim.newGame`); game over → name entry (on-screen keyboard + typing) → title. Still to do: the Sidewinder flying into play on start (ROC-TTL-3) — it is a hard cut for now.
 - [ ] **T8.2 — Audio.** `audio/webaudio.ts` (optional, file-loaded) + `nullaudio.ts`; wire the SFX event set; silent-playable. Null backend asserts events (e.g. kill ⇒ `explode_small`+`cash`). **Refs:** ROC-SFX-1,2, ROC-NFR-3.
 - [ ] **T8.3 — Lore & flavour.** `blurbs.json` + named systems (Riedquat for Elite mode), Jameson default name, **Dark Wheel** ace waves, **Raxxla** hidden secret, dock-geometry variety (Coriolis/Dodo/icosahedral), Blue-Danube-style cue (PD arrangement). **Refs:** ROC-LORE-1..7.
 
