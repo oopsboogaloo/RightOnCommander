@@ -5,7 +5,7 @@
 
 import { type Vec3, vec3 } from '../math/vec3.js';
 import type { Entity } from '../components.js';
-import { PLAYER_ID, type World } from '../world.js';
+import { PLAYER_ID, playerInert, type World } from '../world.js';
 
 export interface MissilesConfig {
   durationSec: number; // timer per grade [ROC-MIS-4]
@@ -161,7 +161,7 @@ export function missilesSystem(world: World, dt: number, cfg: MissilesConfig = D
     p.missileGrade > 0 &&
     world.levelState !== 'DOCKING' &&
     world.levelState !== 'MID_DOCKING' &&
-    !world.player.respawnPending &&
+    !playerInert(world) &&
     enemyOnScreen(world)
   ) {
     p.missileCooldown -= dt;
