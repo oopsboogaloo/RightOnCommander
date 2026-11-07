@@ -4,7 +4,7 @@
 // forfeits it). [tasks T4.2, design §10, ROC-ENM-1,7,8, ROC-ECO-1a,1b]
 
 import { vec3 } from '../math/vec3.js';
-import type { CloakState, Entity, PickupType } from '../components.js';
+import type { CloakState, Entity, LaunchState, PickupType } from '../components.js';
 import type { Rng } from '../rng.js';
 import type { ClearFieldDef, World, WaveRecord } from '../world.js';
 import { getPattern, yawFromTangent, type PathParams } from './paths.js';
@@ -27,12 +27,21 @@ export interface EnemyDef {
   colliderRz?: number;
   scale?: number; // render + collision size multiplier (FdL 1.5, bosses 2.0) [ROC-FDL-1]
   ecm?: boolean; // boss ECM: harmlessly detonates player missiles while alive [ROC-BECM-1..4]
-  behavior?: 'hermit' | 'strafe'; // boss movement/escort archetype [ROC-HERM-*, ROC-FDL-3]
+  behavior?: 'hermit' | 'strafe' | 'mothership'; // boss movement/escort archetype [ROC-HERM-*, ROC-FDL-3, ROC-L4-2]
   cargoDrops?: number; // random cargo canisters shed on destruction [ROC-HERM-10, ROC-FDL-5]
   missileImmune?: boolean; // player missiles won't lock onto or home toward this enemy type
   drops?: PickupType; // guaranteed power-up on destruction (e.g. the Cougar's cloak device)
   cloakCycle?: CloakCycleDef; // periodic cloak/decloak (the Cougar) [ROC-CLK-1,2,3]
   fireSpeedMul?: number; // per-enemy shot-speed multiplier over ai.ts's base shotSpeed [ROC-CLK-7]
+  launches?: LaunchDef; // launches pursuing child craft, e.g. a Thargoid's Thargons [ROC-ENM-6]
+}
+
+// Child-craft launcher: one `enemy` every `everySec` while fewer than `max` of this parent's own
+// children are alive. The children pursue the player and go inert when the parent dies. [ROC-ENM-6]
+export interface LaunchDef {
+  enemy: string;
+  everySec: number;
+  max: number;
 }
 
 // Wave-as-data: pattern, enemy and stats are orthogonal. [ROC-ENM-7,8]
@@ -46,7 +55,8 @@ export interface WaveDef {
   durationMs?: number; // member lifetime before it flies off-field
   speed?: number; // scales the path rate
   params?: PathParams;
-  fire?: { rate: number; aimed?: boolean }; // enemy weapon (driven by ai.ts) [ROC-ENM-11]
+  fire?: { rate: number; aimed?: boolean; spread?: number; arc?: number }; // enemy weapon (driven by
+  // ai.ts); `spread` shots per volley fanned across `arc` radians [ROC-ENM-11]
   clearField?: ClearFieldDef; // a solo encounter (the Cougar): clears every other wave around its
   // own appearance [ROC-CLK-5,6]
 }
@@ -65,6 +75,12 @@ interface PathRuntime {
 const BANK_K = 6; // bank ∝ turn rate
 const MAX_BANK = 0.6;
 const clampAbs = (v: number, m: number): number => Math.min(m, Math.max(-m, v));
+
+// Fresh launcher state for an enemy that launches child craft; the first launch comes half an
+// interval in, so a launcher has a moment on screen before its Thargons appear. [ROC-ENM-6]
+export function launchState(def: LaunchDef | undefined): LaunchState | undefined {
+  return def ? { enemy: def.enemy, everySec: def.everySec, max: def.max, timer: def.everySec / 2 } : undefined;
+}
 
 // Register a wave as active; members spawn over the following steps. Returns its id.
 export function startWave(world: World, def: WaveDef, ctx: WaveContext): number {
@@ -93,6 +109,8 @@ export function startWave(world: World, def: WaveDef, ctx: WaveContext): number 
       spawnedIndex: 0,
       fireRate: def.fire?.rate ?? 0,
       fireAimed: def.fire?.aimed ?? false,
+      fireSpread: def.fire?.spread,
+      fireArc: def.fire?.arc,
       sinceSpawnSec: Infinity, // no member has spawned yet
     },
   };
@@ -143,7 +161,10 @@ function spawnMember(world: World, waveId: number, rec: WaveRecord, ctx: WaveCon
     cloak,
     waveId,
     path,
-    ai: fireRate > 0 ? { rate: fireRate, aimed: s.fireAimed, cooldown: 1 / fireRate, speedMul: def.fireSpeedMul } : undefined,
+    ai: fireRate > 0
+      ? { rate: fireRate, aimed: s.fireAimed, cooldown: 1 / fireRate, speedMul: def.fireSpeedMul, spread: s.fireSpread, arc: s.fireArc }
+      : undefined,
+    launch: launchState(def.launches),
   };
   world.entities.set(id, e);
   rec.members.add(id);

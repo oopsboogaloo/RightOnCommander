@@ -9,6 +9,12 @@
 //   direction at random intervals, firing an aimed shot on a fixed cadence (the rate/aimed
 //   fields ride on the same ai object aiSystem reads). [requirements §3.25, ROC-FDL-3,4]
 //
+// - 'mothership': the Level 4 Thargoid mothership — a vast saucer that glides down to loom over
+//   the top of the field, sways slowly and spins, and fills the screen with bullet patterns
+//   (rotating rings, aimed fans from its rim, spiral streams) cycling every few seconds, faster
+//   once it is below half hull. Its Thargons launch through the shared launcher (thargons.ts).
+//   [ROC-L4-2, ROC-ENM-13]
+//
 // Escort movement lives here (not in waves.ts): winding paths are open-ended — they last until
 // the adder dies or flees, never "expiring off-field" like a wave member. [ROC-HERM-6]
 
@@ -17,6 +23,7 @@ import type { Entity } from '../components.js';
 import type { Rng } from '../rng.js';
 import type { World } from '../world.js';
 import type { WaveContext } from './waves.js';
+import { fireEnemyBolt, headingToPlayer } from './ai.js';
 
 export const HERMIT_POS = { x: 0, z: 1.05 }; // middle top of the screen [ROC-HERM-2]
 export const HERMIT_SPIN = 0.25; // slow y-rotation, rad/s [ROC-HERM-3]
@@ -51,6 +58,48 @@ export const FDL_FIRE_RATE = 1.25; // one aimed shot every 800 ms [ROC-FDL-4]
 // starfield keeps scrolling, then halts the field and starts strafing once it arrives. [ROC-FDL-*]
 export const FDL_ENTRY_SPAWN_Z = 2.2; // above the top edge (enemies enter around z=1.8)
 export const FDL_ENTRY_SEC = 1.8; // glide-in duration
+
+// The mothership: where it looms, how it moves, and its bullet patterns. [ROC-L4-2]
+export const MOTHERSHIP = {
+  entryZ: 4.2, // spawns well above the top edge (it is huge)
+  holdZ: 0.7, // centre parks in the upper field; the whole saucer looms over the top half
+  entrySec: 3.5,
+  swayX: 0.3,
+  swayRate: 0.32, // rad/s
+  spin: 0.22, // rad/s yaw — the octagon slowly turns
+  rim: 0.75, // fans fire from this far out along the rim, either side
+  phaseSec: { rings: 6, fans: 5, spiral: 6 },
+  ringEvery: 1.0,
+  ringBolts: 22,
+  fanEvery: 0.5,
+  fanBolts: 7,
+  fanArc: 0.9,
+  spiralEvery: 0.075,
+  spiralArms: 3,
+  spiralStep: 0.21, // rad per shot
+  aimedEvery: 0.9, // a steady aimed bolt underneath every pattern
+  boltSpeed: 0.85, // slower than ordinary fire: dense but readable
+  enrage: 1.45, // fire-rate multiplier below half hull
+};
+export type MothershipPhase = 'rings' | 'fans' | 'spiral';
+const PHASES: MothershipPhase[] = ['rings', 'fans', 'spiral'];
+
+export interface MothershipAi {
+  kind: 'mothership';
+  state: 'entry' | 'fight';
+  age: number; // seconds in the current state
+  phase: MothershipPhase;
+  phaseTimer: number;
+  ringTimer: number;
+  fanTimer: number;
+  spiralTimer: number;
+  aimedTimer: number;
+  spiralAngle: number;
+  ringFlip: boolean; // alternate rings are offset half a gap, so they can't be dodged by standing still
+  rate: 0; // aiSystem skips it — the patterns here are its weapons
+  aimed: false;
+  cooldown: number;
+}
 
 interface HermitAi {
   kind: 'hermit';
@@ -103,9 +152,31 @@ const slotOffset = (slot: number): number => (slot === 0 ? 0 : (Math.ceil(slot /
 export function bossPlacement(behavior: string | undefined, slot = 0): {
   pos: { x: number; y: number; z: number };
   yaw: number;
-  ai?: HermitAi | StrafeAi;
+  ai?: HermitAi | StrafeAi | MothershipAi;
   port?: boolean;
 } {
+  if (behavior === 'mothership') {
+    return {
+      pos: { x: 0, y: 0, z: MOTHERSHIP.entryZ },
+      yaw: 0,
+      ai: {
+        kind: 'mothership',
+        state: 'entry',
+        age: 0,
+        phase: 'rings',
+        phaseTimer: MOTHERSHIP.phaseSec.rings,
+        ringTimer: 0.6,
+        fanTimer: 0.6,
+        spiralTimer: 0,
+        aimedTimer: MOTHERSHIP.aimedEvery,
+        spiralAngle: 0,
+        ringFlip: false,
+        rate: 0,
+        aimed: false,
+        cooldown: 0,
+      },
+    };
+  }
   if (behavior === 'hermit') {
     return {
       pos: { x: HERMIT_POS.x, y: 0, z: HERMIT_POS.z },
@@ -358,6 +429,87 @@ function moveStrafe(world: World, e: Entity, rng: Rng, dt: number): void {
   e.bank = clampAbs(-0.8 * e.vel.x, 0.5);
 }
 
+// Fire `n` bolts evenly round a full circle, starting at `offset`. Bolts aimed up-screen fly
+// straight off the top, so only the lower half of a ring ever matters to the player.
+function ring(world: World, x: number, z: number, n: number, offset: number): void {
+  for (let i = 0; i < n; i++) fireEnemyBolt(world, x, z, offset + (i * Math.PI * 2) / n, undefined, MOTHERSHIP.boltSpeed);
+}
+
+function fan(world: World, x: number, z: number): void {
+  const centre = headingToPlayer(world, x, z);
+  const n = MOTHERSHIP.fanBolts;
+  for (let i = 0; i < n; i++) {
+    fireEnemyBolt(world, x, z, centre - MOTHERSHIP.fanArc / 2 + (MOTHERSHIP.fanArc * i) / (n - 1), undefined, MOTHERSHIP.boltSpeed);
+  }
+}
+
+function moveMothership(world: World, e: Entity, dt: number): void {
+  const ai = e.ai as MothershipAi;
+  ai.age += dt;
+  e.yaw += MOTHERSHIP.spin * dt;
+
+  // Entry: a slow descent from far above the top edge, while the field still scrolls; once it
+  // looms in place the field halts and the barrage begins. [ROC-BOSS-1, ROC-L4-2]
+  if (ai.state === 'entry') {
+    const k = smoothstep(Math.min(1, ai.age / MOTHERSHIP.entrySec));
+    const prevZ = e.pos.z;
+    e.pos.z = MOTHERSHIP.entryZ + (MOTHERSHIP.holdZ - MOTHERSHIP.entryZ) * k;
+    e.vel = vec3(0, 0, (e.pos.z - prevZ) / dt);
+    if (ai.age >= MOTHERSHIP.entrySec) {
+      ai.state = 'fight';
+      ai.age = 0;
+      world.scroll = 0;
+    }
+    return;
+  }
+
+  const prevX = e.pos.x;
+  e.pos.x = MOTHERSHIP.swayX * Math.sin(MOTHERSHIP.swayRate * ai.age);
+  e.pos.z = MOTHERSHIP.holdZ;
+  e.vel = vec3((e.pos.x - prevX) / dt, 0, 0);
+
+  const enraged = (e.hull ?? 0) < (e.hullMax ?? 1) / 2;
+  const k = enraged ? MOTHERSHIP.enrage : 1;
+  const { x, z } = e.pos;
+
+  ai.phaseTimer -= dt;
+  if (ai.phaseTimer <= 0) {
+    ai.phase = PHASES[(PHASES.indexOf(ai.phase) + 1) % PHASES.length];
+    ai.phaseTimer = MOTHERSHIP.phaseSec[ai.phase];
+  }
+
+  // Rings run in their own phase, and underneath every phase once it is enraged.
+  if (ai.phase === 'rings' || enraged) {
+    ai.ringTimer -= dt * k;
+    if (ai.ringTimer <= 0) {
+      ai.ringTimer += MOTHERSHIP.ringEvery * (ai.phase === 'rings' ? 1 : 2);
+      ai.ringFlip = !ai.ringFlip;
+      ring(world, x, z, MOTHERSHIP.ringBolts, e.yaw + (ai.ringFlip ? Math.PI / MOTHERSHIP.ringBolts : 0));
+    }
+  }
+  if (ai.phase === 'fans') {
+    ai.fanTimer -= dt * k;
+    if (ai.fanTimer <= 0) {
+      ai.fanTimer += MOTHERSHIP.fanEvery;
+      fan(world, x - MOTHERSHIP.rim, z - 0.25);
+      fan(world, x + MOTHERSHIP.rim, z - 0.25);
+    }
+  }
+  if (ai.phase === 'spiral') {
+    ai.spiralTimer -= dt * k;
+    while (ai.spiralTimer <= 0) {
+      ai.spiralTimer += MOTHERSHIP.spiralEvery;
+      ai.spiralAngle += MOTHERSHIP.spiralStep;
+      ring(world, x, z, MOTHERSHIP.spiralArms, ai.spiralAngle);
+    }
+  }
+  ai.aimedTimer -= dt * k;
+  if (ai.aimedTimer <= 0) {
+    ai.aimedTimer += MOTHERSHIP.aimedEvery;
+    fireEnemyBolt(world, x, z - 0.6, headingToPlayer(world, x, z - 0.6), undefined, 1.2);
+  }
+}
+
 export function bossSystem(world: World, rng: Rng, dt: number, ctx: WaveContext): void {
   const hermit = findHermit(world);
 
@@ -394,5 +546,6 @@ export function bossSystem(world: World, rng: Rng, dt: number, ctx: WaveContext)
   for (const e of [...world.entities.values()]) {
     if (e.kind === 'enemy' && (e.ai as EscortAi | undefined)?.kind === 'escort') moveEscort(world, e, dt);
     else if (e.kind === 'boss' && (e.ai as StrafeAi | undefined)?.kind === 'strafe') moveStrafe(world, e, rng, dt);
+    else if (e.kind === 'boss' && (e.ai as MothershipAi | undefined)?.kind === 'mothership') moveMothership(world, e, dt);
   }
 }

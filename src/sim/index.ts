@@ -41,6 +41,7 @@ import {
 } from './systems/designMode.js';
 import { gamestateSystem, DEFAULT_GAMESTATE } from './systems/gamestate.js';
 import { bossSystem } from './systems/boss.js';
+import { thargonSystem } from './systems/thargons.js';
 import { ecmSystem } from './systems/ecm.js';
 import { cloakSystem } from './systems/cloak.js';
 import { energyBankSystem } from './systems/energyBank.js';
@@ -217,6 +218,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
     asteroidFieldSystem(world, rng, SIM_DT);
     aiSystem(world, rng, SIM_DT);
     bossSystem(world, rng, SIM_DT, waveCtx); // hermit spin/escorts + FdL strafe track [ROC-HERM-*, ROC-FDL-*]
+    thargonSystem(world, rng, SIM_DT, waveCtx); // Thargoid launches + Thargon chase/inert [ROC-ENM-6]
     const activeLevel = currentLevel();
     if (activeLevel) levelStateSystem(world, SIM_DT, activeLevel, waveCtx);
     const hits = collisionSystem(world, {

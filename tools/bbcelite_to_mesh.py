@@ -67,6 +67,31 @@ DEFAULT_SHIPS: dict[str, str] = {
     "cougar": "SHIP_COUGAR",
 }
 
+# Meshes derived from a generated one rather than parsed directly. The Thargoid's octagonal disc
+# stands on edge in bbcelite's axes (thin along x), so from the game's top-down camera it reads as
+# a sliver; the saucer variant rolls it 90 degrees about z so the disc lies flat in the play plane
+# and shows its classic octagon. [ROC-L4-1a]
+DERIVED_SHIPS: dict[str, tuple[str, str]] = {
+    "thargoid_saucer": ("thargoid", "roll90"),
+}
+
+
+def _roll90(p: dict) -> dict:
+    """Rotate a point/normal 90 degrees about z: (x, y, z) -> (-y, x, z)."""
+    return {"x": round(-p["y"], 6) + 0.0, "y": p["x"], "z": p["z"]}
+
+
+def derive_mesh(name: str, base: dict, op: str) -> dict:
+    if op != "roll90":
+        raise ValueError(f"unknown derive op {op!r}")
+    mesh = json.loads(json.dumps(base))
+    mesh["name"] = name
+    mesh["vertices"] = [_roll90(v) for v in mesh["vertices"]]
+    for face in mesh["faces"]:
+        face["normal"] = _roll90(face["normal"])
+    return mesh
+
+
 _VERTICES_LABEL = re.compile(r"^\.(SHIP_[A-Z0-9_]+)_VERTICES\s*$")
 
 Vec3 = tuple[float, float, float]
@@ -334,10 +359,16 @@ def main() -> int:
         print(f"  {name:14s} {len(mesh['vertices']):3d} vertices  "
               f"{len(mesh['edges']):3d} edges  {len(mesh['faces']):3d} faces")
 
+    for name, (base_name, op) in DERIVED_SHIPS.items():
+        base = json.loads((args.out / f"{base_name}.json").read_text())
+        mesh = derive_mesh(name, base, op)
+        (args.out / f"{name}.json").write_text(json.dumps(mesh, indent=2) + "\n")
+        print(f"  {name:14s} derived from {base_name} ({op})")
+
     if missing:
         print("MISSING blueprints: " + ", ".join(missing))
         return 1
-    print(f"Wrote {len(DEFAULT_SHIPS)} meshes to {args.out}")
+    print(f"Wrote {len(DEFAULT_SHIPS) + len(DERIVED_SHIPS)} meshes to {args.out}")
     return 0
 
 

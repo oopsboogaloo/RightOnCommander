@@ -1,7 +1,7 @@
 // Parse + schema-validate content JSON into typed sim structures. Throws on malformed data so
 // bad content fails fast (in CI) rather than at runtime. [tasks T5.2, design §2; ROC-ENM-7,8]
 
-import type { EnemyDef, WaveDef, CloakCycleDef } from '../systems/waves.js';
+import type { EnemyDef, WaveDef, CloakCycleDef, LaunchDef } from '../systems/waves.js';
 import type { PickupType } from '../components.js';
 import type { ClearFieldDef } from '../world.js';
 import type { LevelDef } from '../systems/levelstate.js';
@@ -19,7 +19,7 @@ const num = (v: unknown, where: string): number => {
   return v;
 };
 
-const BOSS_BEHAVIORS = ['hermit', 'strafe'] as const;
+const BOSS_BEHAVIORS = ['hermit', 'strafe', 'mothership'] as const;
 const PICKUP_TYPES = ['fuel', 'gems', 'alloys', 'laser', 'missile', 'ecm', 'bomb', 'life', 'cargo', 'cloak'] as const;
 
 function parseCloakCycle(raw: unknown, where: string): CloakCycleDef {
@@ -28,6 +28,16 @@ function parseCloakCycle(raw: unknown, where: string): CloakCycleDef {
     visibleSec: num(raw.visibleSec, `${where}.visibleSec`),
     transitionSec: num(raw.transitionSec, `${where}.transitionSec`),
     cloakedSec: num(raw.cloakedSec, `${where}.cloakedSec`),
+  };
+}
+
+function parseLaunch(raw: unknown, where: string): LaunchDef {
+  if (!isObj(raw)) throw new Error(`content: ${where} must be an object`);
+  if (typeof raw.enemy !== 'string') throw new Error(`content: ${where}.enemy must be a string`);
+  return {
+    enemy: raw.enemy,
+    everySec: num(raw.everySec, `${where}.everySec`),
+    max: num(raw.max, `${where}.max`),
   };
 }
 
@@ -57,7 +67,14 @@ function parseEnemies(raw: unknown): Record<string, EnemyDef> {
       drops: v.drops as PickupType | undefined,
       cloakCycle: v.cloakCycle === undefined ? undefined : parseCloakCycle(v.cloakCycle, `enemy ${name}.cloakCycle`),
       fireSpeedMul: v.fireSpeedMul === undefined ? undefined : num(v.fireSpeedMul, `enemy ${name}.fireSpeedMul`),
+      launches: v.launches === undefined ? undefined : parseLaunch(v.launches, `enemy ${name}.launches`),
     };
+  }
+  // A launcher must name a real enemy for its children. [ROC-ENM-6]
+  for (const [name, def] of Object.entries(out)) {
+    if (def.launches && !(def.launches.enemy in out)) {
+      throw new Error(`content: enemy '${name}' launches unknown enemy '${def.launches.enemy}'`);
+    }
   }
   return out;
 }
@@ -73,7 +90,12 @@ function parseWave(raw: unknown, enemies: Record<string, EnemyDef>, where: strin
     throw new Error(`content: ${where} references unknown enemy '${String(enemy)}'`);
   }
   const fire = isObj(raw.fire)
-    ? { rate: num(raw.fire.rate, `${where}.fire.rate`), aimed: !!raw.fire.aimed }
+    ? {
+        rate: num(raw.fire.rate, `${where}.fire.rate`),
+        aimed: !!raw.fire.aimed,
+        spread: raw.fire.spread === undefined ? undefined : num(raw.fire.spread, `${where}.fire.spread`),
+        arc: raw.fire.arc === undefined ? undefined : num(raw.fire.arc, `${where}.fire.arc`),
+      }
     : undefined;
   return {
     id: typeof raw.id === 'string' ? raw.id : where,
@@ -174,8 +196,10 @@ function parseLevel(raw: unknown, enemies: Record<string, EnemyDef>): LevelDef {
     combatAsteroids: asteroidGroup('combatAsteroids'),
     giantAsteroids,
     wavesA: group('wavesA'),
-    midBoss: bossOrPack('midBoss'),
-    wavesB: group('wavesB'),
+    // Level 4 has no mid-boss and no second wave group: its waves run straight into the end boss.
+    // [ROC-L4-4]
+    midBoss: raw.midBoss === undefined ? undefined : bossOrPack('midBoss'),
+    wavesB: raw.wavesB === undefined ? [] : group('wavesB'),
     endBoss: boss('endBoss'),
     viper: raw.viper === undefined ? undefined : parseWave(raw.viper, enemies, 'level.viper'),
     witchspace: raw.witchspace === undefined ? undefined : parseWave(raw.witchspace, enemies, 'level.witchspace'),

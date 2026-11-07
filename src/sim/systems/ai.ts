@@ -24,6 +24,46 @@ interface AiState {
   aimed: boolean;
   cooldown: number; // seconds until next shot
   speedMul?: number; // per-enemy shot-speed multiplier (e.g. the Cougar's faster bolts) [ROC-CLK-7]
+  spread?: number; // shots per volley, fanned evenly across `arc` (default 1) [ROC-ENM-11]
+  arc?: number; // total fan width, radians
+}
+
+// Spawn one enemy bolt from (ex, ez) along a heading (radians: 0 = up-screen +z, PI = straight
+// down). Shared by ordinary enemy fire and the boss bullet patterns. [ROC-ENM-11]
+export function fireEnemyBolt(world: World, ex: number, ez: number, heading: number, cfg: AiConfig = DEFAULT_AI, speedMul = 1): void {
+  const p = acquireProjectile(world);
+  p.kind = 'projectile';
+  p.team = 'enemy';
+  p.pos = vec3(ex, 0, ez);
+  p.vel = scale(vec3(Math.sin(heading), 0, Math.cos(heading)), cfg.shotSpeed * speedMul);
+  p.yaw = 0;
+  p.bank = 0;
+  p.ttl = cfg.shotTtl;
+  p.damage = cfg.shotDamage;
+}
+
+// Heading (see fireEnemyBolt) from (ex, ez) toward the player, or straight down if there is none.
+export function headingToPlayer(world: World, ex: number, ez: number): number {
+  const player = world.entities.get(PLAYER_ID);
+  if (!player) return Math.PI;
+  const dx = player.pos.x - ex;
+  const dz = player.pos.z - ez;
+  return dx === 0 && dz === 0 ? Math.PI : Math.atan2(dx, dz);
+}
+
+// A volley: `spread` bolts fanned evenly across `arc`, centred on the aim. [ROC-ENM-11]
+function fireVolley(world: World, rng: Rng, ex: number, ez: number, ai: AiState, cfg: AiConfig): void {
+  const n = Math.max(1, Math.round(ai.spread ?? 1));
+  if (n === 1) {
+    fireShot(world, rng, ex, ez, ai.aimed, cfg, ai.speedMul);
+    return;
+  }
+  // Cloaked player: no lock, so the whole fan sprays from a random centre. [ROC-CLK-4,8]
+  const centre = world.player.cloakTtl > 0 ? rng.range(0, Math.PI * 2) : ai.aimed ? headingToPlayer(world, ex, ez) : Math.PI;
+  const arc = ai.arc ?? 0.6;
+  for (let i = 0; i < n; i++) {
+    fireEnemyBolt(world, ex, ez, centre - arc / 2 + (arc * i) / (n - 1), cfg, ai.speedMul ?? 1);
+  }
 }
 
 function fireShot(world: World, rng: Rng, ex: number, ez: number, aimed: boolean, cfg: AiConfig, speedMul = 1): void {
@@ -59,7 +99,7 @@ export function aiSystem(world: World, rng: Rng, dt: number, cfg: AiConfig = DEF
 
     ai.cooldown -= dt;
     if (ai.cooldown <= 0) {
-      fireShot(world, rng, e.pos.x, e.pos.z, ai.aimed, cfg, ai.speedMul);
+      fireVolley(world, rng, e.pos.x, e.pos.z, ai, cfg);
       ai.cooldown = 1 / ai.rate;
     }
   }

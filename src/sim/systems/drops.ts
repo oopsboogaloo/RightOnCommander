@@ -82,7 +82,7 @@ export function dropsSystem(world: World, rng?: Rng): void {
     // Random cargo from a destroyed ship. Deterministic via world.rng. [ROC-CARGO-1]
     if (!rng || (ev.kind !== 'enemy' && ev.kind !== 'boss')) continue;
     if (rng.range(0, 1) >= CARGO_CHANCE) continue;
-    const thargoid = ev.meshId === 'thargoid';
+    const thargoid = typeof ev.meshId === 'string' && ev.meshId.startsWith('thargoid'); // incl. the L4 saucers
     const pool = thargoid ? [...COMMODITIES, ALIEN_ITEMS] : COMMODITIES; // Alien Items: Thargoids only [ROC-CARGO-5]
     spawnPickup(world, at, 'cargo', pool[rng.int(pool.length)]);
   }
