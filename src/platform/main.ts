@@ -189,6 +189,7 @@ const LAST_NAME_KEY = 'roc.lastName';
 // out as it goes, while the title fades — a continuous hand-off into play. [ROC-TTL-3]
 const FLY_IN_SEC = 1.4;
 let flyFromT = 0; // the title clock when start was pressed, to pick up the ship's pose exactly
+let flyToYaw = 0; // the landing yaw, chosen once at start so it can't jump a full turn mid-flight
 
 // Station shop wiring: the dock screen shows when the level reaches DOCK; taps route to intents.
 // Earned unlocks persist across runs (completing the game unlocks the Thargoid ship). [ROC-PROG-2]
@@ -779,6 +780,10 @@ function startNewGame(): void {
   prev = readPlayerPose();
   curr = prev;
   flyFromT = screenT; // the title ship's pose right now is where the fly-in starts
+  // Land on the full turn nearest where the spin starts, fixed for the whole flight: recomputing it
+  // from the still-turning title pose each frame could flip it by 2π halfway and snap the ship.
+  const startYaw = titleShipPose(flyFromT).yaw;
+  flyToYaw = curr.yaw + Math.PI * 2 * Math.round((startYaw - curr.yaw) / (Math.PI * 2));
   screen = 'launching';
   screenT = 0;
 }
@@ -797,11 +802,10 @@ function renderFlyIn(): void {
   const from = titleShipPose(flyFromT + screenT); // keeps turning as it sets off
   const to = readPlayerPose();
   const player = sim.state.entities.get(PLAYER_ID);
-  const toYaw = to.yaw + Math.PI * 2 * Math.round((from.yaw - to.yaw) / (Math.PI * 2));
   const mesh = (player?.meshId && MESHES[player.meshId]) || MESHES.sidewinder;
   const model = modelMatrix(
     vec3(lerp(0, to.x), 0, lerp(TITLE_SHIP.z, to.z)),
-    lerp(from.yaw, toYaw),
+    lerp(from.yaw, flyToYaw),
     lerp(from.bank, to.bank),
     lerp(TITLE_SHIP.scale, SHIP_SCALE * (player?.scale ?? 1)),
   );
