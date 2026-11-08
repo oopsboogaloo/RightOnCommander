@@ -40,6 +40,7 @@ export function fireEnemyBolt(world: World, ex: number, ez: number, heading: num
   p.bank = 0;
   p.ttl = cfg.shotTtl;
   p.damage = cfg.shotDamage;
+  world.events.push({ type: 'sfx', id: 'enemy_shot' }); // the audio shell rate-limits fans of these
 }
 
 // Heading (see fireEnemyBolt) from (ex, ez) toward the player, or straight down if there is none.
@@ -89,6 +90,7 @@ function fireShot(world: World, rng: Rng, ex: number, ez: number, aimed: boolean
   p.bank = 0;
   p.ttl = cfg.shotTtl;
   p.damage = cfg.shotDamage;
+  world.events.push({ type: 'sfx', id: 'enemy_shot' });
 }
 
 export function aiSystem(world: World, rng: Rng, dt: number, cfg: AiConfig = DEFAULT_AI): void {

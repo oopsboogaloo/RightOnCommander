@@ -119,6 +119,7 @@ function fireOne(world: World, wing: 1 | -1, cfg: MissilesConfig): void {
   m.hullMax = 1;
   m.shield = 0;
   m.damage = cfg.damage;
+  world.events.push({ type: 'sfx', id: 'missile_launch' });
 }
 
 function steerHoming(world: World, m: Entity, dt: number, cfg: MissilesConfig): void {

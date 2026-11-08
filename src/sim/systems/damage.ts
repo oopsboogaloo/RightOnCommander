@@ -38,7 +38,7 @@ function finalizeDeath(world: World, e: Entity): void {
     drops: e.drops,
     cargoDrops: e.cargoDrops,
   });
-  world.events.push({ type: 'sfx', id: 'explode_small' });
+  world.events.push({ type: 'sfx', id: e.kind === 'boss' ? 'explode_large' : 'explode_small' });
   world.entities.delete(e.id);
 }
 
