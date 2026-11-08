@@ -4,6 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Right On Commander</title>
+  <script>
+    // Reload over https if opened over plain http: the mammoththoughts.com host can't redirect
+    // by itself. Local dev servers (localhost) are left alone.
+    if (location.protocol === 'http:' && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) {
+      location.replace('https:' + location.href.slice(5));
+    }
+  </script>
   <style>
     html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
     #gameCanvas { display: block; width: 100vw; height: 100vh; height: 100dvh; touch-action: none; }
