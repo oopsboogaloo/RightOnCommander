@@ -10,7 +10,7 @@ import { vec3 } from '../../sim/math/vec3.js';
 import type { HighScore } from '../../platform/highScores.js';
 import { MAX_NAME } from '../../platform/highScores.js';
 
-export const AUTHOR = 'Chloe';
+export const AUTHOR = 'Chloe Bolland';
 export const COPYRIGHT_YEAR = 2026;
 
 const FAINT = '#9ab';
