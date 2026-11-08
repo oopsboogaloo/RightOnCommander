@@ -1,5 +1,5 @@
 // Pickups: collect fuel/gems to restore shields (surplus banked as sellable cargo), alloys to
-// repair hull, and weapon/utility power-ups (laser/missile/ECM/bomb) fitted in flight. Shooting
+// repair hull, and weapon/utility power-ups (laser/missile/bomb) fitted in flight. Shooting
 // a pickup destroys it (fuel explodes with no splash; gems/alloys shatter). [tasks T5.3,
 // design §6 step 10, ROC-PWR-1..6, ROC-ECO-3]
 
@@ -103,9 +103,6 @@ function collect(world: World, pickup: Entity, player: Entity, cfg: PickupsConfi
       break;
     case 'missile':
       collectMissile(world);
-      break;
-    case 'ecm':
-      world.player.ecm += 1;
       break;
     case 'bomb':
       world.player.energyBombs = Math.min(energyBombCap(world.player.shipClass), world.player.energyBombs + 1);

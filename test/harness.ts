@@ -9,7 +9,6 @@ export const emptyInput = (): InputFrame => ({
   moveTarget: null,
   firing: false,
   fireTapped: false,
-  ecm: false,
   energyBomb: false,
   confirm: false,
   pause: false,

@@ -23,7 +23,6 @@ const raw = (over: Partial<RawInput> = {}): RawInput => ({
   pointerTapped: false,
   held: new Set<Action>(),
   fireEdge: false,
-  ecm: false,
   bomb: false,
   confirm: false,
   pause: false,

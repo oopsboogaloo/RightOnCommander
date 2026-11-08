@@ -15,7 +15,6 @@ function raw(over: Partial<RawInput> = {}): RawInput {
     pointerTapped: false,
     held: new Set<Action>(),
     fireEdge: false,
-    ecm: false,
     bomb: false,
     confirm: false,
     pause: false,
@@ -55,11 +54,10 @@ describe('composeInputFrame', () => {
 
   it('fire held (keyboard) sets firing; momentary edges pass through', () => {
     const { frame } = composeInputFrame(
-      raw({ held: new Set(['fire']), ecm: true, bomb: true, confirm: true, pause: true }),
+      raw({ held: new Set(['fire']), bomb: true, confirm: true, pause: true }),
       OPTS,
     );
     expect(frame.firing).toBe(true);
-    expect(frame.ecm).toBe(true);
     expect(frame.energyBomb).toBe(true);
     expect(frame.confirm).toBe(true);
     expect(frame.pause).toBe(true);

@@ -16,7 +16,6 @@ const inputArb: fc.Arbitrary<InputFrame> = fc.record({
   ),
   firing: fc.boolean(),
   fireTapped: fc.boolean(),
-  ecm: fc.boolean(),
   energyBomb: fc.boolean(),
   confirm: fc.boolean(),
   pause: fc.boolean(),

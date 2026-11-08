@@ -3,7 +3,7 @@
 
 import type { Storage } from '../interfaces.js';
 
-export type Action = 'up' | 'down' | 'left' | 'right' | 'fire' | 'ecm' | 'bomb' | 'confirm' | 'pause';
+export type Action = 'up' | 'down' | 'left' | 'right' | 'fire' | 'bomb' | 'confirm' | 'pause';
 
 export interface RemapTable {
   keyboard: Record<string, Action>; // KeyboardEvent.code -> Action
@@ -24,7 +24,6 @@ export function defaultRemap(): RemapTable {
       ArrowRight: 'right',
       KeyD: 'right',
       Space: 'fire',
-      KeyE: 'ecm',
       KeyB: 'bomb',
       Enter: 'confirm',
       Escape: 'pause',
@@ -36,7 +35,6 @@ export function defaultRemap(): RemapTable {
       15: 'right',
       0: 'fire', // A / cross
       1: 'confirm', // B / circle
-      2: 'ecm', // X / square
       3: 'bomb', // Y / triangle
       9: 'pause', // start
     },

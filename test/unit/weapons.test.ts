@@ -14,7 +14,6 @@ const frame = (over: Partial<InputFrame> = {}): InputFrame => ({
   moveTarget: null,
   firing: false,
   fireTapped: false,
-  ecm: false,
   energyBomb: false,
   confirm: false,
   pause: false,

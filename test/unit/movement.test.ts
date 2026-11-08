@@ -12,7 +12,6 @@ const frame = (moveTarget: Vec2 | null): InputFrame => ({
   moveTarget,
   firing: false,
   fireTapped: false,
-  ecm: false,
   energyBomb: false,
   confirm: false,
   pause: false,

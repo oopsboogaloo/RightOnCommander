@@ -20,7 +20,7 @@ const num = (v: unknown, where: string): number => {
 };
 
 const BOSS_BEHAVIORS = ['hermit', 'strafe', 'mothership'] as const;
-const PICKUP_TYPES = ['fuel', 'gems', 'alloys', 'laser', 'missile', 'ecm', 'bomb', 'life', 'cargo', 'cloak'] as const;
+const PICKUP_TYPES = ['fuel', 'gems', 'alloys', 'laser', 'missile', 'bomb', 'life', 'cargo', 'cloak'] as const;
 
 function parseCloakCycle(raw: unknown, where: string): CloakCycleDef {
   if (!isObj(raw)) throw new Error(`content: ${where} must be an object`);

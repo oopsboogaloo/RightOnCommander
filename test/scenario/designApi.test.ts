@@ -8,7 +8,7 @@ import { createSim } from '../../src/sim/index.js';
 import type { InputFrame } from '../../src/interfaces.js';
 import type { LevelDef } from '../../src/sim/systems/levelstate.js';
 
-const NEUTRAL: InputFrame = { moveTarget: null, firing: false, fireTapped: false, ecm: false, energyBomb: false, confirm: false, pause: false };
+const NEUTRAL: InputFrame = { moveTarget: null, firing: false, fireTapped: false, energyBomb: false, confirm: false, pause: false };
 
 const enemies = { grunt: { hull: 5, bounty: 10 } };
 const level: LevelDef = {

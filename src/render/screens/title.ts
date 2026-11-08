@@ -11,7 +11,6 @@ import type { HighScore } from '../../platform/highScores.js';
 import { MAX_NAME } from '../../platform/highScores.js';
 
 export const AUTHOR = 'Chloe Bolland';
-export const COPYRIGHT_YEAR = 2026;
 
 const FAINT = '#9ab';
 const GOLD = '#ffd76b';
@@ -44,8 +43,8 @@ export function drawTitleHeading(r: Renderer2D, w: number, h: number, alpha = 1)
   const white = `rgba(255,255,255,${a})`;
   const faint = `rgba(153,170,187,${a})`;
   r.drawText('RIGHT ON COMMANDER', { x: w / 2, y: h * 0.09 }, { fill: white, font: 'bold 40px monospace', align: 'center' });
-  r.drawText(`A game by ${AUTHOR}`, { x: w / 2, y: h * 0.09 + 30 }, { fill: faint, font: '16px monospace', align: 'center' });
-  r.drawText(`© ${COPYRIGHT_YEAR} ${AUTHOR}. An unofficial fan homage.`, { x: w / 2, y: h * 0.09 + 52 }, { fill: faint, font: '12px monospace', align: 'center' });
+  r.drawText(`By ${AUTHOR}`, { x: w / 2, y: h * 0.09 + 30 }, { fill: faint, font: '16px monospace', align: 'center' });
+  r.drawText('An unofficial fan homage.', { x: w / 2, y: h * 0.09 + 52 }, { fill: faint, font: '12px monospace', align: 'center' });
   r.drawText('Based on Elite by David Braben & Ian Bell (Acornsoft, 1984).', { x: w / 2, y: h * 0.09 + 68 }, {
     fill: faint,
     font: '12px monospace',

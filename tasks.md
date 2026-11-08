@@ -364,8 +364,8 @@ have nowhere to load into until the campaign can actually advance between levels
 ## Phase 8 — Title, audio, flavour
 
 - [x] **T8.1 — Title/intro screen.** Rotating Sidewinder; title/credits top; **local-storage privacy disclaimer** bottom; start ⇒ ship flies into play, control transfers (continuous). **Refs:** ROC-TTL-1..5.
-  *Status:* mostly built — `render/screens/title.ts`: rotating Sidewinder, title, author/copyright/Elite credit, high-score table, local-storage notice; tap/Enter starts a fresh run (`sim.newGame`); game over → name entry (on-screen keyboard + typing) → title. On start the title Sidewinder flies down into the player's start position (~1.4 s) while the title fades, then control hands over (ROC-TTL-3).
-- [ ] **T8.2 — Audio.** `audio/webaudio.ts` (optional, file-loaded) + `nullaudio.ts`; wire the SFX event set; silent-playable. Null backend asserts events (e.g. kill ⇒ `explode_small`+`cash`). **Refs:** ROC-SFX-1,2, ROC-NFR-3.
+  *Status:* mostly built — `render/screens/title.ts`: rotating Sidewinder, title, "By Chloe Bolland" + fan-homage note/Elite credit (no copyright notice), high-score table, local-storage notice; tap/Enter starts a fresh run (`sim.newGame`); game over → name entry (on-screen keyboard + typing) → title. On start the title Sidewinder flies down into the player's start position (~1.4 s) while the title fades, then control hands over (ROC-TTL-3).
+- [x] **T8.2 — Audio.** *(Done: sounds from Mammoth Gravity Battles in `public/sounds/`, mapped in `audio/sounds.ts`; quiet ambience loop; corner sound/pause buttons + pause menu with volume and return-to-menu in `platform/hud.ts`.)* `audio/webaudio.ts` (optional, file-loaded) + `nullaudio.ts`; wire the SFX event set; silent-playable. Null backend asserts events (e.g. kill ⇒ `explode_small`+`cash`). **Refs:** ROC-SFX-1,2, ROC-NFR-3.
 - [ ] **T8.3 — Lore & flavour.** `blurbs.json` + named systems (Riedquat for Elite mode), Jameson default name, **Dark Wheel** ace waves, **Raxxla** hidden secret, dock-geometry variety (Coriolis/Dodo/icosahedral), Blue-Danube-style cue (PD arrangement). **Refs:** ROC-LORE-1..7.
 
 ---

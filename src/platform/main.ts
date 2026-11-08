@@ -93,6 +93,10 @@ import { COMPLETION_BONUS } from '../sim/systems/levelstate.js';
 import { moveFocus, type MenuEdges } from '../input/menuNav.js';
 import { loadHighScores, saveHighScores, qualifies, insertScore, type HighScore } from './highScores.js';
 import { drawTitleScreen, drawTitleHeading, drawEntryScreen, entryKeys, entryKeyAt, applyEntryKey, titleShipPose, TITLE_SHIP } from '../render/screens/title.js';
+import { WebAudioOut } from '../audio/webaudio.js';
+import { soundsForEvents } from '../audio/sounds.js';
+import { loadAudioSettings, saveAudioSettings } from './audioSettings.js';
+import { Hud } from './hud.js';
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
 if (!canvas) throw new Error('gameCanvas element not found');
@@ -168,6 +172,62 @@ const renderer = new Renderer2D(ctx);
 renderer.setWreckageMeshes(['viper', 'python', 'anaconda', 'cobra_mk3', 'boa', 'transporter', 'asp_mk2', 'constrictor'].map((id) => MESHES[id]).filter(Boolean));
 const storage = createLocalStorage();
 const input = new DomInput({ canvas, storage });
+
+// ---- sound + pause menu ---------------------------------------------------------------------
+// Sound effects from Mammoth Gravity Battles (public/sounds/), a quiet space ambience loop, and
+// the corner sound/pause buttons with their pause menu. [ROC-SFX-1,2, ROC-NFR-3]
+const audioSettings = loadAudioSettings(storage);
+// Sound paths are relative to the page, like the rest of the build (vite base './').
+const audio = new WebAudioOut({ baseUrl: 'sounds/', ...audioSettings });
+// Browsers only allow audio to start from a user gesture: wake it on any tap, click or key.
+for (const type of ['pointerdown', 'touchend', 'keydown'] as const) {
+  window.addEventListener(type, () => audio.unlock(), { capture: true, passive: true });
+}
+document.addEventListener('visibilitychange', () => {
+  audio.setHidden(document.hidden);
+  if (document.hidden && runActive()) hud.open(); // switching away mid-run pauses it
+});
+
+function setSoundEnabled(on: boolean): void {
+  audioSettings.enabled = on;
+  audio.setEnabled(on);
+  hud.setSound(on);
+  saveAudioSettings(storage, audioSettings);
+}
+
+const hud = new Hud(
+  {
+    onSoundToggle: () => setSoundEnabled(!audioSettings.enabled),
+    onVolume: (v) => {
+      audioSettings.volume = v;
+      audio.setVolume(v);
+      saveAudioSettings(storage, audioSettings);
+    },
+    onPauseRequest: () => {
+      if (runActive()) hud.open();
+    },
+    onResume: () => hud.close(),
+    onQuit: () => quitToTitle(),
+    onUiSound: () => audio.play('ui_select'),
+  },
+  audioSettings,
+);
+
+// A run is under way and can be paused: in play, not designing, not on the game-over/win hold.
+function runActive(): boolean {
+  return screen === 'play' && !designMode && sim.state.mode !== 'GAME_OVER' && sim.state.mode !== 'COMPLETE';
+}
+
+// "Return to menu" from the pause menu: abandon the run, unscored, back to the title.
+function quitToTitle(): void {
+  hud.close();
+  paused = false;
+  gameOverSec = 0;
+  completeSec = 0;
+  highlightRow = -1;
+  screen = 'title';
+  screenT = 0;
+}
 
 // Which screen the shell is showing. The game opens on the title; a run ends at game over, then
 // (if the score makes the table) name entry, then back to the title. [ROC-TTL-*, ROC-LBD-1a]
@@ -774,6 +834,7 @@ function startNewGame(): void {
   lastSnapshotLevelIndex = -1;
   launchArmed = false;
   paused = false;
+  hud.close();
   gameOverSec = 0;
   completeSec = 0;
   highlightRow = -1;
@@ -1282,7 +1343,8 @@ startGameLoop({
   step: () => {
     const frame = input.sample(DT); // always drain one-shot input edges, even while paused/designing
     screenT += DT;
-    if (!designMode) handlePadMenu(input.menu);
+    if (hud.isOpen) hud.handlePad(input.menu);
+    else if (!designMode) handlePadMenu(input.menu);
     if (screen === 'launching' && screenT >= FLY_IN_SEC) {
       screen = 'play'; // the fly-in has landed: hand over control
       screenT = 0;
@@ -1307,9 +1369,15 @@ startGameLoop({
       }
       return;
     }
-    if (paused) return;
+    // Esc / gamepad Start opens and closes the pause menu.
+    if ((frame.pause || input.menu.start) && runActive()) {
+      if (hud.isOpen) hud.close();
+      else hud.open();
+    }
+    if (paused || hud.isOpen) return;
     prev = curr;
     const events = sim.step(frame);
+    for (const id of soundsForEvents(events)) audio.play(id);
     // Dense-belt levels show the drifting asteroid backdrop. Follows whichever level is active,
     // not just the first. [ROC-L1-1]
     const lvl = currentLevel() as { backdrop?: string };
@@ -1344,6 +1412,7 @@ startGameLoop({
     }
   },
   render: (alpha) => {
+    hud.setPauseVisible(runActive());
     if (screen === 'launching') {
       renderFlyIn();
       renderer.endFrame(alpha);
@@ -1361,7 +1430,7 @@ startGameLoop({
       drawRotateHint();
       return;
     }
-    renderer.beginFrame(paused ? 0 : sim.state.scroll); // sim-owned: 0 halts for bosses/pause, >1 is hyperspace [ROC-BOSS-1, ROC-HYP-3]
+    renderer.beginFrame(paused || hud.isOpen ? 0 : sim.state.scroll); // sim-owned: 0 halts for bosses/pause, >1 is hyperspace [ROC-BOSS-1, ROC-HYP-3]
 
     if (designMode) {
       renderDesignFrame();

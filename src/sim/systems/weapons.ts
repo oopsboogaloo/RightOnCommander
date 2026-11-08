@@ -211,6 +211,7 @@ export function weaponsSystem(
     const fireMil = firing && world.player.militaryCooldown <= 0; // military cadence (2x)
     let firedPulse = false;
     let firedMil = false;
+    let firedBeam = false;
 
     for (const { mount, dir } of MOUNT_DIRS) {
       const lasers = world.player.lasers[mount];
@@ -222,7 +223,10 @@ export function weaponsSystem(
         const origin = add(add(player.pos, scale(dir, dist)), scale(perp, offset));
         const type = lasers[i];
         if (type === 'beam') {
-          if (firing) fireBeam(world, origin, dir, dt, cfg);
+          if (firing) {
+            fireBeam(world, origin, dir, dt, cfg);
+            firedBeam = true;
+          }
         } else if (type === 'military') {
           if (fireMil) {
             spawnBolt(world, origin, dir, cfg.militarySpeed, cfg.militaryTtl, cfg.militaryDamage, true);
@@ -242,6 +246,8 @@ export function weaponsSystem(
       world.player.militaryCooldown = 1 / cfg.militaryRate;
       world.events.push({ type: 'sfx', id: 'laser_military' });
     }
+    // Beams are continuous, so this fires every step they're held; the audio shell rate-limits it.
+    if (firedBeam) world.events.push({ type: 'sfx', id: 'laser_beam' });
   }
 
   // Advance projectiles and recycle the expired ones.
