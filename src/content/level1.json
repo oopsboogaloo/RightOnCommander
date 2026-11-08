@@ -77,7 +77,7 @@
       "pattern": "side_stream",
       "enemy": "krait",
       "count": 3,
-      "spacingMs": 450,
+      "spacingMs": 725,
       "delayMs": 4950,
       "durationMs": 6000,
       "fire": {
@@ -105,7 +105,7 @@
       "pattern": "pincer",
       "enemy": "gecko",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 575,
       "delayMs": 9450,
       "durationMs": 11300,
       "params": {
@@ -166,7 +166,7 @@
       "pattern": "sine_column",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 525,
       "delayMs": 19350,
       "durationMs": 6000,
       "params": {
@@ -183,7 +183,7 @@
       "pattern": "pincer",
       "enemy": "sidewinder",
       "count": 5,
-      "spacingMs": 450,
+      "spacingMs": 625,
       "delayMs": 21600,
       "durationMs": 11300,
       "params": {
@@ -248,7 +248,7 @@
       "pattern": "side_stream",
       "enemy": "krait",
       "count": 3,
-      "spacingMs": 450,
+      "spacingMs": 725,
       "delayMs": 37500,
       "durationMs": 6000,
       "fire": {
@@ -276,7 +276,7 @@
       "pattern": "pincer",
       "enemy": "gecko",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 575,
       "delayMs": 42000,
       "durationMs": 11300,
       "params": {
@@ -337,7 +337,7 @@
       "pattern": "sine_column",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 525,
       "delayMs": 51900,
       "durationMs": 6000,
       "params": {
@@ -354,7 +354,7 @@
       "pattern": "pincer",
       "enemy": "sidewinder",
       "count": 5,
-      "spacingMs": 450,
+      "spacingMs": 625,
       "delayMs": 54150,
       "durationMs": 11300,
       "params": {
@@ -419,7 +419,7 @@
       "pattern": "side_stream",
       "enemy": "krait",
       "count": 3,
-      "spacingMs": 450,
+      "spacingMs": 725,
       "delayMs": 70050,
       "durationMs": 6000,
       "fire": {
@@ -447,7 +447,7 @@
       "pattern": "pincer",
       "enemy": "gecko",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 575,
       "delayMs": 74550,
       "durationMs": 11300,
       "params": {
@@ -508,7 +508,7 @@
       "pattern": "sine_column",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 525,
       "delayMs": 84450,
       "durationMs": 6000,
       "params": {
@@ -525,7 +525,7 @@
       "pattern": "pincer",
       "enemy": "sidewinder",
       "count": 5,
-      "spacingMs": 450,
+      "spacingMs": 625,
       "delayMs": 86700,
       "durationMs": 11300,
       "params": {
@@ -590,7 +590,7 @@
       "pattern": "side_stream",
       "enemy": "krait",
       "count": 3,
-      "spacingMs": 450,
+      "spacingMs": 725,
       "delayMs": 102600,
       "durationMs": 6000,
       "fire": {
@@ -618,7 +618,7 @@
       "pattern": "pincer",
       "enemy": "gecko",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 575,
       "delayMs": 107100,
       "durationMs": 11300,
       "params": {
@@ -679,7 +679,7 @@
       "pattern": "sine_column",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 525,
       "delayMs": 117000,
       "durationMs": 6000,
       "params": {
@@ -696,7 +696,7 @@
       "pattern": "pincer",
       "enemy": "sidewinder",
       "count": 5,
-      "spacingMs": 450,
+      "spacingMs": 625,
       "delayMs": 119250,
       "durationMs": 11300,
       "params": {
@@ -761,7 +761,7 @@
       "pattern": "side_stream",
       "enemy": "krait",
       "count": 3,
-      "spacingMs": 450,
+      "spacingMs": 725,
       "delayMs": 135150,
       "durationMs": 6000,
       "fire": {
@@ -789,7 +789,7 @@
       "pattern": "pincer",
       "enemy": "gecko",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 575,
       "delayMs": 139650,
       "durationMs": 11300,
       "params": {
@@ -874,7 +874,7 @@
       "pattern": "side_stream",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 725,
       "delayMs": 8100,
       "durationMs": 6000,
       "fire": {
@@ -887,7 +887,7 @@
       "pattern": "pincer",
       "enemy": "gecko",
       "count": 5,
-      "spacingMs": 450,
+      "spacingMs": 575,
       "delayMs": 10350,
       "durationMs": 11300,
       "params": {
@@ -948,7 +948,7 @@
       "pattern": "pincer",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 1100,
       "delayMs": 21600,
       "durationMs": 11300,
       "params": {
@@ -999,7 +999,7 @@
       "pattern": "side_stream",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 725,
       "delayMs": 29250,
       "durationMs": 6000,
       "fire": {
@@ -1050,7 +1050,7 @@
       "pattern": "side_stream",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 725,
       "delayMs": 43350,
       "durationMs": 6000,
       "fire": {
@@ -1063,7 +1063,7 @@
       "pattern": "pincer",
       "enemy": "gecko",
       "count": 5,
-      "spacingMs": 450,
+      "spacingMs": 575,
       "delayMs": 45600,
       "durationMs": 11300,
       "params": {
@@ -1124,7 +1124,7 @@
       "pattern": "pincer",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 1100,
       "delayMs": 56850,
       "durationMs": 11300,
       "params": {
@@ -1175,7 +1175,7 @@
       "pattern": "side_stream",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 725,
       "delayMs": 64500,
       "durationMs": 6000,
       "fire": {
@@ -1226,7 +1226,7 @@
       "pattern": "side_stream",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 725,
       "delayMs": 78600,
       "durationMs": 6000,
       "fire": {
@@ -1239,7 +1239,7 @@
       "pattern": "pincer",
       "enemy": "gecko",
       "count": 5,
-      "spacingMs": 450,
+      "spacingMs": 575,
       "delayMs": 80850,
       "durationMs": 11300,
       "params": {
@@ -1300,7 +1300,7 @@
       "pattern": "pincer",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 1100,
       "delayMs": 92100,
       "durationMs": 11300,
       "params": {
@@ -1351,7 +1351,7 @@
       "pattern": "side_stream",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 725,
       "delayMs": 99750,
       "durationMs": 6000,
       "fire": {
@@ -1402,7 +1402,7 @@
       "pattern": "side_stream",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 725,
       "delayMs": 113850,
       "durationMs": 6000,
       "fire": {
@@ -1415,7 +1415,7 @@
       "pattern": "pincer",
       "enemy": "gecko",
       "count": 5,
-      "spacingMs": 450,
+      "spacingMs": 575,
       "delayMs": 116100,
       "durationMs": 11300,
       "params": {
@@ -1476,7 +1476,7 @@
       "pattern": "pincer",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 1100,
       "delayMs": 127350,
       "durationMs": 11300,
       "params": {
@@ -1527,7 +1527,7 @@
       "pattern": "side_stream",
       "enemy": "krait",
       "count": 4,
-      "spacingMs": 450,
+      "spacingMs": 725,
       "delayMs": 135000,
       "durationMs": 6000,
       "fire": {

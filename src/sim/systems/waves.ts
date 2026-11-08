@@ -70,7 +70,14 @@ interface PathRuntime {
   params: PathParams;
   age: number;
   duration: number;
+  offsetX?: number; // this member's sideways place in the row (params.spreadX), so a wave whose
+  // path parks every member at one spot (drop_hold) lines them up instead of stacking them
 }
+
+// Sideways offset of member `index` of `count`, centred on the path: `spreadX` apart. Every member
+// otherwise flies the identical path, only time-shifted. [v1.19 wave spacing]
+export const memberOffsetX = (params: PathParams, index: number, count: number): number =>
+  (params.spreadX ?? 0) * (index - (count - 1) / 2);
 
 const BANK_K = 6; // bank ∝ turn rate
 const MAX_BANK = 0.6;
@@ -128,7 +135,8 @@ function spawnMember(world: World, waveId: number, rec: WaveRecord, ctx: WaveCon
   const id = world.nextId++;
   const params = s.params;
   const start = pattern(0, params, rng);
-  const path: PathRuntime = { pattern: s.pattern, params, age: 0, duration: s.durationSec };
+  const offsetX = memberOffsetX(params, s.spawnedIndex, s.count);
+  const path: PathRuntime = { pattern: s.pattern, params, age: 0, duration: s.durationSec, offsetX: offsetX || undefined };
 
   // Enemy stats scale with difficulty (more hull/shields/fire later). [ROC-ENM-12, ROC-DIF-2]
   const scale = difficultyScale(world.difficulty);
@@ -143,7 +151,7 @@ function spawnMember(world: World, waveId: number, rec: WaveRecord, ctx: WaveCon
   const e: Entity = {
     id,
     kind: 'enemy',
-    pos: vec3(start.pos.x, start.pos.y, start.pos.z),
+    pos: vec3(start.pos.x + offsetX, start.pos.y, start.pos.z),
     vel: vec3(),
     yaw: yawFromTangent(start.tangent),
     bank: 0,
@@ -245,7 +253,7 @@ export function waveSystem(world: World, rng: Rng, dt: number, ctx: WaveContext)
     const t = Math.min(path.age / path.duration, 1);
     const pt = pattern(t, path.params, rng);
     const prev = e.pos;
-    const np = vec3(pt.pos.x, pt.pos.y, pt.pos.z);
+    const np = vec3(pt.pos.x + (path.offsetX ?? 0), pt.pos.y, pt.pos.z);
     e.vel = vec3((np.x - prev.x) / dt, (np.y - prev.y) / dt, (np.z - prev.z) / dt); // real motion, so wrecks inherit it
     e.pos = np;
     const yaw = yawFromTangent(pt.tangent);
