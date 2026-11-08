@@ -28,7 +28,6 @@ describe('movement bounds', () => {
             moveTarget,
             firing: false,
             fireTapped: false,
-            ecm: false,
             energyBomb: false,
             confirm: false,
             pause: false,

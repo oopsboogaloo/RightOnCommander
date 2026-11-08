@@ -1,6 +1,6 @@
 // DOM input backend: wires mouse / touch / keyboard / gamepad into an InputFrame each sample,
-// via the pure remap + compose modules. Touch drag moves, tap fires, and ECM/Energy-Bomb have
-// explicit trigger hooks for the transparent on-screen buttons. [ROC-CTL-1..6]
+// via the pure remap + compose modules. Touch drag moves, tap fires, and Energy-Bomb has an
+// explicit trigger hook for a transparent on-screen button. [ROC-CTL-1..6]
 
 import type { InputFrame, Vec2, Storage } from '../interfaces.js';
 import { type RemapTable, type Action, defaultRemap, loadRemap, keyAction, buttonAction } from './remap.js';
@@ -8,7 +8,7 @@ import { composeInputFrame, applyDeadzone, type FieldBounds, type RawInput } fro
 import { initialMenuNav, stepMenuNav, NO_MENU_EDGES, MENU_STICK, type MenuEdges, type MenuNavState, type PadSnapshot } from './menuNav.js';
 import { computeViewport, isTouchCapable, physicalToLogical } from '../render/viewport.js';
 
-const EDGE_ACTIONS: ReadonlySet<Action> = new Set(['fire', 'ecm', 'bomb', 'confirm', 'pause']);
+const EDGE_ACTIONS: ReadonlySet<Action> = new Set(['fire', 'bomb', 'confirm', 'pause']);
 const DIRECTIONS: ReadonlySet<Action> = new Set(['up', 'down', 'left', 'right']);
 
 // The flight-control field's default extent — the compose step clamps the pointer/virtual-cursor
@@ -38,7 +38,7 @@ export class DomInput {
   private pointerFiring = false;
   private pointerTapped = false;
 
-  private edges = { fire: false, ecm: false, bomb: false, confirm: false, pause: false };
+  private edges = { fire: false, bomb: false, confirm: false, pause: false };
   private virtualTarget: Vec2 = { x: 0, y: 0 };
 
   // Which device moved the ship last. The mouse's position is remembered between moves, so it
@@ -235,10 +235,7 @@ export class DomInput {
     this.padPrev = new Set(this.padHeld);
   }
 
-  // Touch-button hooks for the transparent ECM / Energy-Bomb buttons. [ROC-CTL-3]
-  triggerEcm(): void {
-    this.edges.ecm = true;
-  }
+  // Touch-button hook for a transparent Energy-Bomb button. [ROC-CTL-3]
   triggerBomb(): void {
     this.edges.bomb = true;
   }
@@ -260,7 +257,6 @@ export class DomInput {
       pointerTapped: this.pointerTapped,
       held,
       fireEdge: this.edges.fire,
-      ecm: this.edges.ecm,
       bomb: this.edges.bomb,
       confirm: this.edges.confirm,
       pause: this.edges.pause,
@@ -273,7 +269,7 @@ export class DomInput {
 
     // Consume one-shot edges.
     this.pointerTapped = false;
-    this.edges = { fire: false, ecm: false, bomb: false, confirm: false, pause: false };
+    this.edges = { fire: false, bomb: false, confirm: false, pause: false };
 
     return frame;
   }

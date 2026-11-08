@@ -15,7 +15,6 @@ export interface InputFrame {
   moveTarget: Vec2 | null; // pointer/stick target in play-field coords
   firing: boolean; // fire held (autofire) [ROC-CTL-1]
   fireTapped: boolean; // single-shot edge
-  ecm: boolean; // edge-triggered
   energyBomb: boolean; // edge-triggered
   confirm: boolean; // menus / "are you sure" [ROC-STN-6]
   pause: boolean;

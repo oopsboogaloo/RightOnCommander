@@ -15,7 +15,6 @@ export interface PlayerState {
   missileTimer: number; // seconds left at the current grade [ROC-MIS-4]
   missileCooldown: number; // seconds until the next missile launch
   missileWing: number; // 0/1: which wing launches next (alternates) [ROC-MIS-8]
-  ecm: number;
   cloakTtl: number; // seconds left of cloak-device immunity from aimed enemy fire [ROC-CLK-*]
   energyBombs: number;
   energyBank: boolean; // owned: slowly regenerates shields over time [ROC-BANK-1,2]
@@ -181,7 +180,6 @@ export function makeWorld(seed: number): World {
       missileTimer: 0,
       missileCooldown: 0,
       missileWing: 0,
-      ecm: 0,
       cloakTtl: 0,
       energyBombs: 0,
       energyBank: false,

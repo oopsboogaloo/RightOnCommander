@@ -18,7 +18,8 @@ describe('remap', () => {
     expect(keyAction(t, 'KeyW')).toBe('up');
     expect(keyAction(t, 'ArrowLeft')).toBe('left');
     expect(keyAction(t, 'Space')).toBe('fire');
-    expect(keyAction(t, 'KeyE')).toBe('ecm');
+    expect(keyAction(t, 'KeyE')).toBeUndefined(); // the player ECM is gone; only bosses have one
+    expect(keyAction(t, 'KeyB')).toBe('bomb');
     expect(keyAction(t, 'Escape')).toBe('pause');
     expect(buttonAction(t, 0)).toBe('fire');
     expect(buttonAction(t, 12)).toBe('up');

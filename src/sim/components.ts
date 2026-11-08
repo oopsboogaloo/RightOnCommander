@@ -23,7 +23,6 @@ export type PickupType =
   | 'alloys'
   | 'laser'
   | 'missile'
-  | 'ecm'
   | 'bomb'
   | 'life'
   | 'cargo' // a tradeable commodity (see `commodity`) [ROC-CARGO-1]

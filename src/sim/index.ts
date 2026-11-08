@@ -201,7 +201,7 @@ export function createSim({ seed, content }: CreateSimArgs): Sim {
   let designPhase: DesignPhase | null = null;
   let designSnapshot: WorldSnapshot | null = null;
   let designCurrentFrame = 0; // how far the last replayTo() actually advanced, for the cheap forward path below
-  const NEUTRAL_INPUT: InputFrame = { moveTarget: null, firing: false, fireTapped: false, ecm: false, energyBomb: false, confirm: false, pause: false };
+  const NEUTRAL_INPUT: InputFrame = { moveTarget: null, firing: false, fireTapped: false, energyBomb: false, confirm: false, pause: false };
 
   function step(input: InputFrame): SimEvent[] {
     rng.setState(world.rngState);

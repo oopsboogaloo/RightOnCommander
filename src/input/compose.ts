@@ -18,8 +18,7 @@ export interface RawInput {
   pointerTapped: boolean; // rising edge of a click/tap this sample
   held: Set<Action>; // currently-held actions (keyboard + gamepad)
   fireEdge: boolean; // rising edge of the fire action
-  ecm: boolean; // rising edges (momentary)
-  bomb: boolean;
+  bomb: boolean; // rising edges (momentary)
   confirm: boolean;
   pause: boolean;
   virtualTarget: Vec2; // persistent directional cursor
@@ -85,7 +84,6 @@ export function composeInputFrame(
     moveTarget,
     firing: raw.pointerFiring || raw.held.has('fire'),
     fireTapped: raw.pointerTapped || raw.fireEdge,
-    ecm: raw.ecm,
     energyBomb: raw.bomb,
     confirm: raw.confirm,
     pause: raw.pause,
