@@ -69,15 +69,15 @@ export const MOTHERSHIP = {
   spin: 0.22, // rad/s yaw — the octagon slowly turns
   rim: 0.75, // fans fire from this far out along the rim, either side
   phaseSec: { rings: 6, fans: 5, spiral: 6 },
-  ringEvery: 1.0,
+  ringEvery: 2.0, // v1.19: every cadence doubled = half the bullets, same patterns
   ringBolts: 22,
-  fanEvery: 0.5,
+  fanEvery: 1.0,
   fanBolts: 7,
   fanArc: 0.9,
-  spiralEvery: 0.075,
+  spiralEvery: 0.15,
   spiralArms: 3,
   spiralStep: 0.21, // rad per shot
-  aimedEvery: 0.9, // a steady aimed bolt underneath every pattern
+  aimedEvery: 1.8, // a steady aimed bolt underneath every pattern
   boltSpeed: 0.85, // slower than ordinary fire: dense but readable
   enrage: 1.45, // fire-rate multiplier below half hull
 };

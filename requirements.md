@@ -1,10 +1,12 @@
 # Right on Commander — Requirements Specification
 
-**Version:** 1.18 (draft — all design decisions resolved)
+**Version:** 1.19 (draft — all design decisions resolved)
 **Author:** Chloe
 **Notation:** EARS (Easy Approach to Requirements Syntax)
 **Status:** Spec under construction — review
 
+> **Changelog 1.18 → 1.19:** The **Thargoid mothership fires half as many bullets** (same patterns, half the cadence). **Level 4 drops ~15% of its waves** (39 → 33, spread evenly; the section still runs ~1:30). **No attack wave's ships sit on top of one another** (ROC-ENM-7a, new): every overlapping wave in all four levels was re-spaced, and hover waves now line their ships up in a row.
+>
 > **Changelog 1.17 → 1.18:** Balance pass after a full playthrough. **Every boss from Level 2 on takes twice as many hits** (Python, Constrictor, the Anaconda pair, the Cobra ace and the Thargoid mothership; doubled through hull so the shield-ring count is unchanged). **Elite needs 25% more** (75% of all campaign points, up from 60%), with the **early ranks spread further apart** so they no longer all arrive in Level 1 (ROC-RTG-2). The **high-score table's top seed is 120,000** (seeds raised 1.5×).
 >
 > **Changelog 1.16 → 1.17:** **Game-controller support made complete** (ROC-CTL-5): analogue stick steering, last-used device wins between mouse and pad, and the pad drives every menu (title, shop, name entry, game-over/win).
@@ -264,6 +266,7 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
 - **ROC-ENM-5** When an enemy is killed, the system shall award bounty (§3.8) and may drop cargo or a power-up.
 - **ROC-ENM-6** The system shall introduce **Thargoids** (Level 4) as rare, high-value, heavily-shielded enemies launching pursuing **Thargon** swarms that go inert when the parent dies.
 - **ROC-ENM-7** The system shall define attack waves as **data (e.g. JSON), fully tuneable** without code changes — controlling spawn timing/cadence, entity counts, speeds, spacing, path control points, and fire rate.
+- **ROC-ENM-7a** *(v1.19, new)* The members of an attack wave **shall not sit on top of one another**: following ships may come close or touch, but none shall stay overlapped (drawn hulls) for more than a quarter of a second while on screen — brief crossings on looping paths are fine. Where a pattern parks its members at one spot (drop_hold), they shall be spread side by side in a row. Enforced by a content test over every level.
 - **ROC-ENM-8** The system shall keep **wave pattern decoupled from enemy type**, so any pattern can be **paired with any enemy** (and any enemy stat profile) to maximise variety from a small set of parts.
 - **ROC-ENM-9** The system shall ship a **library of reusable pattern archetypes** drawn from classic vertical scrollers (Xenon 2, Raiden, Flying Shark / Sky Shark, 1942), at minimum:
   - **Echelon / V-formation** entering together (1942-style), holding then peeling off.
