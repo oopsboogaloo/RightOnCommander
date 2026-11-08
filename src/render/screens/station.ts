@@ -127,7 +127,7 @@ export function drawStation(
   ctx: StationContext,
   meshes: Record<string, Mesh>,
   buttons: StationButton[],
-  dims: { w: number; h: number; time: number },
+  dims: { w: number; h: number; time: number; focus?: number }, // focus: the gamepad-selected button
 ): void {
   const { w, h, time } = dims;
 
@@ -162,9 +162,14 @@ export function drawStation(
   lines.forEach((t, i) => renderer.drawText(t, { x: 20, y: h - 130 + i * 20 }, { fill: '#9ab', font: '13px monospace', align: 'left' }));
 
   // Menu (right).
-  for (const b of buttons) {
+  buttons.forEach((b, i) => {
     const color = b.enabled ? '#6cf' : '#345';
     strokeRect(renderer, b, color);
+    if (i === dims.focus) {
+      // Gamepad selection: a bright outline just outside the button and a pointer. [ROC-CTL-5]
+      strokeRect(renderer, { ...b, x: b.x - 3, y: b.y - 3, w: b.w + 6, h: b.h + 6 }, '#ffd76b');
+      renderer.drawText('>', { x: b.x - 16, y: b.y + b.h / 2 + 5 }, { fill: '#ffd76b', font: 'bold 15px monospace', align: 'left' });
+    }
     renderer.drawText(b.label, { x: b.x + 10, y: b.y + b.h / 2 + 4 }, { fill: color, font: '13px monospace', align: 'left' });
-  }
+  });
 }

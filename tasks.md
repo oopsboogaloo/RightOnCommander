@@ -57,6 +57,7 @@ Dependencies flow top-down unless noted. IDs are stable; insert with letters (T4
   **Do:** `input/domInput.ts` mouse/touch/keyboard/gamepad → `InputFrame`; remap; transparent ECM/bomb touch buttons (render hooks).
   **Done-when:** each input source produces correct `InputFrame`s; remap persists; sim consumes frames identically regardless of source.
   **Refs:** ROC-CTL-1..6.
+  *v1.17:* full gamepad support — analogue stick with deadzone (`compose.ts` `applyDeadzone`), last-used-device steering in `domInput.ts`, menu navigation (`input/menuNav.ts`) wired to the title, shop, name entry and game-over/win screens. Tests: `test/unit/gamepad.test.ts`.
 
 - [x] **T2.2 — Movement & banking.**
   **Do:** `systems/movement.ts` — follow `moveTarget`, full-screen clamp, bank ∝ lateral velocity, level-out on release, engine-flame flag on forward thrust.

@@ -121,22 +121,32 @@ export function applyEntryKey(name: string, key: string): string | null {
   return name + c;
 }
 
-export function drawEntryScreen(r: Renderer2D, w: number, h: number, t: number, name: string, score: number, rank: string): void {
+// `focus`: the key the gamepad has selected (-1 when not using a pad). [ROC-CTL-5]
+export function drawEntryScreen(r: Renderer2D, w: number, h: number, t: number, name: string, score: number, rank: string, focus = -1): void {
   r.drawText('NEW HIGH SCORE', { x: w / 2, y: h * 0.1 }, { fill: GOLD, font: 'bold 32px monospace', align: 'center' });
   r.drawText(`${score}   ${rank}`, { x: w / 2, y: h * 0.1 + 32 }, { fill: '#fff', font: '18px monospace', align: 'center' });
   r.drawText('ENTER YOUR NAME, COMMANDER', { x: w / 2, y: h * 0.25 }, { fill: FAINT, font: '16px monospace', align: 'center' });
   const cursor = Math.floor(t * 3) % 2 === 0 && name.length < MAX_NAME ? '_' : ' ';
   r.drawText(`${name}${cursor}`, { x: w / 2, y: h * 0.25 + 44 }, { fill: '#fff', font: 'bold 30px monospace', align: 'center' });
 
-  for (const k of entryKeys(w, h)) {
+  entryKeys(w, h).forEach((k, ki) => {
+    const lit = ki === focus;
     const p = [
       { x: k.x, y: k.y },
       { x: k.x + k.w, y: k.y },
       { x: k.x + k.w, y: k.y + k.h },
       { x: k.x, y: k.y + k.h },
     ];
-    for (let i = 0; i < 4; i++) r.drawLine(p[i], p[(i + 1) % 4], { stroke: '#6cf', lineWidth: 1 });
-    r.drawText(k.key, { x: k.x + k.w / 2, y: k.y + k.h / 2 + 6 }, { fill: '#6cf', font: k.key.length > 1 ? '14px monospace' : 'bold 18px monospace', align: 'center' });
-  }
-  r.drawText('or type on your keyboard — Enter to finish', { x: w / 2, y: h - 16 }, { fill: '#678', font: '12px monospace', align: 'center' });
+    for (let i = 0; i < 4; i++) r.drawLine(p[i], p[(i + 1) % 4], { stroke: lit ? '#ffd76b' : '#6cf', lineWidth: lit ? 3 : 1 });
+    r.drawText(k.key, { x: k.x + k.w / 2, y: k.y + k.h / 2 + 6 }, {
+      fill: lit ? '#ffd76b' : '#6cf',
+      font: k.key.length > 1 ? '14px monospace' : 'bold 18px monospace',
+      align: 'center',
+    });
+  });
+  r.drawText('or type on your keyboard — Enter to finish   ·   gamepad: A types, B deletes, Start finishes', { x: w / 2, y: h - 16 }, {
+    fill: '#678',
+    font: '12px monospace',
+    align: 'center',
+  });
 }
