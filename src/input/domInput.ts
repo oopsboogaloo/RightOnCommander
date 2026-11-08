@@ -50,6 +50,12 @@ export class DomInput {
   // hands steering over, so firing with Space or the pad's A while steering with the mouse
   // doesn't take the ship off the mouse.
   private steering: 'pointer' | 'direct' = 'pointer';
+  // Only *new* pad movement takes steering from the mouse: a d-pad direction newly pressed, or
+  // the stick moving well away from where it was when the mouse last moved. A stick or d-pad just
+  // being held mustn't keep stealing it back from a mouse that has moved since.
+  private stickAnchor: Vec2 = { x: 0, y: 0 };
+  private dpadPrev = false;
+  private static readonly STICK_TAKEOVER = 0.25;
   private stick: Vec2 = { x: 0, y: 0 };
   private menuState: MenuNavState = initialMenuNav();
   private menuEdges: MenuEdges = { ...NO_MENU_EDGES };
@@ -121,7 +127,7 @@ export class DomInput {
       if (!this.keyHeld.has(action)) this.rise(action);
       this.keyHeld.add(action);
       this.lastDevice = 'keys';
-      if (DIRECTIONS.has(action)) this.steering = 'direct';
+      if (DIRECTIONS.has(action) && !e.repeat) this.steering = 'direct'; // a fresh press, not key auto-repeat
     });
     window.addEventListener('keyup', (e) => {
       const action = keyAction(this.remap, e.code);
@@ -131,12 +137,12 @@ export class DomInput {
     this.canvas.addEventListener('mousemove', (e) => {
       this.pointerTarget = this.toField(e.clientX, e.clientY);
       this.lastDevice = 'mouse';
-      this.steering = 'pointer';
+      this.takePointerSteering();
     });
     this.canvas.addEventListener('mousedown', (e) => {
       this.pointerTarget = this.toField(e.clientX, e.clientY);
       this.lastDevice = 'mouse';
-      this.steering = 'pointer';
+      this.takePointerSteering();
       this.pointerFiring = true;
       this.pointerTapped = true;
     });
@@ -151,7 +157,7 @@ export class DomInput {
         const t = e.changedTouches[0];
         this.pointerTarget = this.toField(t.clientX, t.clientY);
         this.lastDevice = 'touch';
-        this.steering = 'pointer';
+        this.takePointerSteering();
         this.pointerTapped = true; // a touch fires one shot [ROC-CTL-2]
         this.pointerFiring = true; // and holding fires continuously, same as a held mouse button
       },
@@ -173,6 +179,13 @@ export class DomInput {
     };
     this.canvas.addEventListener('touchend', endTouch);
     this.canvas.addEventListener('touchcancel', endTouch);
+  }
+
+  // The pointer takes steering; remember where the stick rests now, so only moving it again (not
+  // merely holding it) hands steering back to the pad.
+  private takePointerSteering(): void {
+    this.steering = 'pointer';
+    this.stickAnchor = { ...this.stick };
   }
 
   private pollGamepad(dt: number): void {
@@ -210,7 +223,10 @@ export class DomInput {
     ({ edges: this.menuEdges, state: this.menuState } = stepMenuNav(this.menuState, snap, dt));
     if (this.stick.x !== 0 || this.stick.y !== 0 || pad.buttons.some((b) => b.pressed)) this.lastDevice = 'pad';
     const dpad = pressed(12) || pressed(13) || pressed(14) || pressed(15);
-    if (this.stick.x !== 0 || this.stick.y !== 0 || dpad) this.steering = 'direct';
+    const stickMoved = Math.hypot(this.stick.x - this.stickAnchor.x, this.stick.y - this.stickAnchor.y) > DomInput.STICK_TAKEOVER;
+    if ((dpad && !this.dpadPrev) || stickMoved) this.steering = 'direct';
+    if (this.steering === 'direct') this.stickAnchor = { ...this.stick }; // track it while the pad steers
+    this.dpadPrev = dpad;
 
     // Rising edges for momentary actions on the pad.
     for (const action of this.padHeld) {
@@ -232,7 +248,9 @@ export class DomInput {
     const held = new Set<Action>([...this.keyHeld, ...this.padHeld]);
     // A gamepad or keyboard in use takes the ship away from a resting mouse cursor (touch keeps
     // its own drag; it clears itself when the finger lifts). [ROC-CTL-1,5]
-    if (this.steering === 'direct' && this.lastDevice !== 'touch' && this.pointerTarget && !this.pointerFiring) {
+    // Steering only: a held mouse button keeps autofiring (pointerFiring is separate) while the
+    // pad steers.
+    if (this.steering === 'direct' && this.lastDevice !== 'touch' && this.pointerTarget) {
       this.pointerTarget = null;
     }
 
