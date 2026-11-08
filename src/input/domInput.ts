@@ -4,10 +4,12 @@
 
 import type { InputFrame, Vec2, Storage } from '../interfaces.js';
 import { type RemapTable, type Action, defaultRemap, loadRemap, keyAction, buttonAction } from './remap.js';
-import { composeInputFrame, type FieldBounds, type RawInput } from './compose.js';
+import { composeInputFrame, applyDeadzone, type FieldBounds, type RawInput } from './compose.js';
+import { initialMenuNav, stepMenuNav, NO_MENU_EDGES, MENU_STICK, type MenuEdges, type MenuNavState, type PadSnapshot } from './menuNav.js';
 import { computeViewport, isTouchCapable, physicalToLogical } from '../render/viewport.js';
 
 const EDGE_ACTIONS: ReadonlySet<Action> = new Set(['fire', 'ecm', 'bomb', 'confirm', 'pause']);
+const DIRECTIONS: ReadonlySet<Action> = new Set(['up', 'down', 'left', 'right']);
 
 // The flight-control field's default extent — the compose step clamps the pointer/virtual-cursor
 // target to this. minX/maxX = ±4/3 matches the 4:3 box's visible horizontal range (see
@@ -38,6 +40,35 @@ export class DomInput {
 
   private edges = { fire: false, ecm: false, bomb: false, confirm: false, pause: false };
   private virtualTarget: Vec2 = { x: 0, y: 0 };
+
+  // Which device moved the ship last. The mouse's position is remembered between moves, so it
+  // would otherwise override a gamepad/keyboard for good once touched; instead the most recent
+  // device is in charge — move the stick to take over from the mouse, move the mouse to take
+  // back. [ROC-CTL-1,5]
+  private lastDevice: 'mouse' | 'touch' | 'keys' | 'pad' = 'mouse';
+  // Who steers: the pointer, or direct controls (stick / d-pad / arrow keys). Only *movement*
+  // hands steering over, so firing with Space or the pad's A while steering with the mouse
+  // doesn't take the ship off the mouse.
+  private steering: 'pointer' | 'direct' = 'pointer';
+  // Only *new* pad movement takes steering from the mouse: a d-pad direction newly pressed, or
+  // the stick moving well away from where it was when the mouse last moved. A stick or d-pad just
+  // being held mustn't keep stealing it back from a mouse that has moved since.
+  private stickAnchor: Vec2 = { x: 0, y: 0 };
+  private dpadPrev = false;
+  private static readonly STICK_TAKEOVER = 0.25;
+  private stick: Vec2 = { x: 0, y: 0 };
+  private menuState: MenuNavState = initialMenuNav();
+  private menuEdges: MenuEdges = { ...NO_MENU_EDGES };
+
+  // This sample's gamepad menu steps (d-pad/stick, A, B, Start), for the shell's screens.
+  get menu(): MenuEdges {
+    return this.menuEdges;
+  }
+
+  // Is the gamepad the device in use right now? (The shell shows menu highlights only then.)
+  get padActive(): boolean {
+    return this.lastDevice === 'pad';
+  }
 
   constructor(opts: DomInputOptions) {
     this.canvas = opts.canvas;
@@ -95,6 +126,8 @@ export class DomInput {
       e.preventDefault();
       if (!this.keyHeld.has(action)) this.rise(action);
       this.keyHeld.add(action);
+      this.lastDevice = 'keys';
+      if (DIRECTIONS.has(action) && !e.repeat) this.steering = 'direct'; // a fresh press, not key auto-repeat
     });
     window.addEventListener('keyup', (e) => {
       const action = keyAction(this.remap, e.code);
@@ -103,9 +136,13 @@ export class DomInput {
 
     this.canvas.addEventListener('mousemove', (e) => {
       this.pointerTarget = this.toField(e.clientX, e.clientY);
+      this.lastDevice = 'mouse';
+      this.takePointerSteering();
     });
     this.canvas.addEventListener('mousedown', (e) => {
       this.pointerTarget = this.toField(e.clientX, e.clientY);
+      this.lastDevice = 'mouse';
+      this.takePointerSteering();
       this.pointerFiring = true;
       this.pointerTapped = true;
     });
@@ -119,6 +156,8 @@ export class DomInput {
         e.preventDefault();
         const t = e.changedTouches[0];
         this.pointerTarget = this.toField(t.clientX, t.clientY);
+        this.lastDevice = 'touch';
+        this.takePointerSteering();
         this.pointerTapped = true; // a touch fires one shot [ROC-CTL-2]
         this.pointerFiring = true; // and holding fires continuously, same as a held mouse button
       },
@@ -142,12 +181,22 @@ export class DomInput {
     this.canvas.addEventListener('touchcancel', endTouch);
   }
 
-  private pollGamepad(): void {
+  // The pointer takes steering; remember where the stick rests now, so only moving it again (not
+  // merely holding it) hands steering back to the pad.
+  private takePointerSteering(): void {
+    this.steering = 'pointer';
+    this.stickAnchor = { ...this.stick };
+  }
+
+  private pollGamepad(dt: number): void {
     this.padHeld = new Set<Action>();
+    // The first connected pad, wherever the browser put it (not always slot 0).
     const pads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
-    const pad = pads && pads[0];
+    const pad = pads ? Array.from(pads).find((p) => p && p.connected) : undefined;
     if (!pad) {
       this.padPrev = new Set<Action>();
+      this.stick = { x: 0, y: 0 };
+      ({ edges: this.menuEdges, state: this.menuState } = stepMenuNav(this.menuState, null, dt));
       return;
     }
     pad.buttons.forEach((b, i) => {
@@ -155,12 +204,29 @@ export class DomInput {
       const action = buttonAction(this.remap, i);
       if (action) this.padHeld.add(action);
     });
-    // Left stick -> directional held.
-    const [ax, ay] = pad.axes;
-    if (ax < -0.5) this.padHeld.add('left');
-    else if (ax > 0.5) this.padHeld.add('right');
-    if (ay < -0.5) this.padHeld.add('up');
-    else if (ay > 0.5) this.padHeld.add('down');
+    // Left stick: analogue flight (deadzoned), and a menu direction once pushed well over.
+    const ax = pad.axes[0] ?? 0;
+    const ay = pad.axes[1] ?? 0;
+    this.stick = applyDeadzone(ax, ay);
+    const pressed = (i: number): boolean => !!pad.buttons[i]?.pressed;
+    const snap: PadSnapshot = {
+      dirs: {
+        up: pressed(12) || ay < -MENU_STICK,
+        down: pressed(13) || ay > MENU_STICK,
+        left: pressed(14) || ax < -MENU_STICK,
+        right: pressed(15) || ax > MENU_STICK,
+      },
+      select: pressed(0),
+      back: pressed(1),
+      start: pressed(9),
+    };
+    ({ edges: this.menuEdges, state: this.menuState } = stepMenuNav(this.menuState, snap, dt));
+    if (this.stick.x !== 0 || this.stick.y !== 0 || pad.buttons.some((b) => b.pressed)) this.lastDevice = 'pad';
+    const dpad = pressed(12) || pressed(13) || pressed(14) || pressed(15);
+    const stickMoved = Math.hypot(this.stick.x - this.stickAnchor.x, this.stick.y - this.stickAnchor.y) > DomInput.STICK_TAKEOVER;
+    if ((dpad && !this.dpadPrev) || stickMoved) this.steering = 'direct';
+    if (this.steering === 'direct') this.stickAnchor = { ...this.stick }; // track it while the pad steers
+    this.dpadPrev = dpad;
 
     // Rising edges for momentary actions on the pad.
     for (const action of this.padHeld) {
@@ -178,8 +244,15 @@ export class DomInput {
   }
 
   sample(dt: number): InputFrame {
-    this.pollGamepad();
+    this.pollGamepad(dt);
     const held = new Set<Action>([...this.keyHeld, ...this.padHeld]);
+    // A gamepad or keyboard in use takes the ship away from a resting mouse cursor (touch keeps
+    // its own drag; it clears itself when the finger lifts). [ROC-CTL-1,5]
+    // Steering only: a held mouse button keeps autofiring (pointerFiring is separate) while the
+    // pad steers.
+    if (this.steering === 'direct' && this.lastDevice !== 'touch' && this.pointerTarget) {
+      this.pointerTarget = null;
+    }
 
     const raw: RawInput = {
       pointerTarget: this.pointerTarget,
@@ -192,6 +265,7 @@ export class DomInput {
       confirm: this.edges.confirm,
       pause: this.edges.pause,
       virtualTarget: this.virtualTarget,
+      stick: this.stick,
     };
 
     const { frame, virtualTarget } = composeInputFrame(raw, { dt, bounds: this.bounds, speed: this.speed });

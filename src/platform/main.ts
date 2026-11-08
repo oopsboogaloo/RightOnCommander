@@ -90,6 +90,7 @@ import missile_pickup from '../content/meshes/missile_pickup.json';
 import laser_pickup from '../content/meshes/laser_pickup.json';
 import cougar from '../content/meshes/cougar.json';
 import { COMPLETION_BONUS } from '../sim/systems/levelstate.js';
+import { moveFocus, type MenuEdges } from '../input/menuNav.js';
 import { loadHighScores, saveHighScores, qualifies, insertScore, type HighScore } from './highScores.js';
 import { drawTitleScreen, drawTitleHeading, drawEntryScreen, entryKeys, entryKeyAt, applyEntryKey, titleShipPose, TITLE_SHIP } from '../render/screens/title.js';
 
@@ -823,6 +824,49 @@ function onGameComplete(): void {
   rankBanners.length = 0;
 }
 
+// ---- gamepad menus --------------------------------------------------------------------------
+// The pad drives every screen the mouse/touch does: A (or Start) starts from the title and skips
+// the game-over / win holds; in the shop the d-pad or stick moves a highlight and A presses the
+// button; on name entry the d-pad moves over the on-screen keyboard, A types, B deletes and Start
+// finishes. Highlights only show while the pad is the device in use. [ROC-CTL-5]
+let shopFocus = 0;
+let entryFocus = 0;
+
+function handlePadMenu(m: MenuEdges): void {
+  const { w, h } = renderer.getViewport().box;
+  if (screen === 'title') {
+    if (m.select || m.start) startNewGame();
+    return;
+  }
+  if (screen === 'launching') return;
+  if (screen === 'entry') {
+    const keys = entryKeys(w, h);
+    for (const d of ['up', 'down', 'left', 'right'] as const) if (m[d]) entryFocus = moveFocus(keys, entryFocus, d);
+    if (m.select && keys[entryFocus]) typeEntryKey(keys[entryFocus].key);
+    else if (m.back) typeEntryKey('DEL');
+    else if (m.start) typeEntryKey('OK');
+    return;
+  }
+  if (sim.state.mode === 'GAME_OVER') {
+    if ((m.select || m.start) && gameOverSec > 0.8) finishRun();
+    return;
+  }
+  if (sim.state.mode === 'COMPLETE') {
+    if ((m.select || m.start) && completeSec > COMPLETE_MIN_SEC) finishRun();
+    return;
+  }
+  if (!dockActive()) {
+    shopFocus = 0; // each visit to the shop starts at the top
+    return;
+  }
+  const buttons = stationButtons(sim.state, stationCtx, w, h, launchArmed, selectedLaser);
+  if (buttons.length === 0) return;
+  if (m.up) shopFocus = (shopFocus - 1 + buttons.length) % buttons.length;
+  if (m.down) shopFocus = (shopFocus + 1) % buttons.length;
+  shopFocus = Math.min(shopFocus, buttons.length - 1);
+  if (m.select && buttons[shopFocus].enabled) runStationAction(buttons[shopFocus].action);
+}
+
 // The run is over: enter a name if the score makes the table, otherwise straight to the title.
 function finishRun(): void {
   gameOverSec = 0;
@@ -831,6 +875,7 @@ function finishRun(): void {
   if (qualifies(highScores, sim.state.econ.score)) {
     const last = storage.load(LAST_NAME_KEY);
     entryName = typeof last === 'string' ? last : '';
+    entryFocus = 0;
     screen = 'entry';
   } else {
     highlightRow = -1;
@@ -1237,6 +1282,7 @@ startGameLoop({
   step: () => {
     const frame = input.sample(DT); // always drain one-shot input edges, even while paused/designing
     screenT += DT;
+    if (!designMode) handlePadMenu(input.menu);
     if (screen === 'launching' && screenT >= FLY_IN_SEC) {
       screen = 'play'; // the fly-in has landed: hand over control
       screenT = 0;
@@ -1310,7 +1356,7 @@ startGameLoop({
       renderer.beginFrame(1);
       const { w, h } = renderer.getViewport().box;
       if (screen === 'title') drawTitleScreen(renderer, w, h, screenT, highScores, MESHES.sidewinder, highlightRow);
-      else drawEntryScreen(renderer, w, h, screenT, entryName, sim.state.econ.score, sim.state.rating.rank);
+      else drawEntryScreen(renderer, w, h, screenT, entryName, sim.state.econ.score, sim.state.rating.rank, input.padActive ? entryFocus : -1);
       renderer.endFrame(alpha);
       drawRotateHint();
       return;
@@ -1328,7 +1374,7 @@ startGameLoop({
     if (dockActive()) {
       const { w, h } = renderer.getViewport().box;
       const buttons = stationButtons(sim.state, stationCtx, w, h, launchArmed, selectedLaser);
-      drawStation(renderer, sim.state, stationCtx, MESHES, buttons, { w, h, time: performance.now() / 1000 });
+      drawStation(renderer, sim.state, stationCtx, MESHES, buttons, { w, h, time: performance.now() / 1000, focus: input.padActive ? shopFocus : undefined });
       renderer.endFrame(alpha);
       drawRotateHint();
       return;

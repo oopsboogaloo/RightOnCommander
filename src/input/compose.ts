@@ -23,6 +23,18 @@ export interface RawInput {
   confirm: boolean;
   pause: boolean;
   virtualTarget: Vec2; // persistent directional cursor
+  stick?: Vec2; // analogue stick after the deadzone (x right, y up; length <= 1), if a pad is in use
+}
+
+// Radial deadzone: stick readings inside `dz` count as centred; beyond it the deflection is
+// rescaled to start from zero, so a slight tilt gives a slow, smooth move rather than a jump.
+// Gamepad axes are y-down; the result is y-up to match the play field.
+export const STICK_DEADZONE = 0.2;
+export function applyDeadzone(ax: number, ay: number, dz = STICK_DEADZONE): Vec2 {
+  const mag = Math.hypot(ax, ay);
+  if (mag <= dz) return { x: 0, y: 0 };
+  const scaled = Math.min(1, (mag - dz) / (1 - dz));
+  return { x: (ax / mag) * scaled, y: (-ay / mag) * scaled };
 }
 
 export interface ComposeOptions {
@@ -50,6 +62,13 @@ export function composeInputFrame(
   if (raw.pointerTarget) {
     // Pointer wins; keep the virtual cursor synced so releasing it never snaps the ship.
     virtual = clampField(raw.pointerTarget, opts.bounds);
+    moveTarget = virtual;
+  } else if (raw.stick && (raw.stick.x !== 0 || raw.stick.y !== 0)) {
+    // Analogue stick: the cursor moves at a speed proportional to the deflection.
+    virtual = clampField(
+      { x: virtual.x + raw.stick.x * opts.speed * opts.dt, y: virtual.y + raw.stick.y * opts.speed * opts.dt },
+      opts.bounds,
+    );
     moveTarget = virtual;
   } else if (directional) {
     const len = Math.hypot(dx, dy) || 1; // normalise so diagonals aren't faster

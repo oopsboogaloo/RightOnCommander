@@ -1,10 +1,12 @@
 # Right on Commander — Requirements Specification
 
-**Version:** 1.16 (draft — all design decisions resolved)
+**Version:** 1.17 (draft — all design decisions resolved)
 **Author:** Chloe
 **Notation:** EARS (Easy Approach to Requirements Syntax)
 **Status:** Spec under construction — review
 
+> **Changelog 1.16 → 1.17:** **Game-controller support made complete** (ROC-CTL-5): analogue stick steering, last-used device wins between mouse and pad, and the pad drives every menu (title, shop, name entry, game-over/win).
+>
 > **Changelog 1.15 → 1.16:** **Removed the contraband concept** — no contraband cargo and no Viper interception before docking (ROC-ECO-4 and ROC-LVL-4 withdrawn). Level 3's witchspace **Thargoids are twice as tough** and drawn as the flat saucer. The title Sidewinder now **flies into play** on start (ROC-TTL-3 built).
 >
 > **Changelog 1.14 → 1.15:** **Completing the game** (killing Level 4's mothership) now rates the commander **Elite** whatever their tally, shows a congratulations screen, pays a **completion bonus** and goes to the high-score table (ROC-PROG-1 revised). It also **unlocks the Thargoid ship directly** — no longer gated behind Elite mode (ROC-PROG-2 revised; Elite mode is deferred). The **Thargoid ship** is specified: Asp-like with 50% more shield, launching friendly Thargons that attack enemies (ROC-SHIP-6). The mothership's hull is doubled.
@@ -248,7 +250,7 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
 - **ROC-CTL-2** *(v1.8 — fixed touch parity)* Where touch is used, the system shall move the ship by drag and **fire continuously while the touch is held or dragged, matching ROC-CTL-1**; a single tap fires one shot (needed for the beam laser, which has no discrete "shot" to fire on a tap alone).
 - **ROC-CTL-3** On touch, the system shall present a **partly-transparent white button for ECM** (§3.7).
 - **ROC-CTL-4** The system shall support full **keyboard** control.
-- **ROC-CTL-5** The system shall support **game-controller** input.
+- **ROC-CTL-5** The system shall support **game-controller** input. *(v1.17)* The left stick shall steer **proportionally** (radial deadzone), the d-pad digitally, A fires; when both a mouse and a pad are present, **whichever was used last** steers (moving the stick or d-pad takes over from a resting mouse; moving the mouse takes back) while firing with either never steals steering. The pad shall also drive **every screen**: A / Start starts from the title and skips the game-over and win holds; in the station shop the d-pad / stick moves a highlighted button (auto-repeating when held) and A presses it; on high-score name entry the d-pad moves over the on-screen keyboard, A types, B deletes and Start finishes. Highlights show only while the pad is in use.
 - **ROC-CTL-6** The system shall allow input remapping and persist it locally.
 
 ### 3.13 Enemies & wave design
