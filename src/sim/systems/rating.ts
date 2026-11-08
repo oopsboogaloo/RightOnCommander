@@ -4,10 +4,12 @@
 // rank, pays a credit bonus, and emits `rankUp` for the shell to flash on screen; reaching Elite
 // says "RIGHT ON, COMMANDER!". [ROC-RTG-1,2,3]
 //
-// Thresholds come from the campaign itself: Elite is ELITE_SHARE (60%) of every point the levels
+// Thresholds come from the campaign itself: Elite is ELITE_SHARE (75%) of every point the levels
 // can award (all wave members, the witchspace wave and every boss), so a commander who destroys
-// about 60% of everything reaches Elite by the end of the last level. The other ranks sit at set
-// fractions of that, spread so promotions keep coming through the whole campaign.
+// about three-quarters of everything reaches Elite by the end of the last level. The other ranks
+// sit at set fractions of that, spread so promotions keep coming through the whole campaign
+// rather than bunching up in Level 1. (v1.18: raised 25% from 60%, early ranks spread out, after
+// playtesting reached Elite too soon and most ranks within Level 1.)
 
 import type { World } from '../world.js';
 import type { EnemyDef } from './waves.js';
@@ -22,18 +24,18 @@ export interface Rank {
 // Each rank's threshold as a fraction of Elite's (Mostly Harmless: the first kill), and its bonus.
 export const RANK_TABLE: { name: string; share: number; bonus: number }[] = [
   { name: 'Harmless', share: 0, bonus: 0 },
-  { name: 'Mostly Harmless', share: 0, bonus: 100 }, // first kill
-  { name: 'Poor', share: 0.02, bonus: 200 },
-  { name: 'Average', share: 0.05, bonus: 300 },
-  { name: 'Above Average', share: 0.1, bonus: 500 },
-  { name: 'Competent', share: 0.18, bonus: 1000 },
-  { name: 'Dangerous', share: 0.3, bonus: 2500 },
-  { name: 'Deadly', share: 0.55, bonus: 5000 },
+  { name: 'Mostly Harmless', share: 0.02, bonus: 100 },
+  { name: 'Poor', share: 0.06, bonus: 200 },
+  { name: 'Average', share: 0.12, bonus: 300 },
+  { name: 'Above Average', share: 0.2, bonus: 500 },
+  { name: 'Competent', share: 0.3, bonus: 1000 },
+  { name: 'Dangerous', share: 0.45, bonus: 2500 },
+  { name: 'Deadly', share: 0.65, bonus: 5000 },
   { name: 'Elite', share: 1, bonus: 10000 },
 ];
 
 export const ELITE = 'Elite';
-export const ELITE_SHARE = 0.6; // of all campaign points
+export const ELITE_SHARE = 0.75; // of all campaign points
 const BOUNTY_PER_POINT = 50;
 
 // Points for one kill: 1, plus 1 per 50cr of bounty (tougher ships carry bigger bounties).
@@ -55,12 +57,12 @@ export function campaignPoints(levels: LevelDef[], enemies: Record<string, Enemy
 }
 
 // The ladder for a campaign worth `totalPoints`: Elite at ELITE_SHARE of it, the rest at their
-// shares of Elite (never below the rank beneath), Mostly Harmless on the first kill.
+// shares of Elite (never below the rank beneath, and at least the first kill).
 export function buildRanks(totalPoints: number): Rank[] {
   const elite = Math.max(RANK_TABLE.length, Math.round(totalPoints * ELITE_SHARE));
   const ranks: Rank[] = [];
   RANK_TABLE.forEach((r, i) => {
-    const want = i === 0 ? 0 : i === 1 ? 1 : Math.round(r.share * elite);
+    const want = i === 0 ? 0 : Math.max(1, Math.round(r.share * elite));
     const points = i === 0 ? 0 : Math.max(want, ranks[i - 1].points + 1);
     ranks.push({ name: r.name, points, bonus: r.bonus });
   });

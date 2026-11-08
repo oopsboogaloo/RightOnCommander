@@ -208,7 +208,7 @@ Turns the placeholder bosses into the specified fights and adds the level booken
   **Do:** `systems` kill-weighted tally → Harmless…Elite ladder; rank-up notice; "RIGHT ON, COMMANDER!".
   **Done-when:** **property test** — tally monotonic; threshold crossing fires once; Thargoid weighted highest.
   **Refs:** ROC-RTG-1,2,3.
-  *Built:* `systems/rating.ts` — 1 point per kill + 1 per 50cr bounty; Elite at 60% of all campaign points (`campaignPoints`/`buildRanks`, currently 1633), other ranks at fixed shares of it; a credit bonus per rank (requirements v1.14); `rankUp` events flash the rank + bonus mid-screen ("RIGHT ON, COMMANDER!" at Elite); rank shown in the status bar and station. Tests: `test/unit/rating.test.ts` (incl. fast-check property).
+  *Built:* `systems/rating.ts` — 1 point per kill + 1 per 50cr bounty; Elite at 75% of all campaign points (`campaignPoints`/`buildRanks`, currently 2042; raised from 60% in v1.18), other ranks at fixed shares of it, spread out so they don't bunch up in Level 1; a credit bonus per rank (requirements v1.14); `rankUp` events flash the rank + bonus mid-screen ("RIGHT ON, COMMANDER!" at Elite); rank shown in the status bar and station. Tests: `test/unit/rating.test.ts` (incl. fast-check property).
 
 - [x] **T6.4 — Lives, death, escape pod, difficulty.**
   **Do:** 3 lives; death→lose life + restart level; escape-pod→respawn at death point, consume pod; buy lives max 5; global difficulty.
