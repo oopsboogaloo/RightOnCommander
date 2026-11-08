@@ -1,10 +1,12 @@
 # Right on Commander — Requirements Specification
 
-**Version:** 1.17 (draft — all design decisions resolved)
+**Version:** 1.18 (draft — all design decisions resolved)
 **Author:** Chloe
 **Notation:** EARS (Easy Approach to Requirements Syntax)
 **Status:** Spec under construction — review
 
+> **Changelog 1.17 → 1.18:** Balance pass after a full playthrough. **Every boss from Level 2 on takes twice as many hits** (Python, Constrictor, the Anaconda pair, the Cobra ace and the Thargoid mothership; doubled through hull so the shield-ring count is unchanged). **Elite needs 25% more** (75% of all campaign points, up from 60%), with the **early ranks spread further apart** so they no longer all arrive in Level 1 (ROC-RTG-2). The **high-score table's top seed is 120,000** (seeds raised 1.5×).
+>
 > **Changelog 1.16 → 1.17:** **Game-controller support made complete** (ROC-CTL-5): analogue stick steering, last-used device wins between mouse and pad, and the pad drives every menu (title, shop, name entry, game-over/win).
 >
 > **Changelog 1.15 → 1.16:** **Removed the contraband concept** — no contraband cargo and no Viper interception before docking (ROC-ECO-4 and ROC-LVL-4 withdrawn). Level 3's witchspace **Thargoids are twice as tough** and drawn as the flat saucer. The title Sidewinder now **flies into play** on start (ROC-TTL-3 built).
@@ -294,7 +296,7 @@ Power-ups drop from destroyed ships (and asteroids, §3.9) and are highly desira
 ### 3.14 Scoring, rating & persistence
 
 - **ROC-RTG-1** The system shall maintain a **cumulative kill tally, weighted by ship type** (tougher ships — up to the Thargoid — count for more), held **separately from the credit score**.
-- **ROC-RTG-2** The system shall drive the **Harmless → Mostly Harmless → … → Elite** rating ladder from the **kill tally**, each threshold materially higher than the last. *(v1.14)* A kill scores 1 point plus 1 per 50cr of its bounty, so tougher ships, bosses and Thargoids count for more. **Elite is set at 60% of every point the campaign can award** (all wave members, the witchspace wave and every boss), so a commander who destroys about 60% of everything is Elite by the end of the last level; the other ranks sit at fixed shares of Elite — Mostly Harmless on the first kill, then Poor 2%, Average 5%, Above Average 10%, Competent 18%, Dangerous 30%, Deadly 55%. (With the current four levels: 1, 33, 82, 163, 294, 490, 898, 1633 points.)
+- **ROC-RTG-2** The system shall drive the **Harmless → Mostly Harmless → … → Elite** rating ladder from the **kill tally**, each threshold materially higher than the last. *(v1.14)* A kill scores 1 point plus 1 per 50cr of its bounty, so tougher ships, bosses and Thargoids count for more. **Elite is set at 75% of every point the campaign can award** *(v1.18 — raised from 60%)* (all wave members, the witchspace wave and every boss), so a commander who destroys about three-quarters of everything is Elite by the end of the last level; the other ranks sit at fixed shares of Elite, spread so promotions keep coming through the whole campaign — Mostly Harmless 2%, Poor 6%, Average 12%, Above Average 20%, Competent 30%, Dangerous 45%, Deadly 65%. (With the current four levels: 41, 123, 245, 408, 613, 919, 1327, 2042 points.)
 - **ROC-RTG-3** When a kill pushes the tally across a threshold, the system shall **award the rating increase and show a rank-up notice**; on reaching **Elite**, it shall display **"RIGHT ON, COMMANDER!"**. *(v1.14)* Each rank-up shall also pay a **credit bonus** (to wallet and score) that grows with the rank: 100, 200, 300, 500, 1,000, 2,500, 5,000 and 10,000cr for Mostly Harmless through Elite; the notice flashes the new rank and its bonus.
 - **ROC-LBD-1** The system shall persist high score, best rating, current ship class, **unlocks (Elite mode, Thargoid ship)** and settings locally.
 - **ROC-LBD-1a** The system shall maintain and display a **high score table** (local at minimum; online where the leaderboard is enabled).

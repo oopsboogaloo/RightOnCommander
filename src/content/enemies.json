@@ -18,14 +18,14 @@
   "hermit": { "hull": 90, "bounty": 1000, "meshId": "rock_hermit", "scale": 4, "behavior": "hermit", "ecm": true, "cargoDrops": 10, "colliderRx": 0.35, "colliderRz": 0.35 },
   "fer_de_lance": { "hull": 30, "shield": 2, "bounty": 250, "meshId": "fer_de_lance", "scale": 1.5, "colliderRx": 0.4, "colliderRz": 0.35 },
   "fer_de_lance_boss": { "hull": 24, "shield": 8, "bounty": 1000, "meshId": "fer_de_lance", "scale": 2, "behavior": "strafe", "ecm": true, "cargoDrops": 10, "colliderRx": 0.4, "colliderRz": 0.35 },
-  "python": { "hull": 80, "shield": 8, "bounty": 500, "meshId": "python", "scale": 1.4, "behavior": "strafe", "ecm": true, "cargoDrops": 10, "colliderRx": 0.45, "colliderRz": 0.5 },
-  "constrictor": { "hull": 30, "shield": 14, "bounty": 1500, "meshId": "constrictor", "scale": 1.6, "behavior": "strafe", "ecm": true, "cargoDrops": 10, "colliderRx": 0.4, "colliderRz": 0.35 },
-  "anaconda": { "hull": 22, "shield": 6, "bounty": 450, "meshId": "anaconda", "scale": 1.3, "behavior": "strafe", "ecm": true, "cargoDrops": 10, "colliderRx": 0.35, "colliderRz": 0.45 },
-  "cobra_ace": { "hull": 26, "shield": 20, "bounty": 2000, "meshId": "cobra_mk3", "scale": 1.4, "behavior": "strafe", "ecm": true, "cargoDrops": 10, "colliderRx": 0.45, "colliderRz": 0.3 },
+  "python": { "hull": 168, "shield": 8, "bounty": 500, "meshId": "python", "scale": 1.4, "behavior": "strafe", "ecm": true, "cargoDrops": 10, "colliderRx": 0.45, "colliderRz": 0.5 },
+  "constrictor": { "hull": 74, "shield": 14, "bounty": 1500, "meshId": "constrictor", "scale": 1.6, "behavior": "strafe", "ecm": true, "cargoDrops": 10, "colliderRx": 0.4, "colliderRz": 0.35 },
+  "anaconda": { "hull": 50, "shield": 6, "bounty": 450, "meshId": "anaconda", "scale": 1.3, "behavior": "strafe", "ecm": true, "cargoDrops": 10, "colliderRx": 0.35, "colliderRz": 0.45 },
+  "cobra_ace": { "hull": 72, "shield": 20, "bounty": 2000, "meshId": "cobra_mk3", "scale": 1.4, "behavior": "strafe", "ecm": true, "cargoDrops": 10, "colliderRx": 0.45, "colliderRz": 0.3 },
   "cougar": { "hull": 60, "shield": 6, "bounty": 1200, "meshId": "cougar", "scale": 2, "colliderRx": 0.34, "colliderRz": 0.34, "missileImmune": true, "drops": "cloak", "cloakCycle": { "visibleSec": 4, "transitionSec": 1, "cloakedSec": 5 }, "fireSpeedMul": 1.4 },
   "thargoid_scout": { "hull": 3, "shield": 1, "bounty": 60, "meshId": "thargoid_saucer", "scale": 0.4, "colliderRx": 0.18, "colliderRz": 0.18, "missileImmune": true },
   "thargoid_warrior": { "hull": 8, "shield": 3, "bounty": 150, "meshId": "thargoid_saucer", "scale": 0.55, "colliderRx": 0.25, "colliderRz": 0.25, "missileImmune": true, "launches": { "enemy": "thargon", "everySec": 5, "max": 1 } },
   "thargoid_carrier": { "hull": 20, "shield": 6, "bounty": 400, "meshId": "thargoid_saucer", "scale": 0.9, "colliderRx": 0.36, "colliderRz": 0.36, "missileImmune": true, "launches": { "enemy": "thargon", "everySec": 2.5, "max": 2 } },
   "thargon": { "hull": 1, "bounty": 12, "meshId": "thargoid_saucer", "scale": 0.2, "colliderRx": 0.08, "colliderRz": 0.08 },
-  "thargoid_mothership": { "hull": 440, "shield": 20, "bounty": 5000, "meshId": "thargoid_saucer", "scale": 3.8, "behavior": "mothership", "ecm": true, "cargoDrops": 10, "missileImmune": true, "colliderRx": 1.1, "colliderRz": 1.1, "launches": { "enemy": "thargon", "everySec": 1.6, "max": 6 } }
+  "thargoid_mothership": { "hull": 900, "shield": 20, "bounty": 5000, "meshId": "thargoid_saucer", "scale": 3.8, "behavior": "mothership", "ecm": true, "cargoDrops": 10, "missileImmune": true, "colliderRx": 1.1, "colliderRz": 1.1, "launches": { "enemy": "thargon", "everySec": 1.6, "max": 6 } }
 }

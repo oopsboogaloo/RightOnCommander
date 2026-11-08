@@ -23,7 +23,7 @@ import {
   RANK_TABLE,
 } from '../../src/sim/systems/rating.js';
 
-const ranks = buildRanks(1000); // Elite at 600 points
+const ranks = buildRanks(1000); // Elite at 750 points (75%)
 
 function kill(w: World, bounty: number, kind = 'enemy'): void {
   w.events.push({ type: 'destroyed', kind, bounty });
@@ -39,8 +39,8 @@ describe('rating ladder', () => {
       expect(ranks[i].points).toBeGreaterThan(ranks[i - 1].points);
       expect(ranks[i].bonus).toBeGreaterThan(ranks[i - 1].bonus);
     }
-    expect(ranks[1].points).toBe(1); // Mostly Harmless on the first kill
-    expect(ranks[ranks.length - 1].points).toBe(600); // Elite at 60%
+    expect(ranks[1].points).toBe(15); // Mostly Harmless at 2% of Elite — no longer on the first kill
+    expect(ranks[ranks.length - 1].points).toBe(750); // Elite at 75% of the campaign
   });
 
   it('puts Elite at 60% of every point the real campaign can award', () => {
@@ -66,11 +66,15 @@ describe('rating ladder', () => {
 });
 
 describe('ratingSystem', () => {
-  it('promotes on the first kill and pays the bonus into wallet and score', () => {
+  it('promotes once the tally reaches Mostly Harmless and pays the bonus into wallet and score', () => {
     const w = makeWorld(1);
-    kill(w, 10);
+    kill(w, 10); // one Sidewinder: 1 point, not enough on its own any more
     ratingSystem(w, ranks);
-    expect(w.rating.kills).toBe(1);
+    expect(w.rating.rank).toBe('Harmless');
+    w.events = [];
+    kill(w, 50 * (ranks[1].points - 2)); // tops the tally up to exactly Mostly Harmless
+    ratingSystem(w, ranks);
+    expect(w.rating.kills).toBe(2);
     expect(w.rating.rank).toBe('Mostly Harmless');
     expect(w.econ.wallet).toBe(ranks[1].bonus);
     expect(w.econ.score).toBe(ranks[1].bonus);

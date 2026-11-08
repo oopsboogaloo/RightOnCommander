@@ -9,6 +9,7 @@ import {
   TABLE_SIZE,
   MAX_NAME,
   HIGH_SCORES_KEY,
+  OLD_HIGH_SCORES_KEY,
   loadHighScores,
   saveHighScores,
   qualifies,
@@ -38,6 +39,22 @@ describe('high scores', () => {
     expect(loadHighScores(memStorage({ [HIGH_SCORES_KEY]: [{ name: 1 }] }))).toEqual(loadHighScores(memStorage()));
   });
 
+  it('tops out at 120,000 (raised after playtesting)', () => {
+    expect(loadHighScores(memStorage())[0].score).toBe(120000);
+  });
+
+  it("migrates a v1 table: keeps the player's own entries, swaps the old seeds for the new", () => {
+    const v1 = [
+      { name: 'Rafe Zetter', score: 80000, rank: 'Elite' }, // an old seed: dropped
+      { name: 'CHLOE', score: 85000, rank: 'Elite' }, // the player's run: kept
+      { name: 'Jameson', score: 5000, rank: 'Average' }, // an old seed: dropped
+    ];
+    const t = loadHighScores(memStorage({ [OLD_HIGH_SCORES_KEY]: v1 }));
+    expect(t[0]).toEqual({ name: 'Rafe Zetter', score: 120000, rank: 'Elite' });
+    expect(t.some((e) => e.name === 'CHLOE' && e.score === 85000)).toBe(true);
+    expect(t.some((e) => e.score === 80000 || e.score === 5000)).toBe(false);
+  });
+
   it('a score qualifies while the table has room, then only by beating the lowest', () => {
     const t = loadHighScores(memStorage());
     expect(t.length).toBeLessThan(TABLE_SIZE);
@@ -51,8 +68,8 @@ describe('high scores', () => {
 
   it('inserts in score order, reports the row, and keeps the table to size', () => {
     const t = loadHighScores(memStorage());
-    const r = insertScore(t, { name: 'CHLOE', score: 70000, rank: 'Elite' });
-    expect(r.row).toBe(1); // between Rafe Zetter (80000) and Jason Ryder (60000)
+    const r = insertScore(t, { name: 'CHLOE', score: 100000, rank: 'Elite' });
+    expect(r.row).toBe(1); // between Rafe Zetter (120000) and Jason Ryder (90000)
     expect(r.table[1].name).toBe('CHLOE');
     let full = r.table;
     for (let i = 0; i < 10; i++) full = insertScore(full, { name: `P${i}`, score: 90000 + i, rank: 'Elite' }).table;
@@ -62,8 +79,8 @@ describe('high scores', () => {
 
   it('defaults a blank name to Jameson and caps the length', () => {
     const t = loadHighScores(memStorage());
-    expect(insertScore(t, { name: '  ', score: 99999, rank: 'Elite' }).table[0].name).toBe('Jameson');
-    expect(insertScore(t, { name: 'A'.repeat(30), score: 99999, rank: 'Elite' }).table[0].name).toHaveLength(MAX_NAME);
+    expect(insertScore(t, { name: '  ', score: 999999, rank: 'Elite' }).table[0].name).toBe('Jameson');
+    expect(insertScore(t, { name: 'A'.repeat(30), score: 999999, rank: 'Elite' }).table[0].name).toHaveLength(MAX_NAME);
   });
 });
 
